@@ -437,11 +437,11 @@ export function Development() {
             </div>
             <Button
               variant="secondary"
-              disabled={context.role !== 'admin'}
+              disabled={context.role !== 'manager'}
               onClick={() => setReset(true)}
             >
               <RotateCcw size={16} />
-              Redefinir demonstração
+              Redefinir cenário da prefeitura
             </Button>
           </div>
         </Panel>

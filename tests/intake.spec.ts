@@ -1,3 +1,4 @@
+import { selectSession } from './session';
 import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -8,11 +9,12 @@ test('escuta → aferição → correção → consulta → complemento e histó
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
-  await page.getByLabel('Perfil de demonstração').selectOption('nursing');
+  await selectSession(page, { unitId: 'aurora-centro', role: 'nursing' });
+  await selectSession(page, { role: 'nursing' });
   await page.getByRole('link', { name: 'Escuta e sinais vitais', exact: true }).click();
   const row = page.getByRole('row').filter({ hasText: 'Ana Clara Martins' });
   await row.getByRole('link', { name: 'Registrar escuta' }).click();
+  await page.getByRole('button', { name: 'Iniciar escuta', exact: true }).click();
   await page
     .getByLabel('Motivo da procura', { exact: true })
     .fill('Relato fictício para testar a escuta.');
@@ -66,7 +68,7 @@ test('escuta → aferição → correção → consulta → complemento e histó
   await page.getByRole('link', { name: 'Abrir histórico da pessoa' }).click();
   await expect(page.locator('.note-addenda')).toContainText('Informação adicional.');
   await expect(page.locator('.intake-history')).toContainText('UBS Centro');
-  await page.getByLabel('Perfil de demonstração').selectOption('reception');
+  await selectSession(page, { role: 'reception' });
   await expect(page.locator('.intake-history')).toHaveCount(0);
   await expect(page.locator('.note-addenda')).toHaveCount(0);
   await expect(
@@ -78,8 +80,9 @@ test('escuta → aferição → correção → consulta → complemento e histó
 test('escuta protege rascunho e funciona na UPA em tela pequena', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-upa');
+  await selectSession(page, { unitId: 'aurora-upa', role: 'nursing' });
   await page.goto('/escuta/aurora-upa-e0');
+  await page.getByRole('button', { name: 'Iniciar escuta', exact: true }).click();
   await page
     .getByLabel('Motivo da procura', { exact: true })
     .fill('Texto fictício ainda não salvo.');
@@ -89,9 +92,10 @@ test('escuta protege rascunho e funciona na UPA em tela pequena', async ({ page 
   await expect(page.getByLabel('Motivo da procura', { exact: true })).toHaveValue(
     'Texto fictício ainda não salvo.',
   );
-  page.once('dialog', (dialog) => dialog.dismiss());
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
-  await expect(page.getByLabel('Unidade ativa')).toHaveValue('aurora-upa');
+  await page.getByRole('link', { name: 'Trocar sessão de demonstração' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Continuar editando' }).click();
+  await expect(page.getByLabel('Unidade ativa')).toHaveCount(0);
   await page.getByRole('button', { name: 'Salvar escuta', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('salvas');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -104,9 +108,10 @@ test('HTML independente mantém escuta e correções offline', async ({ browser 
   const context = await browser.newContext({ offline: true });
   const page = await context.newPage();
   await page.goto(pathToFileURL(resolve('dist-standalone/Cuidelo.html')).href);
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro', role: 'nursing' });
   await page.getByRole('link', { name: 'Escuta e sinais vitais', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar escuta', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Iniciar escuta', exact: true }).click();
   await page.getByLabel('Motivo da procura', { exact: true }).fill('Teste offline da escuta.');
   await page.getByLabel('Saturação de oxigênio (%)', { exact: true }).fill('98');
   await page.getByRole('button', { name: 'Salvar escuta', exact: true }).click();

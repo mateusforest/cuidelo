@@ -1,5 +1,13 @@
 import type { Command, Context, Database } from '../domain/model';
-import { applyCommand, DomainError, readSnapshot, readSummary } from '../domain/operations';
+import {
+  applyCommand,
+  assertContext,
+  DomainError,
+  readSnapshot,
+  readSummary,
+} from '../domain/operations';
+import { issueKiosk, performance, type KioskRequest } from '../domain/patient-flow';
+import { moduleFor, workMetrics } from '../domain/work-modules';
 import { validDay, dateKey } from '../domain/dates';
 import { createSeed } from './seed';
 import type { CareRepository } from './repository';
@@ -10,6 +18,9 @@ import { validateVaccinationDatabase } from '../domain/vaccination-validation';
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const collections = [
+  'workRecords',
+  'careSegments',
+  'kioskArrivals',
   'organizations',
   'units',
   'patients',
@@ -54,9 +65,15 @@ function parseDatabase(value: string): Database {
     db.vaccineVoids = [];
     db.vaccineRecalls = [];
   }
+  if (isRecord(db) && db.schemaVersion === 4) {
+    db.schemaVersion = 5;
+    db.careSegments = [];
+    db.kioskArrivals = [];
+    db.workRecords = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 4 ||
+    db.schemaVersion !== 5 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -69,6 +86,90 @@ function parseDatabase(value: string): Database {
       throw new Error('Duplicate identifiers');
   }
   const typed = db as unknown as Database;
+  for (const r of typed.workRecords) {
+    const m = moduleFor(r.module);
+    if (
+      !m.states[r.status] ||
+      !Number.isFinite(Date.parse(r.createdAt)) ||
+      !isRecord(r.values) ||
+      Object.values(r.values).some((v) => typeof v !== 'string') ||
+      !Array.isArray(r.history) ||
+      !r.history.length ||
+      r.history.some(
+        (h) =>
+          typeof h.action !== 'string' ||
+          typeof h.reason !== 'string' ||
+          !Number.isFinite(Date.parse(h.at)),
+      )
+    )
+      throw new Error('Invalid work record');
+    if (r.organizationId === 'cuidelo' && (m.permission !== 'business' || r.unitId !== 'office'))
+      throw new Error('Invalid business scope');
+    if (m.permission === 'business' && r.organizationId !== 'cuidelo')
+      throw new Error('Invalid business organization');
+    if (r.unitId === 'all' && !m.network) throw new Error('Invalid network record');
+    for (const f of m.fields) {
+      const value = r.values[f.key];
+      if (
+        typeof value !== 'string' ||
+        (!f.optional && !value.trim()) ||
+        (f.type === 'date' && value && !validDay(value))
+      )
+        throw new Error('Invalid module fields');
+      if (
+        f.type === 'reference' &&
+        !typed.workRecords.some(
+          (p) =>
+            p.id === value &&
+            p.module === f.reference &&
+            p.organizationId === r.organizationId &&
+            p.unitId === r.unitId,
+        )
+      )
+        throw new Error('Invalid module reference');
+      if (
+        f.type === 'patient' &&
+        !typed.patients.some((p) => p.id === value && p.organizationId === r.organizationId)
+      )
+        throw new Error('Invalid module patient');
+    }
+  }
+  for (const s of typed.careSegments) {
+    const e = typed.encounters.find(
+      (e) =>
+        e.id === s.encounterId && e.unitId === s.unitId && e.organizationId === s.organizationId,
+    );
+    if (
+      !e ||
+      typeof s.professionalId !== 'string' ||
+      !Number.isFinite(Date.parse(s.startedAt)) ||
+      (s.endedAt && (!Number.isFinite(Date.parse(s.endedAt)) || s.endedAt < s.startedAt))
+    )
+      throw new Error('Invalid care segment');
+  }
+  const active = typed.careSegments.filter((s) => !s.endedAt);
+  if (
+    new Set(active.map((s) => s.encounterId)).size !== active.length ||
+    new Set(active.map((s) => s.professionalId)).size !== active.length
+  )
+    throw new Error('Conflicting active consultations');
+  for (const a of typed.kioskArrivals) {
+    if (
+      !/^A-\d{3,4}$/.test(a.ticket) ||
+      !Number.isFinite(Date.parse(a.arrivedAt)) ||
+      typeof a.service !== 'string' ||
+      !['routine', 'priority'].includes(a.priority) ||
+      (a.encounterId &&
+        !typed.encounters.some(
+          (e) =>
+            e.id === a.encounterId &&
+            e.unitId === a.unitId &&
+            e.organizationId === a.organizationId &&
+            e.ticket === a.ticket,
+        ))
+    )
+      throw new Error('Invalid kiosk arrival');
+  }
   const strings = (row: unknown, fields: string[]) =>
     isRecord(row) && fields.every((f) => typeof row[f] === 'string');
   if (
@@ -79,12 +180,20 @@ function parseDatabase(value: string): Database {
   for (const key of collections.filter((k) => k !== 'organizations'))
     for (const row of typed[key]) {
       if (
+        (key === 'workRecords' || key === 'audit') &&
+        row.organizationId === 'cuidelo' &&
+        'unitId' in row &&
+        row.unitId === 'office'
+      )
+        continue;
+      if (
         !('organizationId' in row) ||
         !typed.organizations.some((o) => o.id === row.organizationId)
       )
         throw new Error('Invalid organization link');
       if (
         'unitId' in row &&
+        !((key === 'workRecords' || key === 'audit') && row.unitId === 'all') &&
         !typed.units.some((u) => u.id === row.unitId && u.organizationId === row.organizationId)
       )
         throw new Error('Invalid unit link');
@@ -134,6 +243,11 @@ function parseDatabase(value: string): Database {
     throw new Error('Invalid encounters');
   const ticketKeys = typed.encounters.map(
     (e) => `${e.organizationId}:${e.unitId}:${dateKey(new Date(e.arrivedAt))}:${e.ticket}`,
+  );
+  ticketKeys.push(
+    ...typed.kioskArrivals
+      .filter((a) => !a.encounterId)
+      .map((a) => `${a.organizationId}:${a.unitId}:${dateKey(new Date(a.arrivedAt))}:${a.ticket}`),
   );
   if (new Set(ticketKeys).size !== ticketKeys.length) throw new Error('Duplicate tickets');
   if (
@@ -313,6 +427,34 @@ export class DemoRepository implements CareRepository {
   };
   snapshot = (context: Context) => readSnapshot(this.db, context);
   summary = (context: Context) => readSummary(this.db, context, this.now());
+  workMetrics = (context: Context) => {
+    assertContext(this.db, context);
+    return workMetrics(this.db, context);
+  };
+  performance = (context: Context, from: string, to: string) => {
+    assertContext(this.db, context);
+    return performance(this.db, context, from, to, this.now());
+  };
+  async issueTicket(request: KioskRequest) {
+    return this.locked(() => {
+      if (this.recoveryMessage)
+        throw new DomainError(
+          'A recepção precisa revisar o ambiente antes de emitir senhas.',
+          'storage',
+        );
+      const saved = this.storage?.getItem(storageKey);
+      const next = saved ? parseDatabase(saved) : structuredClone(this.db);
+      const receipt = issueKiosk(next, request, this.now());
+      try {
+        this.storage?.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        throw new DomainError('Não foi possível salvar a senha. Procure a recepção.', 'storage');
+      }
+      this.db = next;
+      this.notify();
+      return receipt;
+    });
+  }
   private notify = () => this.listeners.forEach((l) => l());
   private async locked<T>(fn: () => T): Promise<T> {
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.locks)
@@ -369,13 +511,22 @@ export class DemoRepository implements CareRepository {
     });
   }
   async reset(context: Context): Promise<void> {
-    if (context.role !== 'admin')
+    assertContext(this.db, context);
+    if (context.role !== 'manager')
       throw new DomainError(
-        'Use o perfil Administração para redefinir a demonstração.',
+        'Somente a gestão da prefeitura pode redefinir o cenário da sua rede.',
         'permission',
       );
     return this.locked(() => {
-      const next = createSeed(this.now());
+      const seed = createSeed(this.now()),
+        next = structuredClone(this.db);
+      for (const key of collections) {
+        if (key === 'organizations' || key === 'units') continue;
+        (next[key] as unknown[]) = [
+          ...this.db[key].filter((r) => r.organizationId !== context.organizationId),
+          ...seed[key].filter((r) => r.organizationId === context.organizationId),
+        ];
+      }
       next.revision = this.db.revision + 1;
       if (this.storage) {
         try {

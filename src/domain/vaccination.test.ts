@@ -1,3 +1,4 @@
+import { demoContext } from './access';
 import { describe, it, expect } from 'vitest';
 import { applyCommand, readSnapshot, readSummary } from './operations';
 import { createSeed } from '../data/seed';
@@ -8,7 +9,7 @@ import type { Context, VaccinationCommand } from './model';
 
 const now = new Date('2026-10-29T15:00:00Z'),
   today = '2026-10-29';
-const context: Context = { organizationId: 'aurora', unitId: 'aurora-centro', role: 'nursing' };
+const context: Context = demoContext('aurora', 'aurora-centro', 'nursing');
 const application: Extract<VaccinationCommand, { type: 'vaccine.record' }> = {
   type: 'vaccine.record',
   patientId: 'aurora-p1',
@@ -116,7 +117,7 @@ describe('vacinação e estoque', () => {
     expect(() =>
       applyCommand(
         db,
-        { ...context, unitId: 'aurora-vila' },
+        demoContext('aurora', 'aurora-vila', context.role),
         { ...application, lotId: 'aurora-vila-vac0', dose: ' dose de TESTE ' },
         now,
       ),
@@ -128,22 +129,23 @@ describe('vacinação e estoque', () => {
     const db = createSeed(now);
     applyCommand(db, context, application, now);
     for (const role of ['reception', 'manager', 'regulation', 'pharmacy'] as const) {
-      const c = { ...context, role };
+      const c = demoContext(context.organizationId, context.unitId, role);
       expect(readSnapshot(db, c).immunizations).toEqual([]);
       expect(readSnapshot(db, c).vaccineRecalls).toEqual([]);
       expect(readSnapshot(db, c).vaccineVoids).toEqual([]);
       expect(() => applyCommand(db, c, application, now)).toThrow('não tem acesso');
     }
-    expect(readSnapshot(db, { ...context, role: 'pharmacy' }).vaccineLots.length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      readSnapshot(db, demoContext(context.organizationId, context.unitId, 'pharmacy')).vaccineLots
+        .length,
+    ).toBeGreaterThan(0);
     expect(() =>
       applyCommand(db, context, { ...application, lotId: 'aurora-vila-vac0' }, now),
     ).toThrow('nesta unidade');
     expect(() =>
       applyCommand(db, context, { ...application, patientId: 'horizonte-p1' }, now),
     ).toThrow('nesta rede');
-    const other: Context = { ...context, organizationId: 'horizonte', unitId: 'horizonte-centro' };
+    const other: Context = demoContext('horizonte', 'horizonte-centro', context.role);
     expect(readSnapshot(db, other).immunizations).toEqual([]);
     expect(readSummary(db, other, now).vaccination.applied).toBe(0);
     expect(JSON.stringify(readDisplay(db, 'aurora', context.unitId, now))).not.toContain(
@@ -161,7 +163,7 @@ describe('vacinação e estoque', () => {
     expect(() =>
       applyCommand(
         db,
-        { ...context, unitId: 'aurora-vila' },
+        demoContext('aurora', 'aurora-vila', context.role),
         { type: 'vaccine.void', applicationId: id, reason: 'Teste' },
         now,
       ),
@@ -182,7 +184,7 @@ describe('vacinação e estoque', () => {
   });
   it('cria lote sem duplicidade e registra recebimento, quarentena, liberação e perda', () => {
     const db = createSeed(now);
-    const c: Context = { ...context, role: 'pharmacy' };
+    const c: Context = demoContext(context.organizationId, context.unitId, 'pharmacy');
     const cmd: VaccinationCommand = {
       type: 'vaccine.lot.create',
       immunobiological: 'Vacina fictícia X',
@@ -352,11 +354,7 @@ describe('vacinação e estoque', () => {
     applyCommand(db, context, recall, now);
     applyCommand(db, context, application, now);
     const next = new Date('2026-10-30T15:00:00Z');
-    const summary = readSummary(
-      db,
-      { ...context, role: 'manager', unitId: 'all' },
-      next,
-    ).vaccination;
+    const summary = readSummary(db, demoContext('aurora', 'all', 'manager'), next).vaccination;
     expect(summary).toMatchObject({ applied: 1, pending: 1, overdue: 1 });
     expect(summary.byUnit.find((u) => u.unitId === 'aurora-centro')?.applied).toBe(1);
     expect(JSON.stringify(summary)).not.toContain('aurora-p1');

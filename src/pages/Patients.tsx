@@ -318,6 +318,52 @@ export function PatientDetails() {
               />
             </Panel>
           )}
+          {can(context.role, 'clinical') &&
+            data.workRecords.some(
+              (r) => r.module === 'prenatal' && r.values.patientId === p.id,
+            ) && (
+              <Panel
+                title="Histórico de pré-natal na prefeitura"
+                subtitle="Acompanhamentos das unidades desta prefeitura. A edição continua na unidade de origem."
+              >
+                {data.workRecords
+                  .filter((r) => r.module === 'prenatal' && r.values.patientId === p.id)
+                  .map((r) => (
+                    <article key={r.id} className="timeline-note">
+                      <div className="timeline-heading">
+                        <strong>
+                          {data.units.find((u) => u.id === r.unitId)?.name} · início em{' '}
+                          {shortDate(r.values.start)}
+                        </strong>
+                      </div>
+                      <p>
+                        Data provável do parto informada: {shortDate(r.values.expected)} ·{' '}
+                        {r.values.responsible}
+                      </p>
+                      <p>{r.values.notes}</p>
+                      {data.workRecords
+                        .filter(
+                          (c) =>
+                            c.module === 'prenatal-consultas' &&
+                            c.values.episode === r.id &&
+                            c.status === 'done',
+                        )
+                        .map((c) => (
+                          <div className="note-text" key={c.id}>
+                            <strong>
+                              {shortDate(c.values.date)} · semana informada: {c.values.week}
+                            </strong>
+                            <p>{c.values.assessment}</p>
+                            <p>{c.values.plan}</p>
+                          </div>
+                        ))}
+                      <Link to="/modulos/prenatal">
+                        Ver acompanhamento e histórico de alterações
+                      </Link>
+                    </article>
+                  ))}
+              </Panel>
+            )}
           <Panel title="Próximos agendamentos nesta unidade">
             {appointments.length ? (
               <div className="compact-list">

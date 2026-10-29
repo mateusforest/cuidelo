@@ -23,6 +23,22 @@ import { Coverage } from './pages/Coverage';
 import { isPortable } from './app/links';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/patient-flow.css';
+import { Access, WorkspaceHome } from './pages/Access';
+import { Devices, Kiosk } from './pages/Kiosk';
+import { ConsultingRoom, Performance } from './pages/PatientFlow';
+import { ModulesHub, WorkPage, WorkReport } from './pages/WorkModules';
+
+function Home() {
+  const { context } = useApp();
+  return context.role === 'manager' ? (
+    <Dashboard />
+  ) : context.role === 'business' || context.role === 'acs' ? (
+    <ModulesHub />
+  ) : (
+    <WorkspaceHome />
+  );
+}
 
 function Gate({ permission, children }: { permission: Permission; children: ReactNode }) {
   const { context } = useApp();
@@ -31,7 +47,7 @@ function Gate({ permission, children }: { permission: Permission; children: Reac
   ) : (
     <EmptyState
       title="Este módulo não faz parte do perfil selecionado"
-      description="Troque o perfil de demonstração no topo para explorar as outras funções."
+      description="Sua sessão não permite acessar este módulo. Para testar outro perfil, use a entrada de demonstração."
       action={
         <Link className="button secondary" to="/">
           Voltar à visão da rede
@@ -45,6 +61,8 @@ const protect = (permission: Permission, node: ReactNode) => (
 );
 const router = (isPortable() ? createHashRouter : createBrowserRouter)([
   { path: '/painel', element: <QueueDisplay /> },
+  { path: '/totem', element: <Kiosk /> },
+  { path: '/acesso', element: <Access /> },
   {
     path: '/',
     element: <Shell />,
@@ -62,7 +80,13 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
       </div>
     ),
     children: [
-      { index: true, element: <Dashboard /> },
+      { index: true, element: <Home /> },
+      { path: 'modulos', element: <ModulesHub /> },
+      { path: 'modulos/:module', element: <WorkPage /> },
+      { path: 'paineis/:report', element: <WorkReport /> },
+      { path: 'consultorio', element: protect('clinical', <ConsultingRoom />) },
+      { path: 'desempenho', element: protect('performance', <Performance />) },
+      { path: 'dispositivos', element: protect('devices', <Devices />) },
       { path: 'pessoas', element: protect('patients.read', <Patients />) },
       { path: 'pessoas/:id', element: protect('patients.read', <PatientDetails />) },
       { path: 'agenda', element: protect('schedule', <Agenda />) },
@@ -78,7 +102,7 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
       { path: 'hospital', element: protect('beds', <Hospital />) },
       { path: 'farmacia', element: protect('stock', <Pharmacy />) },
       { path: 'regulacao', element: protect('regulation', <Referrals />) },
-      { path: 'unidades', element: protect('manage', <Units />) },
+      { path: 'unidades', element: protect('network', <Units />) },
       { path: 'auditoria', element: protect('manage', <Audit />) },
       { path: 'integracoes', element: <Integrations /> },
       { path: 'desenvolvimento', element: <Development /> },

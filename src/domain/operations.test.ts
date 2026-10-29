@@ -1,3 +1,4 @@
+import { demoContext } from './access';
 import { describe, it, expect } from 'vitest';
 import { createSeed } from '../data/seed';
 import { DemoRepository, storageKey } from '../data/demo-repository';
@@ -5,10 +6,10 @@ import { applyCommand, readSnapshot, readSummary } from './operations';
 import type { Context, Command } from './model';
 
 const now = new Date('2026-10-29T15:00:00Z');
-const clinic: Context = { organizationId: 'aurora', unitId: 'aurora-centro', role: 'clinical' };
-const admin: Context = { ...clinic, role: 'admin' };
-const hospital: Context = { ...admin, unitId: 'aurora-hospital' };
-const pharmacy: Context = { ...clinic, role: 'pharmacy' };
+const clinic: Context = demoContext('aurora', 'aurora-centro', 'clinical');
+const admin: Context = demoContext('aurora', 'aurora-centro', 'admin');
+const hospital: Context = demoContext('aurora', 'aurora-hospital', 'admin');
+const pharmacy: Context = demoContext(clinic.organizationId, clinic.unitId, 'pharmacy');
 const soap = {
   subjective: 'Relato fictício.',
   objective: 'Registro de teste.',
@@ -33,7 +34,7 @@ describe('contexto e permissões', () => {
     expect(view.patients.every((p) => p.organizationId === 'aurora')).toBe(true);
     expect(view.encounters.every((e) => e.unitId === 'aurora-centro')).toBe(true);
     expect(() => readSnapshot(db, { ...clinic, unitId: 'horizonte-centro' })).toThrow(
-      'unidade desta rede',
+      'única unidade',
     );
   });
   it('rejeita identificador de pessoa de outra rede na gravação', () => {
@@ -59,8 +60,9 @@ describe('contexto e permissões', () => {
   });
   it('recepção não recebe notas ou alergias nem pode registrar evolução', () => {
     const db = createSeed(now);
+    applyCommand(db, clinic, { type: 'encounter.start', id: 'aurora-centro-e2' }, now);
     applyCommand(db, clinic, { type: 'note.save', encounterId: 'aurora-centro-e2', soap }, now);
-    const reception: Context = { ...clinic, role: 'reception' };
+    const reception: Context = demoContext(clinic.organizationId, clinic.unitId, 'reception');
     const view = readSnapshot(db, reception);
     expect(view.notes).toEqual([]);
     expect(view.patients.every((p) => p.allergies.length === 0)).toBe(true);
@@ -75,7 +77,7 @@ describe('contexto e permissões', () => {
   });
   it('gestão recebe indicadores agregados e não recebe cadastros ou internações identificadas', () => {
     const db = createSeed(now),
-      manager: Context = { organizationId: 'aurora', unitId: 'all', role: 'manager' };
+      manager: Context = demoContext('aurora', 'all', 'manager');
     const view = readSnapshot(db, manager);
     expect(view.patients).toEqual([]);
     expect(view.encounters).toEqual([]);
@@ -153,6 +155,7 @@ describe('agenda e atendimento', () => {
   });
   it('não conclui um registro sem avaliação e plano', () => {
     const db = createSeed(now);
+    applyCommand(db, clinic, { type: 'encounter.start', id: 'aurora-centro-e2' }, now);
     applyCommand(
       db,
       clinic,
@@ -165,6 +168,7 @@ describe('agenda e atendimento', () => {
   });
   it('preserva a nota finalizada e encerra o atendimento', () => {
     const db = createSeed(now);
+    applyCommand(db, clinic, { type: 'encounter.start', id: 'aurora-centro-e2' }, now);
     applyCommand(db, clinic, { type: 'note.save', encounterId: 'aurora-centro-e2', soap }, now);
     applyCommand(db, clinic, { type: 'note.finalize', encounterId: 'aurora-centro-e2' }, now);
     expect(db.notes[0].status).toBe('final');
@@ -375,8 +379,8 @@ describe('persistência de demonstração', () => {
       }),
     ).rejects.toThrow('Redefina');
     expect(storage.getItem(storageKey)).toBe('{"schemaVersion":999}');
-    await expect(repo.reset(clinic)).rejects.toThrow('Administração');
-    await repo.reset(admin);
+    await expect(repo.reset(clinic)).rejects.toThrow('gestão da prefeitura');
+    await repo.reset(demoContext('aurora', 'all', 'manager'));
     expect(repo.recoveryMessage).toBe('');
   });
 });

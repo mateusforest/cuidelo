@@ -37,7 +37,7 @@ export function roomsForUnit(unit: Unit): Room[] {
   ];
 }
 export function nextTicket(
-  encounters: Encounter[],
+  encounters: Pick<Encounter, 'organizationId' | 'unitId' | 'arrivedAt' | 'ticket'>[],
   organizationId: string,
   unitId: string,
   day: string,

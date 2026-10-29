@@ -1,3 +1,4 @@
+import { selectSession } from './session';
 import { test, expect } from '@playwright/test';
 
 test('cadastro → agenda → chegada → registro finalizado e persistido', async ({ page }) => {
@@ -5,7 +6,7 @@ test('cadastro → agenda → chegada → registro finalizado e persistido', asy
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Visão da rede', exact: true })).toBeVisible();
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   await page.getByRole('link', { name: 'Pessoas e prontuários', exact: true }).click();
   await page.getByRole('button', { name: 'Cadastrar pessoa', exact: true }).click();
   await page.getByLabel('Nome completo', { exact: true }).fill('Pessoa Teste de Fluxo');
@@ -31,6 +32,7 @@ test('cadastro → agenda → chegada → registro finalizado e persistido', asy
   await expect(
     page.locator('.appointment-row').filter({ hasText: 'Pessoa Teste de Fluxo' }),
   ).toContainText('Chegada confirmada');
+  await selectSession(page, { role: 'clinical' });
   await page.getByRole('link', { name: 'Recepção e atendimento', exact: true }).click();
   await page
     .getByRole('row')
@@ -55,7 +57,7 @@ test('cadastro → agenda → chegada → registro finalizado e persistido', asy
   await page.getByRole('button', { name: 'Salvar e concluir' }).click();
   await expect(page.getByText('Registro concluído', { exact: true })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'P · Plano', exact: true })).toBeDisabled();
-  await page.getByLabel('Rede ativa').selectOption('horizonte');
+  await selectSession(page, { organizationId: 'horizonte' });
   await page.goto(`/pessoas/${patientId}`);
   await expect(
     page.getByRole('heading', { name: 'Cadastro não encontrado nesta rede' }),
@@ -65,7 +67,7 @@ test('cadastro → agenda → chegada → registro finalizado e persistido', asy
 
 test('admissão, bloqueio de duplicidade, saída e liberação do leito', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-hospital');
+  await selectSession(page, { unitId: 'aurora-hospital' });
   await page.getByRole('link', { name: 'Internação e leitos', exact: true }).click();
   const bed = page.locator('.bed-card').filter({ hasText: 'Leito 04' });
   await bed.getByRole('button', { name: 'Admitir', exact: true }).click();
@@ -92,7 +94,7 @@ test('perfil de recepção não acessa clínica e redes mantêm cadastros distin
   page,
 }) => {
   await page.goto('/');
-  await page.getByLabel('Perfil de demonstração').selectOption('reception');
+  await selectSession(page, { role: 'reception' });
   await page.goto('/pessoas/aurora-p1');
   await expect(
     page.getByText('Este perfil pode consultar o cadastro', { exact: false }),
@@ -102,7 +104,7 @@ test('perfil de recepção não acessa clínica e redes mantêm cadastros distin
   await expect(
     page.getByRole('heading', { name: 'Este módulo não faz parte do perfil selecionado' }),
   ).toBeVisible();
-  await page.getByLabel('Rede ativa').selectOption('horizonte');
+  await selectSession(page, { organizationId: 'horizonte' });
   await page.goto('/pessoas/aurora-p1');
   await expect(
     page.getByRole('heading', { name: 'Cadastro não encontrado nesta rede' }),
@@ -111,7 +113,7 @@ test('perfil de recepção não acessa clínica e redes mantêm cadastros distin
 
 test('estoque persiste o movimento e bloqueia uso de lote vencido', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   await page.getByRole('link', { name: 'Farmácia e estoque', exact: true }).click();
   await page
     .getByRole('button', { name: 'Saída de Gaze estéril', exact: true })
@@ -134,7 +136,7 @@ test('navegação móvel e formulários cabem na tela', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   await page.getByRole('button', { name: 'Abrir menu' }).click();
   await page.getByRole('link', { name: 'Pessoas e prontuários', exact: true }).click();
   await page.getByRole('button', { name: 'Cadastrar pessoa', exact: true }).click();
@@ -148,7 +150,7 @@ test('encaminhamento passa de solicitação a agendamento e cancelamento persist
   page,
 }) => {
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   await page.getByRole('link', { name: 'Regulação', exact: true }).click();
   await page.getByRole('button', { name: 'Novo encaminhamento' }).click();
   await page.getByLabel('Pessoa', { exact: true }).selectOption('aurora-p5');
@@ -174,7 +176,8 @@ test('encaminhamento passa de solicitação a agendamento e cancelamento persist
 
 test('rascunho não salvo exige decisão antes de sair ou trocar a rede', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
+  await selectSession(page, { role: 'clinical' });
   await page.getByRole('link', { name: 'Recepção e atendimento', exact: true }).click();
   await page.getByRole('button', { name: 'Atender', exact: true }).first().click();
   await page
@@ -186,9 +189,10 @@ test('rascunho não salvo exige decisão antes de sair ou trocar a rede', async 
   await expect(page.getByRole('textbox', { name: 'S · Subjetivo', exact: true })).toHaveValue(
     'Texto fictício ainda não salvo.',
   );
-  page.once('dialog', (dialog) => dialog.dismiss());
-  await page.getByLabel('Rede ativa').selectOption('horizonte');
-  await expect(page.getByLabel('Rede ativa')).toHaveValue('aurora');
+  await page.getByRole('link', { name: 'Trocar sessão de demonstração' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Continuar editando' }).click();
+  await expect(page.getByLabel('Rede ativa')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'S · Subjetivo', exact: true })).toHaveValue(
     'Texto fictício ainda não salvo.',
   );

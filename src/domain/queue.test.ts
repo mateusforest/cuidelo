@@ -1,3 +1,4 @@
+import { demoContext } from './access';
 import { describe, expect, it } from 'vitest';
 import { createSeed } from '../data/seed';
 import { DemoRepository, storageKey } from '../data/demo-repository';
@@ -6,7 +7,7 @@ import { nextTicket, readDisplay } from './queue';
 import type { Context } from './model';
 
 const now = new Date('2026-10-29T15:00:00Z');
-const context: Context = { organizationId: 'aurora', unitId: 'aurora-centro', role: 'reception' };
+const context: Context = demoContext('aurora', 'aurora-centro', 'reception');
 class MemoryStorage {
   values = new Map<string, string>();
   getItem(k: string) {
@@ -91,7 +92,7 @@ describe('senhas e projeção da TV', () => {
     expect(() =>
       applyCommand(
         db,
-        { ...context, role: 'pharmacy' },
+        demoContext(context.organizationId, context.unitId, 'pharmacy'),
         { type: 'queue.call', encounterId: e.id, roomId: 'consultorio-2' },
         now,
       ),
@@ -145,7 +146,7 @@ describe('senhas e projeção da TV', () => {
     const e = view.encounters.find((e) => e.status === 'waiting')!;
     await repo.execute(context, { type: 'queue.call', encounterId: e.id, roomId: 'escuta-1' });
     const saved = JSON.parse(storage.getItem(storageKey)!);
-    expect(saved.schemaVersion).toBe(4);
+    expect(saved.schemaVersion).toBe(5);
     const restored = new DemoRepository(storage, () => now);
     expect(restored.display(context.organizationId, context.unitId).current?.ticket).toBe(e.ticket);
     expect(saved.patients).toEqual(old.patients);

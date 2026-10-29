@@ -2,7 +2,7 @@
 
 O escopo público completo está em [plano-completo.md](plano-completo.md). Esta lista ordena dependências de construção, sem autorizar uma implantação incompleta. A primeira operação em UBS, UPA, pronto atendimento e hospital depende do aceite dos módulos e integrações exigidos pela rede contratada.
 
-## Marco atual: base local 0.4
+## Marco atual: base local 0.5
 
 Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, escuta, sinais vitais, correções, SOAP com complementos, painel de senhas, observação, leitos, estoque, encaminhamentos e vacinação com caderneta, lotes, aprazamentos e visão gerencial. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
 
@@ -45,4 +45,4 @@ Completar suprimentos, compras, custos, contratos, equipes e escalas, produção
 
 Uma frente pode conduzir fluxos, interface e validação com unidades; outra pode conduzir dados, integrações e infraestrutura. Revisar em conjunto alterações de identidade do paciente, acesso, medicação, estado clínico e faturamento. A equipe de desenvolvimento precisa de participação assistencial e operacional dos serviços para homologar os módulos. Não é possível assumir um prazo de conclusão confiável apenas a partir desta base.
 
-Os próximos incrementos locais incluem profissionais e vínculos, pré-natal, território e agentes, além de completar as pendências operacionais da vacinação. Em paralelo, preparar os contratos de acesso e persistência. A conexão do backend permanece para a etapa acordada com os fundadores, antes de qualquer uso com dados reais.
+A versão 0.5 acrescenta sessões vinculadas, totem, autoria e tempos, além de bases locais de pré-natal, território, comunicação, qualidade e operação comercial. Os próximos incrementos devem completar os percursos parciais, incluindo processos hospitalares especializados, ordens clínicas, vacinação e integrações. Em paralelo, preparar os contratos de acesso e persistência. A conexão do backend permanece para a etapa acordada com os fundadores, antes de qualquer uso com dados reais.

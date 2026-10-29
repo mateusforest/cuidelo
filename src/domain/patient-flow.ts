@@ -1,0 +1,275 @@
+import { can, type Context, type Database, type Encounter } from './model';
+import { demoIdentities } from './access';
+import { dateKey, validDay } from './dates';
+import { DomainError } from './errors';
+import { nextTicket } from './queue';
+
+export function ownCare(e: Encounter, c: Context) {
+  if (e.professionalId !== c.sessionId)
+    throw new DomainError(
+      'Assuma este atendimento antes de registrar. Um atendimento em curso pertence ao profissional responsável.',
+      'permission',
+    );
+}
+export function startCare(db: Database, c: Context, e: Encounter, at: string, id: () => string) {
+  if (e.status === 'completed' || db.careSegments.some((s) => s.encounterId === e.id && !s.endedAt))
+    throw new DomainError(
+      'Este atendimento já está em curso com um profissional ou foi concluído.',
+      'conflict',
+    );
+  if (db.careSegments.some((s) => s.professionalId === c.sessionId && !s.endedAt))
+    throw new DomainError(
+      'Conclua ou encaminhe à observação o atendimento que está em curso com você.',
+      'conflict',
+    );
+  if (e.intakeStartedAt && !e.intakeCompletedAt)
+    throw new DomainError('Conclua a escuta antes de iniciar a consulta.', 'conflict');
+  e.professionalId = c.sessionId;
+  db.careSegments.push({
+    id: id(),
+    organizationId: c.organizationId,
+    unitId: c.unitId,
+    encounterId: e.id,
+    professionalId: c.sessionId,
+    startedAt: at,
+  });
+}
+export function closeCare(
+  db: Database,
+  encounterId: string,
+  at: string,
+  reason: 'observation' | 'completed',
+) {
+  const segment = db.careSegments.find((s) => s.encounterId === encounterId && !s.endedAt);
+  if (segment) {
+    segment.endedAt = at;
+    segment.endReason = reason;
+  }
+}
+export const kioskServices = [
+  'Consulta',
+  'Vacinação',
+  'Procedimento',
+  'Orientação na recepção',
+] as const;
+export interface KioskRequest {
+  organizationId: string;
+  unitId: string;
+  service: string;
+  priority: 'routine' | 'priority';
+  record?: string;
+  birthDate?: string;
+  requestId: string;
+}
+export interface TicketReceipt {
+  ticket: string;
+  unitName: string;
+  service: string;
+  issuedAt: string;
+  needsIdentification: boolean;
+  existing: boolean;
+}
+export function issueKiosk(
+  db: Database,
+  request: KioskRequest,
+  now: Date,
+  id = () => crypto.randomUUID(),
+): TicketReceipt {
+  const unit = db.units.find(
+    (u) => u.id === request.unitId && u.organizationId === request.organizationId,
+  );
+  if (!unit) throw new DomainError('Totem não configurado para esta unidade.', 'scope');
+  if (
+    !kioskServices.includes(request.service as (typeof kioskServices)[number]) ||
+    !['routine', 'priority'].includes(request.priority) ||
+    !/^[\w-]{8,80}$/.test(request.requestId)
+  )
+    throw new DomainError('Revise o serviço e a identificação da solicitação.');
+  const prior = db.kioskArrivals.find(
+    (a) =>
+      a.id === request.requestId &&
+      a.organizationId === unit.organizationId &&
+      a.unitId === unit.id,
+  );
+  if (prior)
+    return {
+      ticket: prior.ticket,
+      unitName: unit.name,
+      service: prior.service,
+      issuedAt: prior.arrivedAt,
+      needsIdentification: !prior.encounterId,
+      existing: true,
+    };
+  if (db.kioskArrivals.some((a) => a.id === request.requestId))
+    throw new DomainError(
+      'Solicitação já utilizada em outro dispositivo. Reinicie a retirada de senha.',
+      'conflict',
+    );
+  const known = Boolean(request.record || request.birthDate);
+  const patient = known
+    ? db.patients.find(
+        (p) =>
+          p.organizationId === unit.organizationId &&
+          p.record === request.record?.trim().toUpperCase() &&
+          p.birthDate === request.birthDate,
+      )
+    : undefined;
+  if (known && !patient)
+    throw new DomainError(
+      'Não foi possível confirmar o cadastro. Confira os dados ou procure a recepção.',
+    );
+  const existing =
+    patient &&
+    db.encounters.find(
+      (e) =>
+        e.organizationId === unit.organizationId &&
+        e.unitId === unit.id &&
+        e.patientId === patient.id &&
+        e.status !== 'completed',
+    );
+  if (existing && dateKey(new Date(existing.arrivedAt)) !== dateKey(now))
+    throw new DomainError(
+      'Há um atendimento de outro dia em aberto. Procure a recepção para conferir sua chegada.',
+    );
+  if (existing)
+    return {
+      ticket: existing.ticket,
+      unitName: unit.name,
+      service: existing.service,
+      issuedAt: existing.arrivedAt,
+      needsIdentification: false,
+      existing: true,
+    };
+  const at = now.toISOString(),
+    ticket = nextTicket(
+      [...db.encounters, ...db.kioskArrivals],
+      unit.organizationId,
+      unit.id,
+      dateKey(now),
+    );
+  const encounterId = patient ? id() : undefined;
+  db.kioskArrivals.push({
+    id: request.requestId,
+    organizationId: unit.organizationId,
+    unitId: unit.id,
+    ticket,
+    service: request.service,
+    priority: request.priority,
+    arrivedAt: at,
+    encounterId,
+  });
+  if (patient && encounterId)
+    db.encounters.push({
+      id: encounterId,
+      organizationId: unit.organizationId,
+      unitId: unit.id,
+      patientId: patient.id,
+      ticket,
+      service: request.service,
+      priority: request.priority,
+      arrivedAt: at,
+      status: 'waiting',
+      source: 'kiosk',
+    });
+  db.audit.push({
+    id: id(),
+    organizationId: unit.organizationId,
+    unitId: unit.id,
+    at,
+    actor: 'Totem · demonstração',
+    entityId: encounterId ?? request.requestId,
+    action: `Senha ${ticket} emitida no totem`,
+  });
+  db.revision++;
+  return {
+    ticket,
+    unitName: unit.name,
+    service: request.service,
+    issuedAt: at,
+    needsIdentification: !patient,
+    existing: false,
+  };
+}
+
+const elapsed = (a?: string, b?: string) =>
+  a && b ? Math.max(0, (Date.parse(b) - Date.parse(a)) / 60000) : null;
+const sample = (values: (number | null)[]) => {
+  const known = values.filter((n): n is number => n !== null);
+  return {
+    count: known.length,
+    average: known.length ? known.reduce((a, b) => a + b, 0) / known.length : null,
+  };
+};
+export function performance(db: Database, c: Context, from: string, to: string, now: Date) {
+  if (!can(c.role, 'performance'))
+    throw new DomainError('Este perfil não tem acesso aos indicadores.', 'permission');
+  if (!validDay(from) || !validDay(to) || from > to)
+    throw new DomainError('Informe um período válido.');
+  const own = !can(c.role, 'manage');
+  const scoped = (x: { organizationId: string; unitId: string }) =>
+    x.organizationId === c.organizationId && (c.unitId === 'all' || x.unitId === c.unitId);
+  const entries = db.encounters.filter(
+    (e) =>
+      scoped(e) && dateKey(new Date(e.arrivedAt)) >= from && dateKey(new Date(e.arrivedAt)) <= to,
+  );
+  const ids = new Set(entries.map((e) => e.id));
+  const segments = db.careSegments.filter(
+    (s) => scoped(s) && ids.has(s.encounterId) && (!own || s.professionalId === c.sessionId),
+  );
+  const encounters = own
+    ? entries.filter((e) => segments.some((s) => s.encounterId === e.id))
+    : entries;
+  const identities = demoIdentities(db);
+  const awaiting = (e: Encounter) =>
+    e.status === 'waiting' && !(e.intakeStartedAt && !e.intakeCompletedAt);
+  return {
+    arrivals: encounters.length,
+    waiting: encounters.filter(awaiting).length,
+    reception: sample(
+      encounters.map((e) =>
+        elapsed(
+          e.arrivedAt,
+          e.intakeStartedAt ??
+            (!db.intakes.some((r) => r.encounterId === e.id) ? e.startedAt : undefined),
+        ),
+      ),
+    ),
+    intake: sample(encounters.map((e) => elapsed(e.intakeStartedAt, e.intakeCompletedAt))),
+    beforeConsult: sample(encounters.map((e) => elapsed(e.intakeCompletedAt, e.startedAt))),
+    total: sample(encounters.map((e) => elapsed(e.arrivedAt, e.completedAt))),
+    unassigned: encounters.filter((e) => !db.careSegments.some((s) => s.encounterId === e.id))
+      .length,
+    currentWait: sample(
+      encounters
+        .filter(awaiting)
+        .map((e) => elapsed(e.intakeCompletedAt ?? e.arrivedAt, now.toISOString())),
+    ),
+    byProfessional: [...new Set(segments.map((s) => s.professionalId))].map((professionalId) => {
+      const list = segments.filter((s) => s.professionalId === professionalId);
+      return {
+        professionalId,
+        name:
+          identities.find((i) => i.sessionId === professionalId)?.name ??
+          'Profissional não identificado',
+        unitName: db.units.find((u) => u.id === list[0].unitId)?.name ?? '',
+        patients: new Set(list.map((s) => s.encounterId)).size,
+        active: list.filter((s) => !s.endedAt).length,
+        duration: sample(list.filter((s) => s.endedAt).map((s) => elapsed(s.startedAt, s.endedAt))),
+        activeMinutes: list
+          .filter((s) => !s.endedAt)
+          .reduce((n, s) => n + (elapsed(s.startedAt, now.toISOString()) ?? 0), 0),
+      };
+    }),
+    byUnit: db.units
+      .filter(
+        (u) => u.organizationId === c.organizationId && (c.unitId === 'all' || u.id === c.unitId),
+      )
+      .map((u) => ({
+        name: u.name,
+        arrivals: encounters.filter((e) => e.unitId === u.id).length,
+        completed: encounters.filter((e) => e.unitId === u.id && e.status === 'completed').length,
+        waiting: encounters.filter((e) => e.unitId === u.id && awaiting(e)).length,
+      })),
+  };
+}
+export type PerformanceReport = ReturnType<typeof performance>;

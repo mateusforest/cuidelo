@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Leitura estática do catálogo de 46 telas, das funções de tela e dos fluxos no HTML fornecido; comparação com o código atual do Cuidelo. Não houve execução do Pulso nem homologação das funcionalidades descritas.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.5. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -25,9 +25,9 @@
       "quem": "Todos os profissionais",
       "dispositivo": "cheia",
       "group": "Acesso",
-      "status": "pendente",
-      "route": "",
-      "note": "Falta autenticação real, recuperação de acesso e segundo fator. O seletor atual demonstra perfis e não é login."
+      "status": "parcial",
+      "route": "/acesso",
+      "note": "Entrada por sessões fictícias vinculadas a perfil, unidade e prefeitura. Autenticação real, recuperação de acesso e segundo fator continuam pendentes."
     },
     {
       "id": "ativar",
@@ -37,9 +37,9 @@
       "quem": "Profissional novo",
       "dispositivo": "cheia",
       "group": "Acesso",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam convite, primeiro acesso, conferência de vínculos e ativação de autenticação."
+      "status": "parcial",
+      "route": "/modulos/ativacao",
+      "note": "Cadastro e conferência local de vínculos com histórico de situação. Não cria contas, verifica CNES ou envia convites reais."
     },
     {
       "id": "onde",
@@ -50,8 +50,8 @@
       "dispositivo": "cheia",
       "group": "Acesso",
       "status": "parcial",
-      "route": "/unidades",
-      "note": "Há troca de rede, unidade e perfil. Faltam vínculos reais por profissional, credenciais e autorização no servidor."
+      "route": "/acesso",
+      "note": "Cada sessão possui unidade e função vinculadas. Apenas a prefeitura filtra unidades da sua rede. Vínculos reais e autorização no servidor continuam pendentes."
     },
     {
       "id": "recepcao",
@@ -63,7 +63,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/recepcao",
-      "note": "Há cadastro, busca, chegada e emissão de senha. Faltam conciliação de CPF/CNS e alerta de homônimos como fluxo próprio."
+      "note": "Cadastro, chegada, fila, senha e identificação de senhas anônimas vindas do totem, preservando o horário de chegada. Conciliação CPF/CNS e homônimos continuam pendentes."
     },
     {
       "id": "fila",
@@ -74,8 +74,8 @@
       "dispositivo": "desktop",
       "group": "UBS e assistência",
       "status": "parcial",
-      "route": "/senhas",
-      "note": "Há fila, senha, chamada, rechamada e sala de destino. Faltam gestão da ocupação das salas e ordenação por protocolo clínico validado."
+      "route": "/consultorio",
+      "note": "Chamada e rechamada pelo consultório, início separado da chamada, autoria e duração por profissional. Ocupação de salas e ordenação clínica validada continuam pendentes."
     },
     {
       "id": "tv",
@@ -110,8 +110,8 @@
       "dispositivo": "desktop",
       "group": "UBS e assistência",
       "status": "parcial",
-      "route": "/recepcao",
-      "note": "Há SOAP, rascunho, finalização, complementos, escuta e histórico demonstrativo. Faltam CIAP/CID, prescrição, pedidos de exames, documentos e assinatura aplicável."
+      "route": "/consultorio",
+      "note": "SOAP, rascunho, conclusão, complementos, histórico da prefeitura, chamada na TV e períodos de consulta. CIAP/CID, prescrição, pedidos e assinatura continuam pendentes."
     },
     {
       "id": "vacina",
@@ -133,9 +133,9 @@
       "quem": "Enfermagem e médicos",
       "dispositivo": "desktop",
       "group": "UBS e assistência",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam prontuário obstétrico estruturado, consultas, exames, curvas e pendências por gestante."
+      "status": "parcial",
+      "route": "/modulos/prenatal",
+      "note": "Acompanhamento por pessoa e encontros vinculados, edição com histórico e encerramento preservado. DPP é informada pelo profissional; protocolos, risco, exames e integração materna continuam pendentes."
     },
     {
       "id": "farmacia",
@@ -193,9 +193,9 @@
       "quem": "Secretaria e coordenação",
       "dispositivo": "desktop",
       "group": "Gestão municipal",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam regras versionadas de cofinanciamento, cálculo por equipe, evidências e busca ativa vinculada aos indicadores."
+      "status": "parcial",
+      "route": "/modulos/indicadores",
+      "note": "Indicadores locais com numerador, denominador, meta, período e evidências. Cálculo oficial de cofinanciamento e regras versionadas continuam pendentes."
     },
     {
       "id": "desempenho",
@@ -205,9 +205,9 @@
       "quem": "Secretaria e coordenação",
       "dispositivo": "desktop",
       "group": "Gestão municipal",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam comparação entre equipes e profissionais, evolução temporal e contexto dos indicadores."
+      "status": "parcial",
+      "route": "/desempenho",
+      "note": "Marcos de chegada e escuta, períodos de consulta por profissional, observação separada, filtros por chegada, visão por unidade e exportação. Registros antigos sem marcação não geram tempos inventados; telemetria remota continua pendente."
     },
     {
       "id": "prenatal-municipio",
@@ -217,9 +217,9 @@
       "quem": "Coordenação",
       "dispositivo": "desktop",
       "group": "Gestão municipal",
-      "status": "pendente",
-      "route": "",
-      "note": "Falta acompanhamento das gestantes da rede por risco, atraso, equipe e território."
+      "status": "parcial",
+      "route": "/paineis/prenatal-municipio",
+      "note": "Agregados de acompanhamentos abertos e encontros concluídos por unidade, sem prontuários para a gestão. Cobertura populacional, estratificação validada e dados externos continuam pendentes."
     },
     {
       "id": "vacinacao",
@@ -253,9 +253,9 @@
       "quem": "Coordenação da APS",
       "dispositivo": "desktop",
       "group": "Gestão municipal",
-      "status": "pendente",
-      "route": "/integracoes",
-      "note": "As dependências de integração estão mapeadas. Não há transmissão, retorno, rejeição ou conciliação com sistemas oficiais."
+      "status": "parcial",
+      "route": "/modulos/envio",
+      "note": "Preparação de competências e pendências com conferência e histórico local. Não gera arquivos oficiais nem transmite lotes ao SUS."
     },
     {
       "id": "relatorios",
@@ -266,8 +266,8 @@
       "dispositivo": "desktop",
       "group": "Gestão municipal",
       "status": "parcial",
-      "route": "/",
-      "note": "Há exportação de resumo agregado. Faltam RAG, PAS, relatórios de produção e documentos de prestação de contas revisados."
+      "route": "/paineis/relatorios",
+      "note": "Relatórios operacionais, exportação CSV por unidade e desempenho por período/profissional. Relatórios oficiais e produção faturável continuam pendentes."
     },
     {
       "id": "config",
@@ -278,8 +278,8 @@
       "dispositivo": "desktop",
       "group": "Gestão municipal",
       "status": "parcial",
-      "route": "/unidades",
-      "note": "Há diretório de redes e unidades e perfis demonstrativos. Faltam manutenção dos cadastros, profissionais, vínculos, políticas e configurações por serviço."
+      "route": "/modulos/ativacao",
+      "note": "Separação de sessões, conferência de vínculos, diretório e abertura de telas de totem/TV. Cadastro CNES, políticas autenticadas e configurações clínicas continuam pendentes."
     },
     {
       "id": "campanhas",
@@ -289,9 +289,9 @@
       "quem": "Secretaria",
       "dispositivo": "desktop",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam campanhas, público, agenda, acompanhamento de respostas e resultado da busca ativa."
+      "status": "parcial",
+      "route": "/modulos/campanhas",
+      "note": "Campanhas com público, objetivo, datas, responsável, rascunho e acompanhamento de situação. Seleção automática de pessoas e disparo real continuam pendentes."
     },
     {
       "id": "nova-campanha",
@@ -301,9 +301,9 @@
       "quem": "Secretaria",
       "dispositivo": "desktop",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam criação e revisão de público, mensagem, canal, envio e autorização de comunicação."
+      "status": "parcial",
+      "route": "/modulos/campanhas",
+      "note": "Formulário de campanha, validação de datas, revisão, edição com histórico e encerramento. Não contrata ou envia comunicações."
     },
     {
       "id": "lembretes",
@@ -313,9 +313,9 @@
       "quem": "Secretaria e recepção",
       "dispositivo": "desktop",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam automação de lembretes, confirmação, remarcação e liberação da vaga pela resposta."
+      "status": "parcial",
+      "route": "/modulos/lembretes",
+      "note": "Tarefas de contato com data, referência, responsável e registro do resultado. Sem disparos D-10/D-2 ou alteração automática da agenda."
     },
     {
       "id": "alertas",
@@ -325,9 +325,9 @@
       "quem": "Secretaria",
       "dispositivo": "desktop",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam regras automáticas, destinatários, horários, escalonamento e acompanhamento da resolução."
+      "status": "parcial",
+      "route": "/modulos/alertas",
+      "note": "Pendências operacionais com prioridade, responsável, prazo e resolução rastreada. Alertas clínicos e monitoramento automático continuam pendentes."
     },
     {
       "id": "auditoria",
@@ -337,9 +337,9 @@
       "quem": "Secretaria e administrador",
       "dispositivo": "desktop",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "/auditoria",
-      "note": "Existe histórico local de operações comuns. Não existe assistente de IA nem auditoria de suas perguntas, respostas, dados acessados e decisões."
+      "status": "parcial",
+      "route": "/modulos/auditoria-revisao",
+      "note": "Achados operacionais, responsáveis e revisão humana com histórico. Não executa auditoria clínica por IA nem expõe prontuários à administração."
     },
     {
       "id": "zap-gestao",
@@ -349,9 +349,9 @@
       "quem": "Gestores",
       "dispositivo": "celular",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "",
-      "note": "Falta canal de gestão com autenticação, acesso a indicadores e respostas rastreáveis. Não há WhatsApp conectado."
+      "status": "parcial",
+      "route": "/modulos/mensagens-gestao",
+      "note": "Rascunhos de comunicados, público, responsável e revisão registrada. Sem conexão ou envio por WhatsApp."
     },
     {
       "id": "zap-cidadao",
@@ -361,9 +361,9 @@
       "quem": "Cidadão",
       "dispositivo": "celular",
       "group": "IA e comunicação",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam canal do cidadão, confirmação, remarcação, orientação, representação e mensagens autorizadas."
+      "status": "parcial",
+      "route": "/modulos/cidadao",
+      "note": "Registro manual de solicitações, prazo e acompanhamento de resposta. Portal autenticado, representação e WhatsApp do cidadão continuam pendentes."
     },
     {
       "id": "campo-entrar",
@@ -373,9 +373,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam aplicativo do agente, vínculo com microárea e autenticação apropriada para uso em campo."
+      "status": "parcial",
+      "route": "/acesso",
+      "note": "Sessão própria de agente de saúde, restrita à unidade. Autenticação, identidade no dispositivo e sincronização segura continuam pendentes."
     },
     {
       "id": "campo-hoje",
@@ -385,9 +385,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam agenda de visitas, pendências por família e priorização validada para os agentes."
+      "status": "parcial",
+      "route": "/paineis/campo-hoje",
+      "note": "Visitas planejadas, agenda do dia e pendências por data. Priorização informada pela equipe; sem protocolo automático."
     },
     {
       "id": "campo-mapa",
@@ -397,9 +397,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam mapa territorial, domicílios, rota e funcionamento sem conexão em campo."
+      "status": "parcial",
+      "route": "/paineis/campo-mapa",
+      "note": "Quadro de domicílios por microárea com acesso ao planejamento de visitas. Não é mapa geográfico; GPS e otimização de rota continuam pendentes."
     },
     {
       "id": "campo-familia",
@@ -409,9 +409,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam cadastro domiciliar, composição familiar, microáreas e necessidades vinculadas aos moradores."
+      "status": "parcial",
+      "route": "/modulos/familias",
+      "note": "Domicílio, referência familiar, moradores declarados, microárea, agente e necessidades com histórico. Vinculação individual completa e cadastro nacional continuam pendentes."
     },
     {
       "id": "campo-visita",
@@ -421,9 +421,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam visita estruturada, registro por voz, armazenamento offline e conciliação ao sincronizar."
+      "status": "parcial",
+      "route": "/modulos/visitas",
+      "note": "Visita vinculada à família, data, objetivo, prioridade e resultado; ausência, retorno ao planejamento e conclusão preservada. Sem geolocalização ou envio remoto."
     },
     {
       "id": "campo-cadastro",
@@ -433,9 +433,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "O cadastro de pessoa não cobre domicílio, responsáveis, GPS, território e coleta offline do agente."
+      "status": "parcial",
+      "route": "/modulos/familias",
+      "note": "Formulário domiciliar com validação de moradores, edição rastreada e preservação após encerramento. Conciliação cadastral externa continua pendente."
     },
     {
       "id": "campo-envios",
@@ -445,9 +445,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam fila de sincronização, conflitos, reenvio e comprovante de recebimento dos registros de campo."
+      "status": "parcial",
+      "route": "/paineis/campo-envios",
+      "note": "Conferência de registros locais e últimas alterações. Sincronização remota explicitamente indisponível; não há fila protegida de envio entre dispositivos."
     },
     {
       "id": "campo-mes",
@@ -457,9 +457,9 @@
       "quem": "Agente comunitário",
       "dispositivo": "celular",
       "group": "Agentes de saúde",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam indicadores de visitas, famílias acompanhadas e resultados mensais do agente."
+      "status": "parcial",
+      "route": "/paineis/campo-mes",
+      "note": "Produção por período da data planejada: visitas registradas, ausências, famílias visitadas e agenda. Indicadores oficiais continuam pendentes."
     },
     {
       "id": "bo-resumo",
@@ -469,9 +469,9 @@
       "quem": "Equipe Pulso",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Falta gestão financeira da empresa Cuidelo, separada dos indicadores assistenciais."
+      "status": "parcial",
+      "route": "/paineis/bo-resumo",
+      "note": "Área exclusiva da operação Cuidelo, com carteira, contratos, valores declarados e implantação. Sem dados assistenciais ou conciliação financeira automática."
     },
     {
       "id": "bo-municipios",
@@ -481,9 +481,9 @@
       "quem": "Equipe Pulso",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Há redes fictícias na demonstração, mas falta o funil comercial, ficha do cliente e acompanhamento de contratos."
+      "status": "parcial",
+      "route": "/modulos/bo-municipios",
+      "note": "Carteira comercial com município, contato, responsável e unidades previstas. Não cria redes assistenciais nem libera acessos."
     },
     {
       "id": "bo-contratos",
@@ -493,9 +493,9 @@
       "quem": "Equipe Pulso",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam contratos, vigência, valores, serviços contratados e renovação."
+      "status": "parcial",
+      "route": "/modulos/bo-contratos",
+      "note": "Contratos vinculados ao cliente, vigência, valor e escopo, com alterações rastreadas. Sem assinatura, cobrança ou contratação real."
     },
     {
       "id": "bo-recebimentos",
@@ -505,9 +505,9 @@
       "quem": "Financeiro",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam faturamento da empresa, recebimentos, conciliação e inadimplência."
+      "status": "parcial",
+      "route": "/modulos/bo-recebimentos",
+      "note": "Faturas vinculadas ao contrato, vencimento, valores e recebimento anotado manualmente com justificativa. Sem conexão bancária ou pagamento."
     },
     {
       "id": "bo-implantacao",
@@ -517,9 +517,9 @@
       "quem": "Implantação",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Existe plano de desenvolvimento; falta o quadro operacional de implantação por cliente."
+      "status": "parcial",
+      "route": "/modulos/bo-implantacao",
+      "note": "Etapas vinculadas ao cliente, responsáveis, prazo, evidência e conclusão. Não libera operação clínica automaticamente."
     },
     {
       "id": "bo-uso",
@@ -529,9 +529,9 @@
       "quem": "Equipe Pulso",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam medição real de uso, custo de infraestrutura, IA, mensagens e margem por contrato."
+      "status": "parcial",
+      "route": "/paineis/bo-uso",
+      "note": "Acompanhamento da carteira, unidades previstas, etapas concluídas e chamados abertos. Telemetria de uso real e disponibilidade continuam pendentes."
     },
     {
       "id": "bo-suporte",
@@ -541,9 +541,9 @@
       "quem": "Suporte",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam chamados, responsabilidades, prazos, base de conhecimento e gestão do suporte."
+      "status": "parcial",
+      "route": "/modulos/bo-suporte",
+      "note": "Chamados vinculados ao cliente, prioridade, responsável, prazo e solução com histórico. Sem canal externo, SLA automatizado ou acesso a prontuários."
     },
     {
       "id": "bo-equipe",
@@ -553,9 +553,9 @@
       "quem": "Equipe Pulso",
       "dispositivo": "desktop",
       "group": "Gestão da empresa",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam equipe interna, papéis, segundo fator e acesso excepcional auditado da empresa."
+      "status": "parcial",
+      "route": "/modulos/bo-equipe",
+      "note": "Diretório da equipe comercial, implantação, suporte e desenvolvimento. Não cria credenciais ou muda permissões reais."
     }
   ]
 }

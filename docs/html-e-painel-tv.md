@@ -2,9 +2,9 @@
 
 ## Abrir sem instalar
 
-`pnpm build:html` gera `dist-standalone/Cuidelo.html` e `dist-standalone/Cuidelo-TV.html`. Cada arquivo contém aplicação, estilos, fontes e marca; pode ser aberto diretamente no navegador, sem instalar Node ou iniciar servidor. O primeiro abre a visão da rede. O segundo abre diretamente uma chamada de exemplo na TV. O guia da marca também é incorporado.
+`pnpm build:html` gera `dist-standalone/Cuidelo.html`, `dist-standalone/Cuidelo-TV.html` e `dist-standalone/Cuidelo-Totem.html`. Cada arquivo contém aplicação, estilos, fontes e marca; pode ser aberto diretamente no navegador, sem instalar Node ou iniciar servidor. O primeiro abre a visão da rede. O segundo abre diretamente uma chamada de exemplo na TV. O guia da marca também é incorporado.
 
-Os dois arquivos são demonstrações independentes. Para testar a ligação entre recepção e TV, use **um único arquivo**: abra Cuidelo.html, selecione uma unidade, entre em Painel de senhas e clique em Abrir TV desta unidade. Mantenha as duas janelas desse mesmo arquivo no mesmo navegador. A persistência e a comunicação local dependem do suporte do navegador a armazenamento de arquivos locais. Não existe sincronização entre computadores ou televisores diferentes.
+Os três arquivos são demonstrações independentes. O arquivo de totem abre a retirada de senhas da UBS Centro. Para testar a ligação entre recepção e TV, use **um único arquivo**: abra Cuidelo.html, entre na sessão da unidade, acesse Painel de senhas e clique em Abrir TV desta unidade. Mantenha as duas janelas desse mesmo arquivo no mesmo navegador. A persistência e a comunicação local dependem do suporte do navegador a armazenamento de arquivos locais. Não existe sincronização entre computadores ou televisores diferentes.
 
 ## Recepção e TV
 

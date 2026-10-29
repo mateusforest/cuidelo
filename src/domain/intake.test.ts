@@ -1,3 +1,4 @@
+import { demoContext } from './access';
 import { describe, expect, it } from 'vitest';
 import { createSeed } from '../data/seed';
 import { DemoRepository, storageKey } from '../data/demo-repository';
@@ -7,7 +8,7 @@ import { readDisplay } from './queue';
 import type { Context, IntakeContent, Command, Database } from './model';
 
 const now = new Date('2026-10-29T15:00:00Z');
-const context: Context = { organizationId: 'aurora', unitId: 'aurora-centro', role: 'nursing' };
+const context: Context = demoContext('aurora', 'aurora-centro', 'nursing');
 const content: IntakeContent = {
   complaint: 'Relato fictício de acolhimento.',
   observations: 'Informação para teste.',
@@ -24,6 +25,7 @@ class MemoryStorage {
   }
 }
 function completeNote(db: Database) {
+  applyCommand(db, context, { type: 'encounter.start', id: 'aurora-centro-e2' }, now);
   applyCommand(
     db,
     context,
@@ -57,7 +59,7 @@ describe('escuta, aferições e complementos', () => {
     expect(entries.map((r) => r.kind)).toEqual(['initial', 'reassessment']);
     expect(entries[1].vitals.weight).toBeUndefined();
     expect(entries[0].vitals.weight).toBe(68.125);
-    expect(entries[0].author).toContain('Enfermagem');
+    expect(entries[0].author).toContain('Enf. Camila');
     expect(db.audit.at(-1)?.action).toBe('Nova aferição registrada');
   });
   it('exige relato inicial e rejeita medidas inválidas ou pressão incompleta', () => {
@@ -102,7 +104,7 @@ describe('escuta, aferições e complementos', () => {
       now,
     );
     for (const role of ['reception', 'manager', 'regulation', 'pharmacy'] as const) {
-      const limited = { ...context, role };
+      const limited = demoContext(context.organizationId, context.unitId, role);
       expect(readSnapshot(db, limited).intakes).toEqual([]);
       expect(readSnapshot(db, limited).addenda).toEqual([]);
       expect(() => applyCommand(db, limited, record, now)).toThrow('não tem acesso');
@@ -115,14 +117,15 @@ describe('escuta, aferições e complementos', () => {
         ),
       ).toThrow('não tem acesso');
     }
-    expect(readSnapshot(db, { ...context, unitId: 'aurora-vila' }).intakes).toHaveLength(1);
     expect(
-      readSnapshot(db, { ...context, organizationId: 'horizonte', unitId: 'horizonte-centro' })
-        .intakes,
+      readSnapshot(db, demoContext('aurora', 'aurora-vila', context.role)).intakes,
+    ).toHaveLength(1);
+    expect(
+      readSnapshot(db, demoContext('horizonte', 'horizonte-centro', context.role)).intakes,
     ).toEqual([]);
-    expect(() => applyCommand(db, { ...context, unitId: 'aurora-vila' }, record, now)).toThrow(
-      'não encontrado',
-    );
+    expect(() =>
+      applyCommand(db, demoContext('aurora', 'aurora-vila', context.role), record, now),
+    ).toThrow('não encontrado');
     expect(() => applyCommand(db, { ...context, unitId: 'all' }, record, now)).toThrow();
     expect(JSON.stringify(readDisplay(db, 'aurora', context.unitId, now))).not.toContain(
       content.complaint,
@@ -174,9 +177,9 @@ describe('escuta, aferições e complementos', () => {
       text: 'Informação complementar',
       reason: 'Informação recebida depois',
     };
-    expect(() => applyCommand(db, { ...context, unitId: 'aurora-vila' }, cmd, now)).toThrow(
-      'não encontrado',
-    );
+    expect(() =>
+      applyCommand(db, demoContext('aurora', 'aurora-vila', context.role), cmd, now),
+    ).toThrow('não encontrado');
     expect(() => applyCommand(db, context, { ...cmd, reason: ' ' }, now)).toThrow('Motivo');
     applyCommand(db, context, cmd, now);
     expect(note).toEqual(original);
@@ -208,7 +211,7 @@ describe('escuta, aferições e complementos', () => {
     const saved = JSON.parse(storage.getItem(storageKey)!);
     for (const key of ['patients', 'appointments', 'notes', 'encounters', 'calls'])
       expect(saved[key]).toEqual(old[key]);
-    expect(saved.schemaVersion).toBe(4);
+    expect(saved.schemaVersion).toBe(5);
     const restored = new DemoRepository(storage, () => now);
     expect(restored.recoveryMessage).toBe('');
     expect(restored.snapshot(context).intakes).toHaveLength(1);

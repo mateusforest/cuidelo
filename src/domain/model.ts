@@ -1,5 +1,13 @@
 export type Role =
-  'manager' | 'reception' | 'clinical' | 'nursing' | 'pharmacy' | 'regulation' | 'admin';
+  | 'manager'
+  | 'reception'
+  | 'clinical'
+  | 'nursing'
+  | 'pharmacy'
+  | 'regulation'
+  | 'admin'
+  | 'acs'
+  | 'business';
 export type Permission =
   | 'patients.read'
   | 'patients.write'
@@ -11,9 +19,17 @@ export type Permission =
   | 'vaccination'
   | 'vaccine.stock'
   | 'regulation'
+  | 'network'
+  | 'performance'
+  | 'devices'
+  | 'territory'
+  | 'outreach'
+  | 'quality'
+  | 'business'
   | 'manage';
 export type UnitKind = 'ubs' | 'upa' | 'hospital';
 export interface Context {
+  sessionId: string;
   organizationId: string;
   unitId: string;
   role: Role;
@@ -54,6 +70,10 @@ export interface Appointment extends Scoped {
 }
 export type EncounterStatus = 'waiting' | 'in-care' | 'observation' | 'completed';
 export interface Encounter extends Scoped {
+  source?: 'reception' | 'kiosk';
+  intakeStartedAt?: string;
+  intakeCompletedAt?: string;
+  professionalId?: string;
   ticket: string;
   unitId: string;
   patientId: string;
@@ -292,7 +312,10 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
-  schemaVersion: 4;
+  schemaVersion: 5;
+  workRecords: WorkRecord[];
+  careSegments: CareSegment[];
+  kioskArrivals: KioskArrival[];
   vaccineLots: VaccineLot[];
   vaccineMovements: VaccineMovement[];
   immunizations: Immunization[];
@@ -316,6 +339,9 @@ export interface Database {
   addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  workRecords: WorkRecord[];
+  careSegments: CareSegment[];
+  kioskArrivals: KioskArrival[];
   vaccineLots: VaccineLot[];
   vaccineMovements: VaccineMovement[];
   immunizations: Immunization[];
@@ -358,6 +384,11 @@ export interface Summary {
 }
 export type Command =
   | VaccinationCommand
+  | { type: 'work.create'; module: string; values: Record<string, string> }
+  | { type: 'work.transition'; id: string; status: string; reason: string }
+  | { type: 'work.update'; id: string; values: Record<string, string>; reason: string }
+  | { type: 'intake.start'; encounterId: string }
+  | { type: 'kiosk.link'; arrivalId: string; patientId: string }
   | {
       type: 'intake.record';
       encounterId: string;
@@ -405,13 +436,15 @@ export type Command =
   | { type: 'referral.cancel'; id: string; reason: string };
 
 export const roleNames: Record<Role, string> = {
-  manager: 'Gestão municipal',
+  manager: 'Prefeitura · gestão da rede',
   reception: 'Recepção',
   clinical: 'Equipe médica',
   nursing: 'Enfermagem',
   pharmacy: 'Farmácia',
   regulation: 'Regulação',
-  admin: 'Administração',
+  admin: 'Administração da unidade',
+  acs: 'Agente de saúde',
+  business: 'Operação da Cuidelo',
 };
 export const unitKindNames: Record<UnitKind, string> = {
   ubs: 'Atenção primária',
@@ -419,9 +452,12 @@ export const unitKindNames: Record<UnitKind, string> = {
   hospital: 'Hospital',
 };
 export const permissions: Record<Role, readonly Permission[]> = {
-  manager: ['manage'],
+  manager: ['manage', 'network', 'performance', 'devices', 'outreach', 'quality'],
+  business: ['business'],
+  acs: ['patients.read', 'territory'],
   reception: ['patients.read', 'patients.write', 'schedule', 'queue'],
   clinical: [
+    'performance',
     'patients.read',
     'schedule',
     'queue',
@@ -432,6 +468,7 @@ export const permissions: Record<Role, readonly Permission[]> = {
     'vaccine.stock',
   ],
   nursing: [
+    'performance',
     'patients.read',
     'schedule',
     'queue',
@@ -443,13 +480,16 @@ export const permissions: Record<Role, readonly Permission[]> = {
   pharmacy: ['stock', 'vaccine.stock'],
   regulation: ['patients.read', 'regulation', 'schedule'],
   admin: [
-    'vaccination',
+    'territory',
+    'outreach',
+    'quality',
+    'performance',
+    'devices',
     'vaccine.stock',
     'patients.read',
     'patients.write',
     'schedule',
     'queue',
-    'clinical',
     'beds',
     'stock',
     'regulation',
@@ -460,3 +500,37 @@ export function can(role: Role, permission: Permission) {
   return permissions[role]?.includes(permission) ?? false;
 }
 export const emptySoap = (): Soap => ({ subjective: '', objective: '', assessment: '', plan: '' });
+
+export interface WorkRecord extends Scoped {
+  unitId: string;
+  module: string;
+  values: Record<string, string>;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  authorId: string;
+  history: {
+    at: string;
+    actorId: string;
+    action: string;
+    reason: string;
+    previousValues?: Record<string, string>;
+  }[];
+}
+
+export interface CareSegment extends Scoped {
+  unitId: string;
+  encounterId: string;
+  professionalId: string;
+  startedAt: string;
+  endedAt?: string;
+  endReason?: 'observation' | 'completed';
+}
+export interface KioskArrival extends Scoped {
+  unitId: string;
+  ticket: string;
+  service: string;
+  priority: 'routine' | 'priority';
+  arrivedAt: string;
+  encounterId?: string;
+}

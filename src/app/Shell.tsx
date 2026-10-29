@@ -26,12 +26,18 @@ import {
   Syringe,
   Package,
 } from 'lucide-react';
-import { can, roleNames, type Permission, type Role } from '../domain/model';
+import { can, roleNames, type Permission } from '../domain/model';
 import { useApp } from './context';
 import { Button, Modal, Notice } from '../components/ui';
 
 const navigation = [
-  { group: 'Acompanhar', items: [{ path: '/', label: 'Visão da rede', icon: LayoutDashboard }] },
+  {
+    group: 'Acompanhar',
+    items: [
+      { path: '/', label: 'Início', icon: LayoutDashboard },
+      { path: '/modulos', label: 'Módulos e acompanhamentos', icon: Workflow },
+    ],
+  },
   {
     group: 'Assistência',
     items: [
@@ -49,6 +55,7 @@ const navigation = [
         icon: HeartPulse,
         permission: 'clinical',
       },
+      { path: '/consultorio', label: 'Meu consultório', icon: Stethoscope, permission: 'clinical' },
       { path: '/senhas', label: 'Painel de senhas', icon: Monitor, permission: 'queue' },
       {
         path: '/pessoas',
@@ -75,7 +82,7 @@ const navigation = [
   {
     group: 'Gestão',
     items: [
-      { path: '/unidades', label: 'Unidades da rede', icon: Building2, permission: 'manage' },
+      { path: '/unidades', label: 'Unidades da rede', icon: Building2, permission: 'network' },
       { path: '/vacinacao-rede', label: 'Vacinação da rede', icon: Syringe, permission: 'manage' },
       {
         path: '/auditoria',
@@ -83,6 +90,13 @@ const navigation = [
         icon: ShieldCheck,
         permission: 'manage',
       },
+      {
+        path: '/desempenho',
+        label: 'Tempos e desempenho',
+        icon: LayoutDashboard,
+        permission: 'performance',
+      },
+      { path: '/dispositivos', label: 'Totem e TV', icon: Monitor, permission: 'devices' },
       { path: '/integracoes', label: 'Integrações', icon: Cable },
       { path: '/desenvolvimento', label: 'Plano de entrega', icon: Workflow },
       { path: '/comparacao', label: 'Comparar com Pulso', icon: SearchCheck },
@@ -162,7 +176,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.4</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.5</span>
       </div>
     </>
   );
@@ -227,55 +241,46 @@ export function Shell() {
         </header>
         <div className="contextbar">
           <div className="context-selects">
-            <label>
-              <span>Rede</span>
-              <select
-                aria-label="Rede ativa"
-                value={context.organizationId}
-                onChange={(e) => changeContext({ organizationId: e.target.value })}
-              >
-                {data.organizations.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.shortName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Unidade</span>
-              <select
-                aria-label="Unidade ativa"
-                value={context.unitId}
-                onChange={(e) => changeContext({ unitId: e.target.value })}
-              >
-                {can(context.role, 'manage') && <option value="all">Todas as unidades</option>}
-                {data.units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label className="profile-select">
-            <span className="profile-icon">
-              <Stethoscope size={19} />
-            </span>
             <div>
-              <span>Perfil de demonstração</span>
-              <select
-                aria-label="Perfil de demonstração"
-                value={context.role}
-                onChange={(e) => changeContext({ role: e.target.value as Role })}
-              >
-                {Object.entries(roleNames).map(([role, name]) => (
-                  <option key={role} value={role}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+              <small>
+                {context.role === 'business' ? 'Empresa' : 'Prefeitura / rede vinculada'}
+              </small>
+              <strong>{context.role === 'business' ? 'Cuidelo' : org?.shortName}</strong>
             </div>
-          </label>
+            {context.role === 'manager' ? (
+              <label>
+                <span>Unidades da sua rede</span>
+                <select
+                  aria-label="Unidade ativa"
+                  value={context.unitId}
+                  onChange={(e) => changeContext({ unitId: e.target.value })}
+                >
+                  <option value="all">Todas as unidades</option>
+                  {data.units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <div>
+                <small>
+                  {context.role === 'business' ? 'Área vinculada' : 'Unidade vinculada'}
+                </small>
+                <strong>
+                  {context.role === 'business'
+                    ? 'Operação comercial'
+                    : data.units.find((u) => u.id === context.unitId)?.name}
+                </strong>
+              </div>
+            )}
+          </div>
+          <div className="session-summary">
+            <Stethoscope size={19} />
+            <span>{roleNames[context.role]}</span>
+            <NavLink to="/acesso">Trocar sessão de demonstração</NavLink>
+          </div>
         </div>
         <div className="demo-strip">
           <span>Dados fictícios para desenvolvimento.</span>{' '}
@@ -294,7 +299,7 @@ export function Shell() {
               <NavLink to="/desenvolvimento">Abrir plano e redefinir</NavLink>
             </Notice>
           )}
-          <Outlet key={`${context.organizationId}:${context.unitId}:${context.role}`} />
+          <Outlet key={`${context.sessionId}:${context.unitId}`} />
         </main>
         <footer className="app-footer">
           <span>Cuidelo · Toda a rede. Mais perto das pessoas.</span>
@@ -315,8 +320,8 @@ export function Shell() {
               registros apresentados são fictícios.
             </p>
             <p>
-              Você pode testar os fluxos e alternar entre redes e perfis. O seletor de perfil
-              demonstra diferentes interfaces; ele ainda não é uma autenticação.
+              Você pode testar os fluxos e alternar entre redes e perfis. A entrada por sessões de
+              demonstração serve para testar os acessos; ela ainda não é uma autenticação.
             </p>
             <Notice>
               Esta versão não deve receber dados reais nem ser usada para atendimento. Não há

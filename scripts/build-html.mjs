@@ -93,6 +93,11 @@ const tv = html.replace(
   '<head><script>if(!location.hash)location.hash="/painel?rede=aurora&unidade=aurora-centro&previa=1";</script>',
 );
 await writeFile(path.join(out, 'Cuidelo-TV.html'), tv, 'utf8');
+const kiosk = html.replace(
+  '<head>',
+  '<head><script>if(!location.hash)location.hash="/totem?rede=aurora&unidade=aurora-centro";</script>',
+);
+await writeFile(path.join(out, 'Cuidelo-Totem.html'), kiosk, 'utf8');
 console.log(
-  `HTMLs independentes gerados: Cuidelo.html e Cuidelo-TV.html (${Math.round(Buffer.byteLength(html) / 1024)} KB cada).`,
+  `HTMLs independentes gerados: Cuidelo.html, Cuidelo-TV.html e Cuidelo-Totem.html (${Math.round(Buffer.byteLength(html) / 1024)} KB cada).`,
 );

@@ -15,11 +15,16 @@ import { DomainError } from './errors';
 import { makeQueueCall, nextTicket } from './queue';
 import { validateIntakeContent } from './intake';
 import { applyVaccinationCommand, vaccinationSummary } from './vaccination';
+import { identityFor } from './access';
+import { closeCare, ownCare, startCare } from './patient-flow';
+import { applyWorkCommand, visibleWorkRecords } from './work-modules';
 export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
 }
 export function assertContext(db: Database, c: Context) {
+  identityFor(db, c);
+  if (c.role === 'business') return;
   ensure(
     db.organizations.some((o) => o.id === c.organizationId),
     'Rede não encontrada.',
@@ -28,7 +33,7 @@ export function assertContext(db: Database, c: Context) {
   ensure(Object.hasOwn(roleNames, c.role), 'Perfil inválido.', 'permission');
   ensure(
     c.unitId === 'all'
-      ? can(c.role, 'manage')
+      ? can(c.role, 'network')
       : db.units.some((u) => u.id === c.unitId && u.organizationId === c.organizationId),
     'Selecione uma unidade desta rede.',
     'scope',
@@ -60,7 +65,11 @@ export function applyCommand(
   newId = () => crypto.randomUUID(),
 ): string {
   assertContext(db, c);
-  ensure(c.unitId !== 'all', 'Selecione uma unidade para registrar uma operação.', 'scope');
+  ensure(
+    c.unitId !== 'all' || command.type.startsWith('work.'),
+    'Selecione uma unidade para registrar uma operação.',
+    'scope',
+  );
   const at = now.toISOString(),
     today = dateKey(now);
   let entityId = '',
@@ -81,7 +90,12 @@ export function applyCommand(
       'conflict',
     );
     const e: Encounter = {
-      ticket: nextTicket(db.encounters, c.organizationId, c.unitId, today),
+      ticket: nextTicket(
+        [...db.encounters, ...db.kioskArrivals],
+        c.organizationId,
+        c.unitId,
+        today,
+      ),
       id: newId(),
       organizationId: c.organizationId,
       unitId: c.unitId,
@@ -95,6 +109,41 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'work.create':
+    case 'work.transition':
+    case 'work.update': {
+      ({ entityId, action } = applyWorkCommand(db, c, command, at, newId));
+      break;
+    }
+    case 'intake.start': {
+      permit(c, 'clinical');
+      const e = encounter(command.encounterId);
+      ensure(
+        e.status === 'waiting' &&
+          !e.intakeStartedAt &&
+          !db.intakes.some((r) => r.encounterId === e.id),
+        'A escuta já começou ou este atendimento saiu da espera.',
+        'conflict',
+      );
+      e.intakeStartedAt = at;
+      entityId = e.id;
+      action = 'Escuta iniciada';
+      break;
+    }
+    case 'kiosk.link': {
+      permit(c, 'queue');
+      const arrival = member(db.kioskArrivals, command.arrivalId, c);
+      ensure(!arrival.encounterId, 'Esta senha já foi identificada.', 'conflict');
+      const id = addEncounter(command.patientId, arrival.service, arrival.priority);
+      const e = encounter(id);
+      e.ticket = arrival.ticket;
+      e.arrivedAt = arrival.arrivedAt;
+      e.source = 'kiosk';
+      arrival.encounterId = id;
+      entityId = id;
+      action = 'Senha do totem identificada na recepção';
+      break;
+    }
     case 'vaccine.lot.create':
     case 'vaccine.stock':
     case 'vaccine.record':
@@ -129,6 +178,7 @@ export function applyCommand(
           'immutable',
         );
       const content = validateIntakeContent(command.content);
+      if (!previous.length && e.intakeStartedAt) e.intakeCompletedAt = at;
       if (!previous.length)
         ensure(content.complaint, 'Informe o motivo da procura na escuta inicial.');
       const correctionReason = original
@@ -144,7 +194,7 @@ export function applyCommand(
         ...content,
         kind: original ? 'correction' : previous.length ? 'reassessment' : 'initial',
         recordedAt: at,
-        author: `${roleNames[c.role]} · demonstração`,
+        author: identityFor(db, c).name,
         ...(original ? { correctionOf: original.id, correctionReason } : {}),
       });
       action = original
@@ -174,7 +224,7 @@ export function applyCommand(
         text,
         reason,
         recordedAt: at,
-        author: `${roleNames[c.role]} · demonstração`,
+        author: identityFor(db, c).name,
       });
       action = 'Complemento de registro concluído adicionado';
       break;
@@ -321,11 +371,7 @@ export function applyCommand(
     case 'encounter.start': {
       permit(c, 'clinical');
       const e = encounter(command.id);
-      ensure(
-        e.status === 'waiting' || e.status === 'observation',
-        'Este atendimento já foi iniciado ou concluído.',
-        'conflict',
-      );
+      startCare(db, c, e, at, newId);
       e.status = 'in-care';
       e.startedAt ??= at;
       entityId = e.id;
@@ -335,6 +381,7 @@ export function applyCommand(
     case 'encounter.observe': {
       permit(c, 'clinical');
       const e = encounter(command.id);
+      ownCare(e, c);
       ensure(
         db.units.find((u) => u.id === c.unitId)?.kind !== 'ubs',
         'Observação disponível nos serviços de urgência e hospital.',
@@ -345,6 +392,7 @@ export function applyCommand(
         'conflict',
       );
       e.status = 'observation';
+      closeCare(db, e.id, at, 'observation');
       entityId = e.id;
       action = 'Atendimento encaminhado à observação';
       break;
@@ -352,6 +400,7 @@ export function applyCommand(
     case 'note.save': {
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
+      ownCare(e, c);
       ensure(
         e.status === 'in-care' || e.status === 'observation',
         'O atendimento deve estar em andamento.',
@@ -385,7 +434,7 @@ export function applyCommand(
         Object.assign(existing, {
           soap,
           updatedAt: at,
-          author: `${roleNames[c.role]} · demonstração`,
+          author: identityFor(db, c).name,
         });
       else
         db.notes.push({
@@ -397,7 +446,7 @@ export function applyCommand(
           soap,
           status: 'draft',
           updatedAt: at,
-          author: `${roleNames[c.role]} · demonstração`,
+          author: identityFor(db, c).name,
         });
       action = 'Rascunho clínico salvo';
       break;
@@ -405,6 +454,7 @@ export function applyCommand(
     case 'note.finalize': {
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
+      ownCare(e, c);
       ensure(
         e.status === 'in-care' || e.status === 'observation',
         'Este atendimento não está em andamento.',
@@ -421,6 +471,7 @@ export function applyCommand(
       note.updatedAt = at;
       e.status = 'completed';
       e.completedAt = at;
+      closeCare(db, e.id, at, 'completed');
       entityId = note.id;
       action = 'Registro de demonstração concluído (sem assinatura digital)';
       break;
@@ -577,6 +628,8 @@ export function applyCommand(
       action = 'Encaminhamento cancelado';
       break;
     }
+    default:
+      throw new DomainError('Operação não reconhecida.');
   }
   db.revision += 1;
   db.audit.push({
@@ -584,7 +637,7 @@ export function applyCommand(
     organizationId: c.organizationId,
     unitId: c.unitId,
     at,
-    actor: `${roleNames[c.role]} · demo`,
+    actor: identityFor(db, c).name,
     action,
     entityId,
   });
@@ -599,8 +652,11 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     org(items).filter((x) => c.unitId === 'all' || x.unitId === c.unitId);
   const has = (p: Permission) => can(c.role, p);
   return structuredClone({
-    organizations: db.organizations,
+    organizations: db.organizations.filter((o) => o.id === c.organizationId),
+    workRecords: visibleWorkRecords(db, c),
     units: org(db.units),
+    careSegments: has('clinical') ? unit(db.careSegments) : [],
+    kioskArrivals: has('queue') ? unit(db.kioskArrivals).filter((a) => !a.encounterId) : [],
     patients: has('patients.read')
       ? org(db.patients).map((p) => ({ ...p, allergies: has('clinical') ? p.allergies : [] }))
       : [],

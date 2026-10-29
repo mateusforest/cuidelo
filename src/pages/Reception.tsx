@@ -4,6 +4,7 @@ import { Plus, Clock3, ArrowRight, HeartPulse, Monitor } from 'lucide-react';
 import { can, type EncounterStatus } from '../domain/model';
 import { clockTime, minutesWaiting } from '../domain/dates';
 import { useApp } from '../app/context';
+import { UnidentifiedArrivals } from './PatientFlow';
 import {
   ActionForm,
   Avatar,
@@ -88,6 +89,7 @@ export function Reception() {
         }
       />
       <UnitRequired>
+        <UnidentifiedArrivals />
         {urgent && (
           <Notice>
             <HeartPulse size={16} /> O fluxo de observação está disponível para demonstração. A

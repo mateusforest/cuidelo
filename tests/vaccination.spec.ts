@@ -1,3 +1,4 @@
+import { selectSession } from './session';
 import { test, expect, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -19,7 +20,7 @@ test('aprazamento → aplicação → estoque → prontuário → gestão sem no
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro', role: 'nursing' });
   await page.getByRole('link', { name: 'Sala de vacinação', exact: true }).click();
   await page.getByRole('button', { name: 'Aprazar retorno', exact: true }).click();
   await page
@@ -47,11 +48,11 @@ test('aprazamento → aplicação → estoque → prontuário → gestão sem no
   );
   await page.goto('/pessoas/aurora-p1');
   await expect(page.locator('.vaccine-history')).toContainText('Profissional de teste');
-  await page.getByLabel('Perfil de demonstração').selectOption('manager');
+  await selectSession(page, { role: 'manager' });
   await page.goto('/vacinacao-rede');
   await expect(page.getByRole('row').filter({ hasText: 'UBS Centro' })).toContainText('1');
   await expect(page.getByText('Ana Clara Martins', { exact: true })).toHaveCount(0);
-  await page.getByLabel('Perfil de demonstração').selectOption('pharmacy');
+  await selectSession(page, { role: 'pharmacy' });
   await page.goto('/vacinas-estoque');
   await expect(
     page.getByRole('heading', { name: 'Lotes de imunobiológicos', exact: true }),
@@ -65,7 +66,7 @@ test('aprazamento → aplicação → estoque → prontuário → gestão sem no
 
 test('anulação preserva caderneta, persiste e não estorna estoque', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro', role: 'nursing' });
   await page.goto('/vacinacao');
   await page.getByRole('button', { name: 'Registrar aplicação', exact: true }).click();
   await fillApplication(page);
@@ -91,8 +92,8 @@ test('anulação preserva caderneta, persiste e não estorna estoque', async ({ 
   await expect(page.getByRole('row').filter({ hasText: 'VAC-DEMO-01' }).first()).toContainText(
     '19 doses',
   );
-  await page.getByLabel('Rede ativa').selectOption('horizonte');
-  await page.getByLabel('Unidade ativa').selectOption('horizonte-centro');
+  await selectSession(page, { organizationId: 'horizonte' });
+  await selectSession(page, { unitId: 'horizonte-centro', role: 'nursing' });
   await page.goto('/vacinacao');
   await expect(page.locator('.vaccine-record')).toHaveCount(0);
 });
@@ -101,7 +102,7 @@ test('lote novo, recebimento, perda e quarentena persistem e bloqueiam aplicaç�
   page,
 }) => {
   await page.goto('/');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro', role: 'nursing' });
   await page.goto('/vacinas-estoque');
   await page.getByRole('button', { name: 'Cadastrar lote', exact: true }).click();
   await page.getByLabel('Imunobiológico', { exact: true }).fill('Imunizante Teste Novo');
@@ -141,7 +142,7 @@ test('HTML offline no celular protege formulário e mantém a caderneta', async 
   });
   const page = await context.newPage();
   await page.goto(pathToFileURL(resolve('dist-standalone/Cuidelo.html')).href);
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro', role: 'nursing' });
   await page.getByRole('button', { name: 'Abrir menu', exact: true }).click();
   await page.getByRole('link', { name: 'Sala de vacinação', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

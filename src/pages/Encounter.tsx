@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
 import { useApp } from '../app/context';
+import { DoctorCall } from './PatientFlow';
 import { emptySoap, type Soap } from '../domain/model';
 import { ageAt, clockTime, shortDate } from '../domain/dates';
 import { Avatar, Badge, Button, EmptyState, Field, Notice, Panel } from '../components/ui';
@@ -91,6 +92,7 @@ function EncounterEditor({ id }: { id?: string }) {
     }
   };
   const unit = data.units.find((u) => u.id === context.unitId);
+  const canEdit = encounter.professionalId === context.sessionId;
   const addendum = async () => {
     if (!note) return;
     setPending(true);
@@ -137,6 +139,14 @@ function EncounterEditor({ id }: { id?: string }) {
       </div>
       <div className="clinical-grid">
         <div>
+          <DoctorCall
+            encounter={encounter}
+            onChange={(previousRevision) =>
+              setBaseRevision((current) =>
+                current === previousRevision ? repository.getRevision() : current,
+              )
+            }
+          />
           <div className="clinical-record-links">
             <Link className="button secondary" to={`/escuta/${encounter.id}`}>
               Escuta e novas aferições
@@ -178,7 +188,7 @@ function EncounterEditor({ id }: { id?: string }) {
                 </Notice>
               </div>
             )}
-            <fieldset className="soap-fields" disabled={pending || finalized}>
+            <fieldset className="soap-fields" disabled={pending || finalized || !canEdit}>
               {(Object.keys(labels) as (keyof Soap)[]).map((key) => (
                 <Field key={key} label={labels[key].title} hint={labels[key].hint}>
                   <textarea
@@ -230,14 +240,14 @@ function EncounterEditor({ id }: { id?: string }) {
                 <div>
                   <Button
                     variant="secondary"
-                    disabled={pending || encounter.status === 'waiting'}
+                    disabled={pending || encounter.status === 'waiting' || !canEdit}
                     onClick={() => save()}
                   >
                     <Save size={16} />
                     Salvar rascunho
                   </Button>
                   <Button
-                    disabled={pending || encounter.status === 'waiting'}
+                    disabled={pending || encounter.status === 'waiting' || !canEdit}
                     onClick={() => save(true)}
                   >
                     <CheckCircle2 size={16} />
@@ -340,7 +350,7 @@ function EncounterEditor({ id }: { id?: string }) {
                 <p className="muted">Acompanhe a pessoa em observação na unidade.</p>
                 <Button
                   variant="secondary"
-                  disabled={pending || encounter.status !== 'in-care'}
+                  disabled={pending || encounter.status !== 'in-care' || !canEdit}
                   onClick={observe}
                 >
                   Encaminhar à observação

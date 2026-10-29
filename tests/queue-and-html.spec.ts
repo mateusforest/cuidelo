@@ -1,3 +1,4 @@
+import { selectSession } from './session';
 import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -6,7 +7,7 @@ test('recepção publica senha na TV da unidade e a rechamada não duplica o his
   page,
 }) => {
   await page.goto('/senhas');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   await page.getByLabel('Local para chamar a próxima senha').selectOption('consultorio-2');
   const pop = page.waitForEvent('popup');
   await page.getByRole('link', { name: 'Abrir TV desta unidade', exact: true }).click();
@@ -48,7 +49,7 @@ test('HTML abre diretamente, sem rede, com navegação, fontes, marca e guia inc
       .locator('.brand-lockup img')
       .evaluate((e: HTMLImageElement) => e.complete && e.naturalWidth > 0),
   ).toBe(true);
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   await page
     .getByRole('navigation', { name: 'Navegação principal' })
     .getByRole('link', { name: 'Painel de senhas', exact: true })
@@ -115,7 +116,7 @@ test('controle de senhas no celular mantém chamada acessível sem rolagem later
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/senhas');
-  await page.getByLabel('Unidade ativa').selectOption('aurora-centro');
+  await selectSession(page, { unitId: 'aurora-centro' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const call = page.getByRole('button', { name: /^Chamar senha A-/ }).first();
   await call.scrollIntoViewIfNeeded();

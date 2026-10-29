@@ -11,12 +11,13 @@ import type { Context, Snapshot, Summary } from '../domain/model';
 import type { CareRepository } from '../data/repository';
 import { browserRepository } from '../data/demo-repository';
 import { storageKey } from '../data/demo-repository';
-import { can } from '../domain/model';
+import { demoContext, demoIdentities, identityFor } from '../domain/access';
 
 type Toast = { id: number; message: string; kind: 'success' | 'error' };
 interface AppValue {
   context: Context;
   changeContext: (patch: Partial<Context>) => void;
+  chooseSession: (sessionId: string) => void;
   data: Snapshot;
   summary: Summary;
   repository: CareRepository;
@@ -31,11 +32,21 @@ const preferenceKey = 'cuidelo.demo.context.v1';
 export function AppProvider({ children }: { children: ReactNode }) {
   const [repository] = useState(browserRepository);
   const [context, setContext] = useState<Context>(() => {
-    const initial: Context = { organizationId: 'aurora', unitId: 'all', role: 'admin' };
+    const initial = demoContext('aurora', 'all', 'manager');
     try {
       const value = localStorage.getItem(preferenceKey);
       if (value) {
-        const parsed = JSON.parse(value) as Context;
+        let parsed = JSON.parse(value) as Context;
+        if (!parsed.sessionId)
+          parsed = demoContext(
+            parsed.organizationId,
+            parsed.unitId === 'all' && parsed.role !== 'manager'
+              ? repository
+                  .directory()
+                  .units.find((u) => u.organizationId === parsed.organizationId)!.id
+              : parsed.unitId,
+            parsed.role,
+          );
         repository.snapshot(parsed);
         return parsed;
       }
@@ -74,30 +85,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [toast]);
   const changeContext = (patch: Partial<Context>) => {
+    if (Object.keys(patch).some((key) => key !== 'unitId')) {
+      notify('Troque de sessão pela entrada de demonstração.', 'error');
+      return;
+    }
     if (
       dirty &&
       !window.confirm('Há um rascunho não salvo. Deseja descartá-lo e trocar de contexto?')
     )
       return;
     const next = { ...context, ...patch };
-    const units = repository
-      .directory()
-      .units.filter((u) => u.organizationId === next.organizationId);
-    if (patch.organizationId && patch.organizationId !== context.organizationId)
-      next.unitId = can(next.role, 'manage') ? 'all' : units[0].id;
-    if (next.unitId === 'all' && !can(next.role, 'manage')) next.unitId = units[0].id;
-    if (next.unitId !== 'all' && !units.some((u) => u.id === next.unitId))
-      next.unitId = units[0].id;
+    try {
+      identityFor(repository.directory(), next);
+      repository.snapshot(next);
+    } catch (e) {
+      notify((e as Error).message, 'error');
+      return;
+    }
     setDirty(false);
     setContext(next);
   };
   const notify = (message: string, kind: Toast['kind'] = 'success') =>
     setToast({ id: Date.now(), message, kind });
+  const chooseSession = (sessionId: string) => {
+    const identity = demoIdentities(repository.directory()).find((i) => i.sessionId === sessionId);
+    if (!identity) return;
+    setDirty(false);
+    setContext(identity);
+  };
   return (
     <AppContext
       value={{
         context,
         changeContext,
+        chooseSession,
         data,
         summary,
         repository,

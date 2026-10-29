@@ -25,7 +25,7 @@ export function IntakeQueue() {
   const [search, setSearch] = useState(''),
     [filter, setFilter] = useState('pending');
   const hasRecord = (id: string) => data.intakes.some((r) => r.encounterId === id);
-  const pending = data.encounters.filter((e) => e.status !== 'completed' && !hasRecord(e.id));
+  const pending = data.encounters.filter((e) => e.status === 'waiting' && !hasRecord(e.id));
   const recorded = data.encounters.filter((e) => e.status !== 'completed' && hasRecord(e.id));
   const list = data.encounters
     .filter((e) => {
@@ -313,7 +313,54 @@ function IntakeEditor({ id }: { id?: string }) {
               subtitle="Preencha somente o que foi informado ou aferido. Campos vazios permanecem sem registro."
             >
               <form ref={formRef} onSubmit={save}>
-                <fieldset className="intake-fields" disabled={busy}>
+                {!records.length &&
+                  !encounter.intakeStartedAt &&
+                  encounter.status === 'waiting' && (
+                    <div className="panel-body">
+                      <Notice>
+                        Registre o início quando a pessoa entrar na sala. O tempo da escuta termina
+                        ao salvar a primeira avaliação.
+                      </Notice>
+                      <Button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            await repository.execute(context, {
+                              type: 'intake.start',
+                              encounterId: encounter.id,
+                            });
+                            setBaseRevision(repository.getRevision());
+                            notify('Início da escuta registrado.');
+                          } catch (e) {
+                            setError((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        Iniciar escuta
+                      </Button>
+                    </div>
+                  )}
+                {encounter.intakeStartedAt && (
+                  <p className="panel-body">
+                    Escuta iniciada às {clockTime(encounter.intakeStartedAt)}
+                    {encounter.intakeCompletedAt
+                      ? ` · primeira avaliação salva às ${clockTime(encounter.intakeCompletedAt)}`
+                      : ' · em andamento'}
+                  </p>
+                )}
+                <fieldset
+                  className="intake-fields"
+                  disabled={
+                    busy ||
+                    (!records.length &&
+                      !encounter.intakeStartedAt &&
+                      encounter.status === 'waiting')
+                  }
+                >
                   {correcting && (
                     <>
                       <Notice>
