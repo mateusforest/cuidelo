@@ -121,6 +121,7 @@ test('estoque persiste o movimento e bloqueia uso de lote vencido', async ({ pag
   await page.getByLabel('Quantidade', { exact: true }).fill('5');
   await page.getByLabel('Motivo e referência').fill('Movimento fictício para verificação.');
   await page.getByRole('button', { name: 'Registrar movimento' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Paracetamol' })).toContainText('115');
   await page.reload();
   await expect(page.getByRole('row').filter({ hasText: 'Paracetamol' })).toContainText('115');
   await expect(
@@ -165,6 +166,7 @@ test('encaminhamento passa de solicitação a agendamento e cancelamento persist
   await row.getByRole('button', { name: 'Cancelar encaminhamento de Beatriz Fernandes' }).click();
   await page.getByLabel('Motivo', { exact: true }).fill('Cancelamento fictício de teste.');
   await page.getByRole('button', { name: 'Confirmar cancelamento' }).click();
+  await expect(row).toContainText('Cancelado');
   await page.reload();
   await expect(row).toContainText('Cancelado');
   await expect(row.getByRole('button', { name: 'Agendar', exact: true })).toHaveCount(0);
