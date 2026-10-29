@@ -1,6 +1,7 @@
 import type { Database, Organization, Unit } from '../domain/model';
 import { addDays, dateKey } from '../domain/dates';
 import { assignMissingTickets } from '../domain/queue';
+import { seedVaccineLots } from '../domain/vaccination';
 
 export function createSeed(now = new Date()): Database {
   const today = dateKey(now);
@@ -62,7 +63,12 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 3,
+    schemaVersion: 4,
+    vaccineLots: [],
+    vaccineMovements: [],
+    immunizations: [],
+    vaccineVoids: [],
+    vaccineRecalls: [],
     revision: 0,
     organizations,
     units,
@@ -214,5 +220,6 @@ export function createSeed(now = new Date()): Database {
     );
   }
   assignMissingTickets(db.encounters);
+  seedVaccineLots(db, now);
   return db;
 }

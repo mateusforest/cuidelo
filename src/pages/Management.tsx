@@ -305,9 +305,9 @@ const scope = [
   ],
   [
     'Vacinação e vigilância',
-    'Planejado',
-    'Escopo incluído na primeira versão pública.',
-    'Doses, aprazamento, imunobiológicos, notificações e campanhas.',
+    'Fluxo local',
+    'Caderneta, aplicações, lotes, perdas, quarentena, aprazamentos e produção por unidade.',
+    'Calendário validado, codificação oficial, rede de frio completa, notificações e integração SUS.',
   ],
   [
     'Território e ACS',

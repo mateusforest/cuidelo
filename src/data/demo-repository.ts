@@ -5,6 +5,7 @@ import { createSeed } from './seed';
 import type { CareRepository } from './repository';
 import { assignMissingTickets, readDisplay } from '../domain/queue';
 import { validateIntakeContent } from '../domain/intake';
+import { validateVaccinationDatabase } from '../domain/vaccination-validation';
 
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -24,6 +25,11 @@ const collections = [
   'calls',
   'intakes',
   'addenda',
+  'vaccineLots',
+  'vaccineMovements',
+  'immunizations',
+  'vaccineVoids',
+  'vaccineRecalls',
 ] as const;
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -40,9 +46,17 @@ function parseDatabase(value: string): Database {
     db.intakes = [];
     db.addenda = [];
   }
+  if (isRecord(db) && db.schemaVersion === 3) {
+    db.schemaVersion = 4;
+    db.vaccineLots = [];
+    db.vaccineMovements = [];
+    db.immunizations = [];
+    db.vaccineVoids = [];
+    db.vaccineRecalls = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 3 ||
+    db.schemaVersion !== 4 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -247,6 +261,7 @@ function parseDatabase(value: string): Database {
       )
     )
       throw new Error('Invalid addendum');
+  validateVaccinationDatabase(typed);
   return typed;
 }
 

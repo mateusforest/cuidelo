@@ -4,6 +4,7 @@ import { Plus, ArrowLeft, ArrowUpRight, FileText, ShieldCheck } from 'lucide-rea
 import { useApp } from '../app/context';
 import { can } from '../domain/model';
 import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
+import { VaccineHistory } from '../components/VaccineHistory';
 import { ageAt, dateKey, shortDate } from '../domain/dates';
 import {
   ActionForm,
@@ -298,6 +299,23 @@ export function PatientDetails() {
               ) : (
                 <p className="panel-empty">Nenhuma escuta ou aferição registrada.</p>
               )}
+            </Panel>
+          )}
+          {can(context.role, 'vaccination') && (
+            <Panel
+              title="Histórico de vacinação"
+              subtitle="Registros e comprovantes da pessoa na mesma rede."
+              action={
+                <Link className="text-link" to={`/vacinacao?pessoa=${p.id}`}>
+                  Abrir sala de vacinação
+                </Link>
+              }
+            >
+              <VaccineHistory
+                records={data.immunizations.filter((i) => i.patientId === p.id)}
+                voids={data.vaccineVoids}
+                unitNames={Object.fromEntries(data.units.map((u) => [u.id, u.name]))}
+              />
             </Panel>
           )}
           <Panel title="Próximos agendamentos nesta unidade">

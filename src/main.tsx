@@ -11,6 +11,9 @@ import { Agenda } from './pages/Agenda';
 import { Reception } from './pages/Reception';
 import { EncounterPage } from './pages/Encounter';
 import { IntakePage, IntakeQueue } from './pages/Intake';
+import { Vaccination } from './pages/Vaccination';
+import { VaccineStock } from './pages/VaccineStock';
+import { VaccinationManagement } from './pages/VaccinationManagement';
 import { Hospital } from './pages/Hospital';
 import { Pharmacy } from './pages/Pharmacy';
 import { Referrals } from './pages/Referrals';
@@ -66,6 +69,9 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
       { path: 'recepcao', element: protect('queue', <Reception />) },
       { path: 'escuta', element: protect('clinical', <IntakeQueue />) },
       { path: 'escuta/:id', element: protect('clinical', <IntakePage />) },
+      { path: 'vacinacao', element: protect('vaccination', <Vaccination />) },
+      { path: 'vacinas-estoque', element: protect('vaccine.stock', <VaccineStock />) },
+      { path: 'vacinacao-rede', element: protect('manage', <VaccinationManagement />) },
       { path: 'senhas', element: protect('queue', <QueueControl />) },
       { path: 'comparacao', element: <Coverage /> },
       { path: 'atendimento/:id', element: protect('clinical', <EncounterPage />) },

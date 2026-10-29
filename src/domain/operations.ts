@@ -14,6 +14,7 @@ import { addDays, dateKey, minuteOfDay, validDay, validTime } from './dates';
 import { DomainError } from './errors';
 import { makeQueueCall, nextTicket } from './queue';
 import { validateIntakeContent } from './intake';
+import { applyVaccinationCommand, vaccinationSummary } from './vaccination';
 export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
@@ -94,6 +95,15 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'vaccine.lot.create':
+    case 'vaccine.stock':
+    case 'vaccine.record':
+    case 'vaccine.void':
+    case 'vaccine.recall.create':
+    case 'vaccine.recall.update': {
+      ({ entityId, action } = applyVaccinationCommand(db, c, command, now, newId));
+      break;
+    }
     case 'intake.record': {
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
@@ -599,6 +609,11 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     notes: has('clinical') ? org(db.notes) : [],
     intakes: has('clinical') ? org(db.intakes) : [],
     addenda: has('clinical') ? org(db.addenda) : [],
+    vaccineLots: has('vaccine.stock') ? unit(db.vaccineLots) : [],
+    vaccineMovements: has('vaccine.stock') ? unit(db.vaccineMovements) : [],
+    immunizations: has('vaccination') ? org(db.immunizations) : [],
+    vaccineVoids: has('vaccination') ? org(db.vaccineVoids) : [],
+    vaccineRecalls: has('vaccination') ? org(db.vaccineRecalls) : [],
     beds: has('beds') || has('manage') ? unit(db.beds) : [],
     admissions: has('beds') ? unit(db.admissions) : [],
     lots: has('stock') ? unit(db.lots) : [],
@@ -619,6 +634,7 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
   const encounters = scoped(db.encounters),
     beds = scoped(db.beds);
   return {
+    vaccination: vaccinationSummary(db, c, now),
     today: encounters.filter((e) => dateKey(new Date(e.arrivedAt)) === today).length,
     waiting: encounters.filter((e) => e.status === 'waiting').length,
     inCare: encounters.filter((e) => e.status === 'in-care' || e.status === 'observation').length,

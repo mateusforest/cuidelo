@@ -52,3 +52,7 @@ A meta de 100 postos é um requisito de projeto, ainda não comprovado. Dimensio
 ## Escuta e complementos no formato 3
 
 Escutas e aferições são registros imutáveis na lógica dos comandos; correções criam sucessoras justificadas. Complementos referenciam notas finalizadas sem substituir o SOAP. A leitura clínica compartilha o histórico dentro da mesma organização, como as notas, e a escrita exige a unidade de origem. A projeção para recepção, gestão, regulação e farmácia exclui escutas e complementos. O DTO da TV continua restrito à chamada. Veja [escuta-e-registros.md](escuta-e-registros.md) para o percurso e os limites.
+
+## Vacinação no formato 4
+
+O domínio separa lotes de imunobiológicos, movimentos, registros de vacinação, anulações e aprazamentos. Uma aplicação local e sua baixa de uma dose são persistidas na mesma gravação. Transcrições não alteram estoque nem produção local. Anulação preserva o registro e não faz reposição automática. A projeção clínica acompanha a pessoa na rede; a visão de estoque não inclui a caderneta e a gestão recebe apenas agregados. A migração acrescenta coleções vazias nas bases existentes. Consulte [vacinacao.md](vacinacao.md) para limites e critérios restantes.

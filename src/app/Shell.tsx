@@ -23,6 +23,8 @@ import {
   Monitor,
   SearchCheck,
   HeartPulse,
+  Syringe,
+  Package,
 } from 'lucide-react';
 import { can, roleNames, type Permission, type Role } from '../domain/model';
 import { useApp } from './context';
@@ -40,6 +42,7 @@ const navigation = [
         permission: 'queue',
       },
       { path: '/agenda', label: 'Agenda', icon: CalendarDays, permission: 'schedule' },
+      { path: '/vacinacao', label: 'Sala de vacinação', icon: Syringe, permission: 'vaccination' },
       {
         path: '/escuta',
         label: 'Escuta e sinais vitais',
@@ -60,6 +63,12 @@ const navigation = [
     group: 'Operação',
     items: [
       { path: '/farmacia', label: 'Farmácia e estoque', icon: Pill, permission: 'stock' },
+      {
+        path: '/vacinas-estoque',
+        label: 'Lotes de vacinas',
+        icon: Package,
+        permission: 'vaccine.stock',
+      },
       { path: '/regulacao', label: 'Regulação', icon: ArrowRightLeft, permission: 'regulation' },
     ],
   },
@@ -67,6 +76,7 @@ const navigation = [
     group: 'Gestão',
     items: [
       { path: '/unidades', label: 'Unidades da rede', icon: Building2, permission: 'manage' },
+      { path: '/vacinacao-rede', label: 'Vacinação da rede', icon: Syringe, permission: 'manage' },
       {
         path: '/auditoria',
         label: 'Histórico de operações',
@@ -152,7 +162,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.3</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.4</span>
       </div>
     </>
   );

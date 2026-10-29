@@ -8,6 +8,8 @@ export type Permission =
   | 'clinical'
   | 'beds'
   | 'stock'
+  | 'vaccination'
+  | 'vaccine.stock'
   | 'regulation'
   | 'manage';
 export type UnitKind = 'ubs' | 'upa' | 'hospital';
@@ -171,8 +173,131 @@ export interface QueueCall extends Scoped {
   roomId: string;
   calledAt: string;
 }
+export interface VaccineLot extends Scoped {
+  unitId: string;
+  immunobiological: string;
+  manufacturer: string;
+  batch: string;
+  expiresAt: string;
+  quantity: number;
+  status: 'available' | 'quarantine';
+}
+export interface VaccineMovement extends Scoped {
+  unitId: string;
+  lotId: string;
+  kind: 'receipt' | 'application' | 'loss' | 'quarantine' | 'release';
+  quantity: number;
+  reason: string;
+  recordedAt: string;
+  author: string;
+  applicationId?: string;
+}
+export interface Immunization extends Scoped {
+  unitId: string;
+  patientId: string;
+  source: 'administered' | 'transcribed';
+  immunobiological: string;
+  dose: string;
+  date: string;
+  lotId?: string;
+  batch: string;
+  manufacturer: string;
+  route: string;
+  site: string;
+  strategy: string;
+  group: string;
+  professional: string;
+  institution: string;
+  observations: string;
+  recordedAt: string;
+  author: string;
+  recallId?: string;
+}
+export interface VaccineVoid extends Scoped {
+  unitId: string;
+  applicationId: string;
+  reason: string;
+  recordedAt: string;
+  author: string;
+}
+export interface VaccineRecall extends Scoped {
+  unitId: string;
+  patientId: string;
+  immunobiological: string;
+  dose: string;
+  date: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  applicationId?: string;
+  events: { action: string; date: string; reason: string; recordedAt: string; author: string }[];
+}
+export type VaccinationCommand =
+  | {
+      type: 'vaccine.lot.create';
+      immunobiological: string;
+      manufacturer: string;
+      batch: string;
+      expiresAt: string;
+      quantity: number;
+    }
+  | {
+      type: 'vaccine.stock';
+      lotId: string;
+      kind: 'receipt' | 'loss' | 'quarantine' | 'release';
+      quantity: number;
+      reason: string;
+    }
+  | {
+      type: 'vaccine.record';
+      patientId: string;
+      source: Immunization['source'];
+      lotId?: string;
+      immunobiological: string;
+      batch: string;
+      manufacturer: string;
+      dose: string;
+      date: string;
+      route: string;
+      site: string;
+      strategy: string;
+      group: string;
+      professional: string;
+      institution: string;
+      observations: string;
+      recallId?: string;
+    }
+  | { type: 'vaccine.void'; applicationId: string; reason: string }
+  | {
+      type: 'vaccine.recall.create';
+      patientId: string;
+      immunobiological: string;
+      dose: string;
+      date: string;
+      reason: string;
+    }
+  | {
+      type: 'vaccine.recall.update';
+      id: string;
+      action: 'reschedule' | 'cancel';
+      date: string;
+      reason: string;
+    };
+export interface VaccinationSummary {
+  month: string;
+  applied: number;
+  transcribed: number;
+  voided: number;
+  overdue: number;
+  pending: number;
+  byUnit: { unitId: string; applied: number; pending: number; overdue: number }[];
+  byImmunobiological: { name: string; applied: number }[];
+}
 export interface Database {
-  schemaVersion: 3;
+  schemaVersion: 4;
+  vaccineLots: VaccineLot[];
+  vaccineMovements: VaccineMovement[];
+  immunizations: Immunization[];
+  vaccineVoids: VaccineVoid[];
+  vaccineRecalls: VaccineRecall[];
   revision: number;
   organizations: Organization[];
   units: Unit[];
@@ -191,6 +316,11 @@ export interface Database {
   addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  vaccineLots: VaccineLot[];
+  vaccineMovements: VaccineMovement[];
+  immunizations: Immunization[];
+  vaccineVoids: VaccineVoid[];
+  vaccineRecalls: VaccineRecall[];
   intakes: IntakeRecord[];
   addenda: NoteAddendum[];
   organizations: Organization[];
@@ -215,6 +345,7 @@ export interface UnitSummary {
   totalBeds: number;
 }
 export interface Summary {
+  vaccination: VaccinationSummary;
   today: number;
   waiting: number;
   inCare: number;
@@ -226,6 +357,7 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | VaccinationCommand
   | {
       type: 'intake.record';
       encounterId: string;
@@ -289,11 +421,30 @@ export const unitKindNames: Record<UnitKind, string> = {
 export const permissions: Record<Role, readonly Permission[]> = {
   manager: ['manage'],
   reception: ['patients.read', 'patients.write', 'schedule', 'queue'],
-  clinical: ['patients.read', 'schedule', 'queue', 'clinical', 'beds', 'regulation'],
-  nursing: ['patients.read', 'schedule', 'queue', 'clinical', 'beds'],
-  pharmacy: ['stock'],
+  clinical: [
+    'patients.read',
+    'schedule',
+    'queue',
+    'clinical',
+    'beds',
+    'regulation',
+    'vaccination',
+    'vaccine.stock',
+  ],
+  nursing: [
+    'patients.read',
+    'schedule',
+    'queue',
+    'clinical',
+    'beds',
+    'vaccination',
+    'vaccine.stock',
+  ],
+  pharmacy: ['stock', 'vaccine.stock'],
   regulation: ['patients.read', 'regulation', 'schedule'],
   admin: [
+    'vaccination',
+    'vaccine.stock',
     'patients.read',
     'patients.write',
     'schedule',

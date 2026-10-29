@@ -211,11 +211,13 @@ export function ActionForm({
   children,
   onSubmit,
   onClose,
+  onCancel,
   submitLabel = 'Salvar',
 }: {
   children: ReactNode;
   onSubmit: (data: FormData) => Promise<void>;
   onClose: () => void;
+  onCancel?: () => void;
   submitLabel?: string;
 }) {
   const [pending, setPending] = useState(false);
@@ -249,7 +251,7 @@ export function ActionForm({
         </div>
       )}
       <div className="modal-actions">
-        <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+        <Button type="button" variant="secondary" onClick={onCancel ?? onClose} disabled={pending}>
           Cancelar
         </Button>
         <Button type="submit" disabled={pending}>

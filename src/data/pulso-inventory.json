@@ -121,9 +121,9 @@
       "quem": "Técnicos de enfermagem",
       "dispositivo": "desktop",
       "group": "UBS e assistência",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam caderneta, aplicação por pessoa e lote, aprazamento, perdas, rede de frio e integração oficial."
+      "status": "parcial",
+      "route": "/vacinacao",
+      "note": "Há caderneta, aplicação com baixa de dose por lote, transcrição, anulação preservada, aprazamentos, perdas e quarentena. Faltam calendário validado, registro tardio e correções com reconciliação, rede de frio completa e integração oficial."
     },
     {
       "id": "prenatal",
@@ -229,9 +229,9 @@
       "quem": "Coordenação",
       "dispositivo": "desktop",
       "group": "Gestão municipal",
-      "status": "pendente",
-      "route": "",
-      "note": "Faltam cobertura por dose, faixa etária, bairro e unidade, com denominadores e origem identificados."
+      "status": "parcial",
+      "route": "/vacinacao-rede",
+      "note": "Há produção válida por unidade e imunobiológico, retornos pendentes e atrasados, com transcrições separadas. Faltam cobertura populacional, denominadores por faixa e território, metas e dados oficiais conciliados."
     },
     {
       "id": "regulacao",
