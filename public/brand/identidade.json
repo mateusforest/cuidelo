@@ -1,0 +1,27 @@
+{
+  "nome": "Cuidelo",
+  "status": "Identidade visual aprovada pelo fundador",
+  "versao": "1.0",
+  "data": "2026-10-29",
+  "assinatura": "Toda a rede. Mais perto das pessoas.",
+  "conceito": "Cuidado + elo. Dois elos abertos representam a continuidade entre pessoas, equipes e serviços.",
+  "cores": {
+    "petroleo": "#153D41",
+    "verde_profundo": "#126D65",
+    "menta": "#A8DBC9",
+    "nevoa": "#F5F8F5"
+  },
+  "tipografia": {
+    "marca_e_titulos": "Manrope",
+    "interface_referencia": "IBM Plex Sans",
+    "interface_embutida": "Cuidelo Interface, subconjunto derivado e renomeado sob SIL OFL 1.1"
+  },
+  "arquivos": {
+    "marca": "marca.svg",
+    "negativa": "marca-negativa.svg",
+    "monocromatica": "marca-monocromatica.svg",
+    "simbolo": "simbolo.svg",
+    "simbolo_negativo": "simbolo-negativo.svg"
+  },
+  "observacao": "A aprovação visual não equivale a registro de marca. Anterioridade no INPI e disponibilidade de domínio não foram confirmadas."
+}

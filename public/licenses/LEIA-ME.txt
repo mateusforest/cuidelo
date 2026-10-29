@@ -1,0 +1,12 @@
+Cuidelo - fontes e créditos
+
+Manrope: autoria e licença SIL Open Font License 1.1 no arquivo Manrope-OFL.txt.
+Origem: https://github.com/google/fonts/tree/main/ofl/manrope
+Os arquivos WOFF2 foram instanciados nos pesos 500 e 650 e reduzidos aos caracteres usados no projeto. O logotipo usa contornos derivados de Manrope.
+
+IBM Plex Sans: Copyright © 2017 IBM Corp., nome reservado "Plex".
+Licença SIL Open Font License 1.1 no arquivo IBM-Plex-Sans-OFL.txt.
+Origem: https://github.com/IBM/plex
+Os arquivos WOFF2 foram instanciados nos pesos 400 e 600 e reduzidos aos caracteres usados no projeto. A versão modificada foi renomeada para Cuidelo Interface, preservando os créditos e a licença. Não se declara endosso dos autores originais.
+
+As licenças das fontes não concedem licença sobre o nome ou o símbolo da marca Cuidelo. O projeto de aplicação não recebeu uma licença de distribuição pública nesta entrega.

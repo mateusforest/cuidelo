@@ -1,0 +1,48 @@
+@font-face {
+  font-family: Manrope;
+  src: url('/fonts/Manrope-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: Manrope;
+  src: url('/fonts/Manrope-650.woff2') format('woff2');
+  font-weight: 650;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cuidelo Interface';
+  src: url('/fonts/CuideloInterface-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cuidelo Interface';
+  src: url('/fonts/CuideloInterface-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+:root {
+  --brand-ink: #153d41;
+  --brand-primary: #126d65;
+  --brand-soft: #a8dbc9;
+  --brand-surface: #f5f8f5;
+  --surface: #fff;
+  --surface-subtle: #f0f5f2;
+  --text: #233b39;
+  --muted: #60736f;
+  --border: #dfe8e2;
+  --green-surface: #e8f4ec;
+  --green-text: #245e42;
+  --amber-surface: #fff4db;
+  --amber-text: #7d5510;
+  --red-surface: #fcebe9;
+  --red-text: #983e34;
+  --blue-surface: #eaf1f7;
+  --blue-text: #345e7d;
+  --radius: 12px;
+  --shadow: 0 6px 24px #153d4107;
+  --font-body: 'Cuidelo Interface', Arial, sans-serif;
+  --font-heading: Manrope, Arial, sans-serif;
+  color-scheme: light;
+}

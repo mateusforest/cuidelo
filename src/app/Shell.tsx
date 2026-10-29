@@ -1,0 +1,347 @@
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate, useBlocker } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Users,
+  ClipboardList,
+  BedDouble,
+  Pill,
+  ArrowRightLeft,
+  Building2,
+  ShieldCheck,
+  Workflow,
+  Cable,
+  HelpCircle,
+  Menu,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Search,
+  ChevronRight,
+  Stethoscope,
+} from 'lucide-react';
+import { can, roleNames, type Permission, type Role } from '../domain/model';
+import { useApp } from './context';
+import { Button, Modal, Notice } from '../components/ui';
+
+const navigation = [
+  { group: 'Acompanhar', items: [{ path: '/', label: 'Visão da rede', icon: LayoutDashboard }] },
+  {
+    group: 'Assistência',
+    items: [
+      {
+        path: '/recepcao',
+        label: 'Recepção e atendimento',
+        icon: ClipboardList,
+        permission: 'queue',
+      },
+      { path: '/agenda', label: 'Agenda', icon: CalendarDays, permission: 'schedule' },
+      {
+        path: '/pessoas',
+        label: 'Pessoas e prontuários',
+        icon: Users,
+        permission: 'patients.read',
+      },
+      { path: '/hospital', label: 'Internação e leitos', icon: BedDouble, permission: 'beds' },
+    ],
+  },
+  {
+    group: 'Operação',
+    items: [
+      { path: '/farmacia', label: 'Farmácia e estoque', icon: Pill, permission: 'stock' },
+      { path: '/regulacao', label: 'Regulação', icon: ArrowRightLeft, permission: 'regulation' },
+    ],
+  },
+  {
+    group: 'Gestão',
+    items: [
+      { path: '/unidades', label: 'Unidades da rede', icon: Building2, permission: 'manage' },
+      {
+        path: '/auditoria',
+        label: 'Histórico de operações',
+        icon: ShieldCheck,
+        permission: 'manage',
+      },
+      { path: '/integracoes', label: 'Integrações', icon: Cable },
+      { path: '/desenvolvimento', label: 'Plano de entrega', icon: Workflow },
+    ],
+  },
+];
+export function Shell() {
+  const { context, changeContext, data, repository, toast, dirty, setDirty } = useApp();
+  const location = useLocation(),
+    navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false),
+    [help, setHelp] = useState(false),
+    [search, setSearch] = useState('');
+  const blocker = useBlocker(dirty);
+  useEffect(() => setMobileOpen(false), [location.pathname]);
+  useEffect(() => {
+    const fn = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', fn);
+    return () => window.removeEventListener('beforeunload', fn);
+  }, [dirty]);
+  const current =
+    navigation.flatMap((g) => g.items).find((i) => i.path === location.pathname)?.label ??
+    'Prontuário';
+  const org = data.organizations.find((o) => o.id === context.organizationId);
+  const navContent = (
+    <>
+      <a
+        className="brand-lockup"
+        href="/"
+        onClick={(e) => {
+          e.preventDefault();
+          navigate('/');
+        }}
+        aria-label="Cuidelo, início"
+      >
+        <img src="/brand/marca.svg" alt="Cuidelo" />
+        <span>SAÚDE CONECTADA</span>
+      </a>
+      <div className="sidebar-divider" />
+      <nav aria-label="Navegação principal">
+        {navigation.map((group) => {
+          const items = group.items.filter(
+            (item) => !('permission' in item) || can(context.role, item.permission as Permission),
+          );
+          return (
+            items.length > 0 && (
+              <div className="nav-group" key={group.group}>
+                <p>{group.group}</p>
+                {items.map(({ path, label, icon: Icon }) => (
+                  <NavLink
+                    key={path}
+                    to={path}
+                    end={path === '/'}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  >
+                    <Icon size={19} />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )
+          );
+        })}
+      </nav>
+      <div className="sidebar-bottom">
+        <div className="brand-promise">
+          Toda a rede.
+          <br />
+          <strong>Mais perto das pessoas.</strong>
+        </div>
+        <button className="nav-item help" onClick={() => setHelp(true)}>
+          <HelpCircle size={18} />
+          Sobre este ambiente
+        </button>
+        <span className="version-label">Cuidelo · desenvolvimento 0.1</span>
+      </div>
+    </>
+  );
+  return (
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Ir para o conteúdo
+      </a>
+      <aside className="sidebar">{navContent}</aside>
+      {mobileOpen && (
+        <div className="mobile-overlay" onClick={() => setMobileOpen(false)}>
+          <aside className="mobile-sidebar" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="icon-button mobile-close"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fechar menu"
+            >
+              <X size={20} />
+            </button>
+            {navContent}
+          </aside>
+        </div>
+      )}
+      <div className="app-main">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <button
+              className="icon-button menu-button"
+              aria-label="Abrir menu"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={21} />
+            </button>
+            <span>{org?.shortName}</span>
+            <ChevronRight size={14} />
+            <strong>{current}</strong>
+          </div>
+          <div className="topbar-right">
+            {can(context.role, 'patients.read') && (
+              <form
+                className="global-search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  navigate(`/pessoas?q=${encodeURIComponent(search)}`);
+                  setSearch('');
+                }}
+              >
+                <Search size={17} />
+                <input
+                  aria-label="Buscar pessoa na rede"
+                  placeholder="Buscar pessoa na rede"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </form>
+            )}
+            <span className="environment-tag">
+              <span />
+              Demonstração
+            </span>
+          </div>
+        </header>
+        <div className="contextbar">
+          <div className="context-selects">
+            <label>
+              <span>Rede</span>
+              <select
+                aria-label="Rede ativa"
+                value={context.organizationId}
+                onChange={(e) => changeContext({ organizationId: e.target.value })}
+              >
+                {data.organizations.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.shortName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Unidade</span>
+              <select
+                aria-label="Unidade ativa"
+                value={context.unitId}
+                onChange={(e) => changeContext({ unitId: e.target.value })}
+              >
+                {can(context.role, 'manage') && <option value="all">Todas as unidades</option>}
+                {data.units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="profile-select">
+            <span className="profile-icon">
+              <Stethoscope size={19} />
+            </span>
+            <div>
+              <span>Perfil de demonstração</span>
+              <select
+                aria-label="Perfil de demonstração"
+                value={context.role}
+                onChange={(e) => changeContext({ role: e.target.value as Role })}
+              >
+                {Object.entries(roleNames).map(([role, name]) => (
+                  <option key={role} value={role}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </label>
+        </div>
+        <div className="demo-strip">
+          <span>Dados fictícios para desenvolvimento.</span>{' '}
+          {repository.persistent
+            ? 'Alterações salvas somente neste navegador.'
+            : 'Sessão temporária; alterações não persistem ao fechar.'}
+          <button onClick={() => setHelp(true)}>
+            Entender o ambiente
+            <ChevronRight size={13} />
+          </button>
+        </div>
+        <main id="main-content" className="main-content">
+          {repository.recoveryMessage && (
+            <Notice tone="amber">
+              {repository.recoveryMessage}{' '}
+              <NavLink to="/desenvolvimento">Abrir plano e redefinir</NavLink>
+            </Notice>
+          )}
+          <Outlet key={`${context.organizationId}:${context.unitId}:${context.role}`} />
+        </main>
+        <footer className="app-footer">
+          <span>Cuidelo · Toda a rede. Mais perto das pessoas.</span>
+          <span>Uso demonstrativo · sem integrações clínicas ativas</span>
+        </footer>
+      </div>
+      {toast && (
+        <div className={`toast ${toast.kind}`} role={toast.kind === 'error' ? 'alert' : 'status'}>
+          {toast.kind === 'success' ? <CheckCircle2 size={19} /> : <AlertCircle size={19} />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+      {help && (
+        <Modal title="Um ambiente para construir juntos" onClose={() => setHelp(false)}>
+          <div className="modal-body">
+            <p>
+              Esta é a primeira base de desenvolvimento da Cuidelo. Os nomes, pessoas, unidades e
+              registros apresentados são fictícios.
+            </p>
+            <p>
+              Você pode testar os fluxos e alternar entre redes e perfis. O seletor de perfil
+              demonstra diferentes interfaces; ele ainda não é uma autenticação.
+            </p>
+            <Notice>
+              Esta versão não deve receber dados reais nem ser usada para atendimento. Não há
+              conexão com Supabase, SUS, assinatura digital ou sistemas hospitalares.
+            </Notice>
+            <p>
+              O escopo de lançamento continua abrangendo toda a rede pública. O plano de entrega
+              acompanha o que já foi construído e o que ainda precisa de implementação e validação.
+            </p>
+          </div>
+          <div className="modal-actions">
+            <Button
+              onClick={() => {
+                setHelp(false);
+                navigate('/desenvolvimento');
+              }}
+            >
+              Ver plano de entrega
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {blocker.state === 'blocked' && (
+        <Modal title="Salvar seu rascunho primeiro?" onClose={() => blocker.reset()}>
+          <div className="modal-body">
+            <p>
+              Há alterações ainda não salvas neste atendimento. Volte para salvar ou descarte o
+              rascunho antes de sair.
+            </p>
+          </div>
+          <div className="modal-actions">
+            <Button variant="secondary" onClick={() => blocker.reset()}>
+              Continuar editando
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setDirty(false);
+                blocker.proceed();
+              }}
+            >
+              Descartar e sair
+            </Button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

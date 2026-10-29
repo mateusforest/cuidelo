@@ -1,0 +1,10 @@
+node_modules
+dist
+playwright-report
+test-results
+coverage
+public/fonts
+public/licenses
+public/brand/*.svg
+docs/plano-completo.md
+pnpm-lock.yaml

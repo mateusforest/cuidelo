@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cuidelo · Identidade visual</title>
+    <style>
+      @font-face {
+        font-family: Manrope;
+        src: url('../fonts/Manrope-500.woff2');
+        font-weight: 500;
+      }
+      @font-face {
+        font-family: Manrope;
+        src: url('../fonts/Manrope-650.woff2');
+        font-weight: 650;
+      }
+      @font-face {
+        font-family: Interface;
+        src: url('../fonts/CuideloInterface-400.woff2');
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: Interface;
+        src: url('../fonts/CuideloInterface-600.woff2');
+        font-weight: 600;
+      }
+      :root {
+        --ink: #153d41;
+        --green: #126d65;
+        --mint: #a8dbc9;
+        --mist: #f5f8f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #e7eeea;
+        color: var(--ink);
+        font-family: Interface, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .toolbar {
+        max-width: 794px;
+        margin: 22px auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+      }
+      .toolbar a,
+      .toolbar button {
+        color: var(--ink);
+        background: #fff;
+        border: 1px solid #cedbd3;
+        border-radius: 9px;
+        padding: 9px 15px;
+        font: 600 13px Interface;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .page {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 18mm;
+        position: relative;
+        background: var(--mist);
+        margin: 20px auto;
+        box-shadow: 0 10px 50px #153d4110;
+        overflow: hidden;
+      }
+      .kicker {
+        font-size: 11px;
+        letter-spacing: 2px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--green);
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: Manrope, Arial, sans-serif;
+        letter-spacing: -0.045em;
+        line-height: 1.17;
+        font-weight: 650;
+      }
+      h1 {
+        font-size: 48px;
+        max-width: 570px;
+        margin: 31px 0 23px;
+      }
+      h2 {
+        font-size: 35px;
+        margin: 14px 0 20px;
+      }
+      h3 {
+        font-size: 19px;
+        margin: 0 0 9px;
+      }
+      p {
+        margin: 0 0 14px;
+      }
+      .lead {
+        font-size: 17px;
+        max-width: 535px;
+        color: #48625c;
+        line-height: 1.6;
+      }
+      .hero {
+        height: 280px;
+        background: #fff;
+        border: 1px solid #dce7df;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 34px 0 29px;
+        position: relative;
+      }
+      .hero img {
+        width: 400px;
+      }
+      .pill {
+        position: absolute;
+        bottom: 22px;
+        left: 26px;
+        font-size: 11px;
+        letter-spacing: 1.4px;
+        color: var(--green);
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .body-note {
+        font-size: 13px;
+        color: #506a63;
+      }
+      .footer {
+        position: absolute;
+        bottom: 13mm;
+        left: 18mm;
+        right: 18mm;
+        border-top: 1px solid #d6e2da;
+        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: #526a63;
+      }
+      .footer strong {
+        color: var(--ink);
+      }
+      .swatches {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 28px 0;
+      }
+      .swatch {
+        padding: 22px;
+        border-radius: 14px;
+        min-height: 148px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border: 1px solid #153d4110;
+      }
+      .swatch strong {
+        font-family: Manrope;
+        font-size: 21px;
+        font-weight: 650;
+      }
+      .swatch span {
+        font-size: 13px;
+      }
+      .swatch small {
+        opacity: 0.9;
+      }
+      .dark {
+        background: var(--ink);
+        color: white;
+      }
+      .green {
+        background: var(--green);
+        color: white;
+      }
+      .mint {
+        background: var(--mint);
+      }
+      .mist {
+        background: var(--mist);
+      }
+      .type-row {
+        background: #fff;
+        padding: 20px 22px;
+        border-radius: 12px;
+        border: 1px solid #dce7df;
+        margin-top: 13px;
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 18px;
+        align-items: center;
+      }
+      .type-row .sample {
+        font-size: 22px;
+        line-height: 1.35;
+      }
+      .type-row small {
+        display: block;
+        font-size: 12px;
+        color: #60766e;
+      }
+      .label {
+        font-size: 10px;
+        letter-spacing: 1.3px;
+        font-weight: 600;
+        color: #60766e;
+      }
+      .note {
+        margin-top: 22px;
+        padding: 18px 20px;
+        background: #e7f1eb;
+        border-radius: 12px;
+        font-size: 13px;
+      }
+      .lockups {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 26px 0;
+      }
+      .lockup {
+        height: 132px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #fff;
+        border: 1px solid #dce7df;
+        border-radius: 14px;
+      }
+      .lockup img {
+        width: 220px;
+      }
+      .lockup.dark {
+        background: var(--ink);
+      }
+      .rule {
+        border-top: 1px solid #d6e2da;
+        padding: 13px 0;
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 18px;
+        font-size: 13px;
+      }
+      .rule strong {
+        font-weight: 600;
+      }
+      .app-example {
+        background: white;
+        border: 1px solid #dce7df;
+        border-radius: 15px;
+        padding: 21px 24px;
+        margin: 23px 0 20px;
+        display: flex;
+        gap: 25px;
+        align-items: center;
+      }
+      .app-example img {
+        width: 43px;
+      }
+      .app-example strong {
+        font-family: Manrope;
+        font-size: 17px;
+      }
+      .app-example small {
+        display: block;
+        font-size: 12px;
+        color: #60766e;
+      }
+      .button-sample {
+        background: var(--green);
+        color: white;
+        border-radius: 8px;
+        padding: 10px 15px;
+        margin-left: auto;
+        font-weight: 600;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .downloads {
+        display: flex;
+        gap: 14px;
+        font-size: 12px;
+        margin-top: 16px;
+      }
+      .downloads a {
+        color: var(--green);
+        text-underline-offset: 3px;
+      }
+      @media (max-width: 820px) {
+        .page {
+          width: 100%;
+          min-height: auto;
+          padding: 30px 24px 80px;
+          margin: 0 0 20px;
+        }
+        .footer {
+          left: 24px;
+          right: 24px;
+          bottom: 22px;
+        }
+        .hero {
+          height: 230px;
+        }
+        .hero img {
+          width: min(90%, 400px);
+        }
+        h1 {
+          font-size: 38px;
+        }
+        h2 {
+          font-size: 30px;
+        }
+        .toolbar {
+          margin: 15px;
+        }
+        .two {
+          gap: 18px;
+        }
+        .lockup img {
+          width: 88%;
+        }
+        .rule {
+          grid-template-columns: 120px 1fr;
+        }
+        .type-row {
+          grid-template-columns: 120px 1fr;
+        }
+        .app-example {
+          gap: 14px;
+        }
+        .button-sample {
+          display: none;
+        }
+        .downloads {
+          flex-wrap: wrap;
+        }
+      }
+      @media print {
+        @page {
+          size: A4;
+          margin: 0;
+        }
+        html,
+        body {
+          margin: 0;
+          background: white;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .toolbar,
+        .downloads {
+          display: none;
+        }
+        .page {
+          width: 210mm;
+          height: 297mm;
+          min-height: 297mm;
+          box-shadow: none;
+          padding: 18mm;
+          margin: 0;
+          break-after: page;
+        }
+        .page:last-child {
+          break-after: auto;
+        }
+        .footer {
+          left: 18mm;
+          right: 18mm;
+          bottom: 13mm;
+        }
+        h1 {
+          font-size: 48px;
+        }
+        h2 {
+          font-size: 35px;
+        }
+        .hero {
+          height: 280px;
+        }
+        .hero img {
+          width: 400px;
+        }
+        .rule {
+          grid-template-columns: 150px 1fr;
+        }
+        .type-row {
+          grid-template-columns: 150px 1fr;
+        }
+        .button-sample {
+          display: block;
+        }
+        .lockup img {
+          width: 220px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <span>Cuidelo · identidade aprovada · versão 1.0</span
+      ><button onclick="window.print()">Imprimir guia</button>
+    </div>
+    <section class="page">
+      <div class="kicker">Cuidelo / identidade visual / 2026</div>
+      <h1>Toda a rede.<br />Mais perto das pessoas.</h1>
+      <p class="lead">
+        Uma identidade para conectar o cuidado, da unidade de saúde à gestão de toda a rede.
+      </p>
+      <div class="hero">
+        <img src="marca.svg" alt="Marca Cuidelo" /><span class="pill">CUIDADO + ELO</span>
+      </div>
+      <div class="two">
+        <div>
+          <h3>Um nome que aproxima.</h3>
+          <p class="body-note">
+            Cuidelo reúne a ideia de cuidado e conexão. Curto, acolhedor e pensado para acompanhar a
+            evolução da plataforma.
+          </p>
+        </div>
+        <div>
+          <h3>Um símbolo de continuidade.</h3>
+          <p class="body-note">
+            Dois elos abertos representam pessoas, equipes e serviços que trabalham em conjunto. As
+            curvas trazem proximidade; a construção simples mantém clareza.
+          </p>
+        </div>
+      </div>
+      <div class="note">
+        <strong>Marca institucional, presença humana.</strong><br />O foco inicial é toda a rede
+        pública: prefeituras, UBS, postos, UPA, pronto atendimento e hospitais. A identidade também
+        comporta a expansão futura para redes privadas.
+      </div>
+      <div class="footer">
+        <strong>Cuidelo · Manual da marca</strong
+        ><span>Identidade aprovada · 29/10/2026 &nbsp; / &nbsp; 01</span>
+      </div>
+    </section>
+    <section class="page">
+      <div class="kicker">01 / sistema visual</div>
+      <h2>Confiança, com leveza.</h2>
+      <p class="lead">
+        Uma base sóbria para o trabalho diário, com verdes que dão unidade à experiência.
+      </p>
+      <div class="swatches">
+        <div class="swatch dark">
+          <strong>Petróleo</strong
+          ><span>#153D41<br /><small>Marca, títulos e textos de destaque</small></span>
+        </div>
+        <div class="swatch green">
+          <strong>Verde profundo</strong
+          ><span>#126D65<br /><small>Ações principais e seleção</small></span>
+        </div>
+        <div class="swatch mint">
+          <strong>Menta</strong
+          ><span>#A8DBC9<br /><small>Apoio, acolhimento e detalhes</small></span>
+        </div>
+        <div class="swatch mist">
+          <strong>Névoa</strong><span>#F5F8F5<br /><small>Fundo e descanso visual</small></span>
+        </div>
+      </div>
+      <h3>Tipografia que ajuda a trabalhar.</h3>
+      <div class="type-row">
+        <div><strong>Manrope</strong><small>Marca e títulos</small></div>
+        <div class="sample" style="font-family: Manrope; font-weight: 650">
+          Uma rede de cuidado.
+        </div>
+      </div>
+      <div class="type-row">
+        <div><strong>IBM Plex Sans</strong><small>Referência de interface</small></div>
+        <div class="sample">
+          Informação clara.<br /><span style="font-size: 17px">Pessoas, equipes e serviços.</span>
+        </div>
+      </div>
+      <p class="body-note" style="margin: 14px 0 0; font-size: 12px">
+        O aplicativo incorpora fontes locais. O subconjunto derivado de IBM Plex Sans foi renomeado
+        para Cuidelo Interface, conforme a licença. Créditos e licenças acompanham os arquivos.
+      </p>
+      <div class="note">
+        <strong>Cor precisa de contexto.</strong><br />Use Petróleo sobre Menta e branco sobre Verde
+        profundo. Reserve Menta para fundos e detalhes. Estados clínicos precisam de texto, ícone e
+        protocolo próprio; a paleta institucional não define a classificação de risco.
+      </div>
+      <div class="footer">
+        <strong>Cuidelo · Manual da marca</strong><span>Cores e tipografia &nbsp; / &nbsp; 02</span>
+      </div>
+    </section>
+    <section class="page">
+      <div class="kicker">02 / aplicação</div>
+      <h2>Consistência em cada ponto.</h2>
+      <p class="lead">
+        Use as versões oficiais para preservar reconhecimento, proporção e legibilidade.
+      </p>
+      <div class="lockups">
+        <div class="lockup"><img src="marca.svg" alt="Marca principal em fundo claro" /></div>
+        <div class="lockup dark">
+          <img src="marca-negativa.svg" alt="Marca branca em fundo petróleo" />
+        </div>
+      </div>
+      <div class="rule">
+        <strong>Respiro</strong
+        ><span
+          >Manter ao redor da marca um espaço mínimo de ¼ da altura total do símbolo. Não aproximar
+          outros elementos desse limite.</span
+        >
+      </div>
+      <div class="rule">
+        <strong>Redução</strong
+        ><span
+          >Em tela: marca horizontal com pelo menos 120 px; símbolo isolado, 24 px. Em impressão: 30
+          mm e 7 mm, respectivamente. Conferir o resultado no suporte final.</span
+        >
+      </div>
+      <div class="rule">
+        <strong>Integridade</strong
+        ><span
+          >Usar os vetores fornecidos. Preservar proporção, cores e posição dos elementos. Não
+          redigitar a marca, aplicar sombras ou colocar sobre fundos com pouco contraste.</span
+        >
+      </div>
+      <div class="rule">
+        <strong>Nome e assinatura</strong
+        ><span
+          >Nos textos, escrever Cuidelo. A forma minúscula pertence ao logotipo. A assinatura pode
+          acompanhar a comunicação; omitir quando o espaço for pequeno.</span
+        >
+      </div>
+      <div class="app-example">
+        <img src="simbolo.svg" alt="Símbolo Cuidelo" />
+        <div>
+          <strong>Bom cuidado começa com clareza.</strong
+          ><small>Pessoas e prontuários · Unidade de saúde</small>
+        </div>
+        <span class="button-sample">Novo atendimento</span>
+      </div>
+      <div class="two">
+        <div>
+          <h3>Voz da marca</h3>
+          <p class="body-note">
+            Clara, respeitosa e direta. Explicar o que aconteceu e qual é a próxima ação. Usar
+            palavras conhecidas pelas equipes.
+          </p>
+        </div>
+        <div>
+          <h3>Arquivos oficiais</h3>
+          <p class="body-note">
+            Marca principal, negativa, monocromática e símbolos em SVG, paleta digital, fontes
+            locais e licenças.
+          </p>
+        </div>
+      </div>
+      <p class="body-note" style="margin-top: 20px; font-size: 12px">
+        Esta aprovação fecha a identidade visual. Registro de marca no INPI e disponibilidade de
+        domínio ainda precisam ser confirmados.
+      </p>
+      <div class="downloads">
+        <a href="marca.svg" download>Marca principal</a
+        ><a href="marca-negativa.svg" download>Marca negativa</a
+        ><a href="simbolo.svg" download>Símbolo</a
+        ><a href="identidade.json" download>Paleta e especificação</a>
+      </div>
+      <div class="footer">
+        <strong>Cuidelo · Manual da marca</strong><span>Uso e consistência &nbsp; / &nbsp; 03</span>
+      </div>
+    </section>
+  </body>
+</html>
