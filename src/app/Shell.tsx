@@ -124,7 +124,15 @@ export function Shell() {
   }, [dirty]);
   const current =
     navigation.flatMap((g) => g.items).find((i) => i.path === location.pathname)?.label ??
-    (location.pathname.startsWith('/escuta/') ? 'Escuta e sinais vitais' : 'Prontuário');
+    (location.pathname.startsWith('/escuta/')
+      ? 'Escuta e sinais vitais'
+      : location.pathname.startsWith('/modulos/')
+        ? 'Módulos e acompanhamentos'
+        : location.pathname.startsWith('/paineis/')
+          ? 'Acompanhamento'
+          : location.pathname.startsWith('/atendimento/')
+            ? 'Atendimento'
+            : 'Pessoas e prontuários');
   const org = data.organizations.find((o) => o.id === context.organizationId);
   const navContent = (
     <>
@@ -210,7 +218,7 @@ export function Shell() {
             >
               <Menu size={21} />
             </button>
-            <span>{org?.shortName}</span>
+            <span>{context.role === 'business' ? 'Cuidelo' : org?.shortName}</span>
             <ChevronRight size={14} />
             <strong>{current}</strong>
           </div>
