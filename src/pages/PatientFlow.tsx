@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Megaphone, Play, Clock3 } from 'lucide-react';
 import { useApp } from '../app/context';
 import { demoIdentities } from '../domain/access';
+import { preferenceLabel } from '../domain/kiosk-options';
 import type { Encounter } from '../domain/model';
 import { roomsForUnit } from '../domain/queue';
 import { clockTime, dateKey } from '../domain/dates';
@@ -416,6 +417,11 @@ export function UnidentifiedArrivals() {
             <strong>{a.ticket}</strong>
             <span>
               {a.service} · <LiveDuration since={a.arrivedAt} />
+              {a.priority === 'priority' && (
+                <small className="table-subtitle">
+                  Preferencial: {preferenceLabel(a.preferenceReason)}
+                </small>
+              )}
             </span>
             <Field label={`Pessoa da senha ${a.ticket}`}>
               <select

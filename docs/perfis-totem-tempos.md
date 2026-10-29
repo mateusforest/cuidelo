@@ -1,4 +1,4 @@
-# Perfis, totem e acompanhamento — Cuidelo 0.5
+# Perfis, totem e acompanhamento — Cuidelo 0.5.1
 
 Esta entrega é um ambiente local de desenvolvimento com dados fictícios. O escopo de lançamento continua incluindo UBS, UPA, pronto atendimento e hospitais. As telas não substituem a implementação e a validação dos percursos clínicos, das integrações e da proteção em servidor.
 
@@ -23,7 +23,7 @@ O histórico clínico é compartilhado entre unidades **da mesma prefeitura**, c
 ## Testar chegada, totem, TV e consulta
 
 1. Na administração da unidade, abra **Totem e TV**. Use os links dessa página para testar todas as janelas pelo mesmo arquivo/endereço e navegador.
-2. No totem, escolha cadastro existente ou atendimento pela recepção. A identificação usa número DEMO e nascimento fictício; não consulta CPF ou CNS.
+2. No totem, escolha cadastro existente ou atendimento pela recepção. A identificação usa CPF ou nome completo (civil ou social), junto da data de nascimento. Confere apenas o cadastro fictício local, sem consultar a Receita Federal ou CNS. Nomes iguais com o mesmo nascimento exigem conferência na recepção.
 3. Quem não se identifica recebe uma senha para o balcão. A recepção seleciona o cadastro correspondente; o horário de chegada do totem é preservado.
 4. A senha pode ser impressa pela janela de impressão do navegador, com recibo sem nome ou informação clínica. A comunicação direta com impressora térmica ainda depende do equipamento.
 5. Na escuta, registre o início quando a pessoa entrar. Salvar a primeira avaliação registra o fim dessa etapa. Aferições posteriores e correções continuam preservadas.
@@ -66,3 +66,15 @@ As 46 referências do Pulso agora apontam para uma base correspondente. **44 con
 Arquivos diferentes podem ter armazenamentos separados. Para ver uma chamada atualizada entre janelas, abra TV e totem pelos links do **mesmo Cuidelo.html**, no mesmo navegador. Nada é sincronizado entre computadores.
 
 Não foram conectados Supabase, autenticação, SUS, WhatsApp, assinatura digital ou dispositivos clínicos. Persistência protegida, continuidade de operação, validação profissional e teste de capacidade para 100 unidades continuam necessários antes de atendimento real.
+
+## Atualização do totem em 0.5.1
+
+Atendimento comum e preferencial aparecem como opções grandes na entrada e durante a emissão. O motivo é opcional: a pessoa pode escolher informar à recepção. Os exemplos incluem pessoas idosas, pessoas com deficiência, autismo, gestantes, lactantes, criança de colo, obesidade, mobilidade reduzida e doadores de sangue. A interface distingue maiores de 80 anos e orienta o doador a apresentar comprovante de até 120 dias. Não automatiza a ordem entre grupos prioritários nem a classificação clínica de risco; a equipe confere o fluxo.
+
+Referências consultadas em 29/10/2026: [Lei 10.048, texto atualizado na Câmara](https://www2.camara.leg.br/legin/fed/lei/2000/lei-10048-8-novembro-2000-376937-normaatualizada-pl.html) e [Estatuto da Pessoa Idosa, art. 15, § 7º](https://www2.camara.leg.br/legin/fed/lei/2003/lei-10741-1-outubro-2003-497511-normaatualizada-pl.html). Regras locais e protocolos assistenciais precisam ser validados antes de implantação.
+
+O motivo chega à recepção, inclusive quando uma senha sem identificação é vinculada ao cadastro. O recibo mostra somente serviço, senha, unidade, horário e solicitação comum/preferencial; CPF, nome, nascimento e motivo não aparecem nele ou na TV. Recuperar uma senha aberta não cria outro atendimento. Uma preferência já registrada não é rebaixada pelo totem; alterações após o início do cuidado exigem conferência presencial.
+
+O cadastro de pessoas aceita CPF opcional, valida seus dígitos e impede duplicidade na mesma prefeitura. Cadastros sem CPF continuam acessíveis por nome e nascimento. A migração preserva os dados anteriores e inclui CPFs sintéticos somente nos exemplos originais reconhecidos. O próprio totem oferece “Dados fictícios para testar”.
+
+Os serviços exibidos variam conforme o cenário UBS, UPA ou hospital. São opções demonstrativas; a oferta de cada estabelecimento será configurada e validada na implantação.

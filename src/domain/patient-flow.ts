@@ -3,6 +3,9 @@ import { demoIdentities } from './access';
 import { dateKey, validDay } from './dates';
 import { DomainError } from './errors';
 import { nextTicket } from './queue';
+import { cpfDigits, validCpf, normalizedName } from './identification';
+import { preferenceReasons, servicesForUnit, type PreferenceReason } from './kiosk-options';
+export { kioskServices } from './kiosk-options';
 
 export function ownCare(e: Encounter, c: Context) {
   if (e.professionalId !== c.sessionId)
@@ -46,22 +49,18 @@ export function closeCare(
     segment.endReason = reason;
   }
 }
-export const kioskServices = [
-  'Consulta',
-  'Vacinação',
-  'Procedimento',
-  'Orientação na recepção',
-] as const;
 export interface KioskRequest {
   organizationId: string;
   unitId: string;
   service: string;
   priority: 'routine' | 'priority';
-  record?: string;
-  birthDate?: string;
+  identification?: { kind: 'cpf' | 'name'; value: string; birthDate: string };
+  preferenceReason?: PreferenceReason;
   requestId: string;
 }
 export interface TicketReceipt {
+  priority: 'routine' | 'priority';
+  preferenceNeedsReview?: boolean;
   ticket: string;
   unitName: string;
   service: string;
@@ -80,11 +79,18 @@ export function issueKiosk(
   );
   if (!unit) throw new DomainError('Totem não configurado para esta unidade.', 'scope');
   if (
-    !kioskServices.includes(request.service as (typeof kioskServices)[number]) ||
+    !servicesForUnit(unit.kind).some((s) => s.value === request.service) ||
     !['routine', 'priority'].includes(request.priority) ||
     !/^[\w-]{8,80}$/.test(request.requestId)
   )
     throw new DomainError('Revise o serviço e a identificação da solicitação.');
+  const reason =
+    request.priority === 'priority' ? (request.preferenceReason ?? 'reception') : undefined;
+  if (
+    (reason && !preferenceReasons.some((r) => r.id === reason)) ||
+    (request.priority === 'routine' && request.preferenceReason)
+  )
+    throw new DomainError('Revise a opção de atendimento preferencial.');
   const prior = db.kioskArrivals.find(
     (a) =>
       a.id === request.requestId &&
@@ -93,6 +99,8 @@ export function issueKiosk(
   );
   if (prior)
     return {
+      priority: db.encounters.find((e) => e.id === prior.encounterId)?.priority ?? prior.priority,
+      preferenceNeedsReview: prior.preferenceNeedsReview,
       ticket: prior.ticket,
       unitName: unit.name,
       service: prior.service,
@@ -105,19 +113,44 @@ export function issueKiosk(
       'Solicitação já utilizada em outro dispositivo. Reinicie a retirada de senha.',
       'conflict',
     );
-  const known = Boolean(request.record || request.birthDate);
-  const patient = known
-    ? db.patients.find(
-        (p) =>
-          p.organizationId === unit.organizationId &&
-          p.record === request.record?.trim().toUpperCase() &&
-          p.birthDate === request.birthDate,
-      )
-    : undefined;
-  if (known && !patient)
-    throw new DomainError(
-      'Não foi possível confirmar o cadastro. Confira os dados ou procure a recepção.',
+  const identification = request.identification;
+  let patient;
+  if (identification !== undefined) {
+    if (
+      !identification ||
+      !['cpf', 'name'].includes(identification.kind) ||
+      typeof identification.value !== 'string' ||
+      !identification.value.trim() ||
+      identification.value.length > 120 ||
+      !validDay(identification.birthDate) ||
+      identification.birthDate > dateKey(now)
+    )
+      throw new DomainError('Informe CPF ou nome completo e uma data de nascimento válida.');
+    const value = identification.value.trim();
+    if (identification.kind === 'cpf' && !validCpf(value))
+      throw new DomainError('Confira o CPF: informe os 11 números e verifique a digitação.');
+    if (identification.kind === 'name' && normalizedName(value).split(' ').length < 2)
+      throw new DomainError('Informe o nome completo, como está no cadastro.');
+    const matches = db.patients.filter(
+      (p) =>
+        p.organizationId === unit.organizationId &&
+        p.birthDate === identification.birthDate &&
+        (identification.kind === 'cpf'
+          ? p.cpf === cpfDigits(value)
+          : [p.name, p.socialName]
+              .filter(Boolean)
+              .some((n) => normalizedName(n) === normalizedName(value))),
     );
+    if (matches.length > 1)
+      throw new DomainError(
+        'Não foi possível identificar com segurança. Use o CPF ou retire uma senha para a recepção.',
+      );
+    if (!matches.length)
+      throw new DomainError(
+        'Não foi possível confirmar o cadastro. Confira os dados ou retire uma senha para a recepção.',
+      );
+    patient = matches[0];
+  }
   const existing =
     patient &&
     db.encounters.find(
@@ -131,8 +164,57 @@ export function issueKiosk(
     throw new DomainError(
       'Há um atendimento de outro dia em aberto. Procure a recepção para conferir sua chegada.',
     );
-  if (existing)
+  if (existing) {
+    const review =
+      request.priority === 'priority' &&
+      existing.status !== 'waiting' &&
+      existing.priority !== 'priority';
+    if (
+      request.priority === 'priority' &&
+      existing.status === 'waiting' &&
+      (existing.priority !== 'priority' || (existing.preferenceReason ?? 'reception') !== reason)
+    ) {
+      existing.priority = 'priority';
+      existing.preferenceReason = reason;
+      for (const a of db.kioskArrivals.filter((a) => a.encounterId === existing.id)) {
+        a.priority = 'priority';
+        a.preferenceReason = reason;
+      }
+      db.audit.push({
+        id: id(),
+        organizationId: unit.organizationId,
+        unitId: unit.id,
+        at: now.toISOString(),
+        actor: 'Totem · demonstração',
+        entityId: existing.id,
+        action: 'Preferência administrativa solicitada no totem',
+      });
+    }
+    db.kioskArrivals.push({
+      id: request.requestId,
+      organizationId: unit.organizationId,
+      unitId: unit.id,
+      ticket: existing.ticket,
+      service: existing.service,
+      priority: existing.priority,
+      ...(existing.preferenceReason ? { preferenceReason: existing.preferenceReason } : {}),
+      preferenceNeedsReview: review,
+      arrivedAt: existing.arrivedAt,
+      encounterId: existing.id,
+    });
+    db.audit.push({
+      id: id(),
+      organizationId: unit.organizationId,
+      unitId: unit.id,
+      at: now.toISOString(),
+      actor: 'Totem · demonstração',
+      entityId: existing.id,
+      action: 'Senha existente recuperada no totem',
+    });
+    db.revision++;
     return {
+      priority: existing.priority,
+      preferenceNeedsReview: review,
       ticket: existing.ticket,
       unitName: unit.name,
       service: existing.service,
@@ -140,6 +222,7 @@ export function issueKiosk(
       needsIdentification: false,
       existing: true,
     };
+  }
   const at = now.toISOString(),
     ticket = nextTicket(
       [...db.encounters, ...db.kioskArrivals],
@@ -155,6 +238,7 @@ export function issueKiosk(
     ticket,
     service: request.service,
     priority: request.priority,
+    ...(reason ? { preferenceReason: reason } : {}),
     arrivedAt: at,
     encounterId,
   });
@@ -167,6 +251,7 @@ export function issueKiosk(
       ticket,
       service: request.service,
       priority: request.priority,
+      ...(reason ? { preferenceReason: reason } : {}),
       arrivedAt: at,
       status: 'waiting',
       source: 'kiosk',
@@ -182,6 +267,7 @@ export function issueKiosk(
   });
   db.revision++;
   return {
+    priority: request.priority,
     ticket,
     unitName: unit.name,
     service: request.service,

@@ -5,6 +5,7 @@ import { can, type EncounterStatus } from '../domain/model';
 import { clockTime, minutesWaiting } from '../domain/dates';
 import { useApp } from '../app/context';
 import { UnidentifiedArrivals } from './PatientFlow';
+import { preferenceLabel } from '../domain/kiosk-options';
 import {
   ActionForm,
   Avatar,
@@ -151,7 +152,9 @@ export function Reception() {
                             <strong>{p?.socialName || p?.name}</strong>
                             <small>
                               {p?.record}
-                              {e.priority === 'priority' ? ' · Prioridade informada' : ''}
+                              {e.priority === 'priority'
+                                ? ` · Preferencial: ${preferenceLabel(e.preferenceReason)}`
+                                : ''}
                             </small>
                           </span>
                         </Link>

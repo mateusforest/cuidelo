@@ -146,7 +146,7 @@ describe('senhas e projeção da TV', () => {
     const e = view.encounters.find((e) => e.status === 'waiting')!;
     await repo.execute(context, { type: 'queue.call', encounterId: e.id, roomId: 'escuta-1' });
     const saved = JSON.parse(storage.getItem(storageKey)!);
-    expect(saved.schemaVersion).toBe(5);
+    expect(saved.schemaVersion).toBe(6);
     const restored = new DemoRepository(storage, () => now);
     expect(restored.display(context.organizationId, context.unitId).current?.ticket).toBe(e.ticket);
     expect(saved.patients).toEqual(old.patients);

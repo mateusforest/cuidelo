@@ -49,6 +49,7 @@ export interface Unit extends Scoped {
   district: string;
 }
 export interface Patient extends Scoped {
+  cpf?: string;
   name: string;
   socialName: string;
   birthDate: string;
@@ -70,6 +71,7 @@ export interface Appointment extends Scoped {
 }
 export type EncounterStatus = 'waiting' | 'in-care' | 'observation' | 'completed';
 export interface Encounter extends Scoped {
+  preferenceReason?: import('./kiosk-options').PreferenceReason;
   source?: 'reception' | 'kiosk';
   intakeStartedAt?: string;
   intakeCompletedAt?: string;
@@ -312,7 +314,7 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
-  schemaVersion: 5;
+  schemaVersion: 6;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -399,7 +401,14 @@ export type Command =
   | { type: 'note.addendum'; noteId: string; text: string; reason: string }
   | { type: 'queue.call'; encounterId: string; roomId: string }
   | { type: 'queue.recall'; callId: string }
-  | { type: 'patient.create'; name: string; socialName: string; birthDate: string; phone: string }
+  | {
+      type: 'patient.create';
+      name: string;
+      socialName: string;
+      birthDate: string;
+      phone: string;
+      cpf?: string;
+    }
   | {
       type: 'appointment.create';
       patientId: string;
@@ -527,6 +536,8 @@ export interface CareSegment extends Scoped {
   endReason?: 'observation' | 'completed';
 }
 export interface KioskArrival extends Scoped {
+  preferenceNeedsReview?: boolean;
+  preferenceReason?: import('./kiosk-options').PreferenceReason;
   unitId: string;
   ticket: string;
   service: string;

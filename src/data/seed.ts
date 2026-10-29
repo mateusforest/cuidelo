@@ -2,6 +2,7 @@ import type { Database, Organization, Unit } from '../domain/model';
 import { addDays, dateKey } from '../domain/dates';
 import { assignMissingTickets } from '../domain/queue';
 import { seedVaccineLots } from '../domain/vaccination';
+import { demoCpf } from '../domain/identification';
 
 export function createSeed(now = new Date()): Database {
   const today = dateKey(now);
@@ -63,7 +64,7 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     workRecords: [],
     careSegments: [],
     kioskArrivals: [],
@@ -110,6 +111,7 @@ export function createSeed(now = new Date()): Database {
         id: `${org.id}-p${index + 1}`,
         organizationId: org.id,
         name: org.id === 'horizonte' ? name.replace(/ .*/, ' Monteiro') : name,
+        cpf: demoCpf(organizations.indexOf(org) * 12 + index + 1),
         socialName: '',
         birthDate: [
           '1988-03-14',

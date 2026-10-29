@@ -18,6 +18,7 @@ import { applyVaccinationCommand, vaccinationSummary } from './vaccination';
 import { identityFor } from './access';
 import { closeCare, ownCare, startCare } from './patient-flow';
 import { applyWorkCommand, visibleWorkRecords } from './work-modules';
+import { cpfDigits, validCpf } from './identification';
 export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
@@ -139,6 +140,7 @@ export function applyCommand(
       e.ticket = arrival.ticket;
       e.arrivedAt = arrival.arrivedAt;
       e.source = 'kiosk';
+      e.preferenceReason = arrival.preferenceReason;
       arrival.encounterId = id;
       entityId = id;
       action = 'Senha do totem identificada na recepção';
@@ -250,6 +252,15 @@ export function applyCommand(
     }
     case 'patient.create': {
       permit(c, 'patients.write');
+      const cpf = command.cpf?.trim() ? cpfDigits(command.cpf) : undefined;
+      if (cpf) {
+        ensure(validCpf(cpf), 'Informe um CPF válido para o cadastro fictício.');
+        ensure(
+          !db.patients.some((p) => p.organizationId === c.organizationId && p.cpf === cpf),
+          'Já existe um cadastro com este CPF nesta prefeitura.',
+          'conflict',
+        );
+      }
       ensure(
         validDay(command.birthDate) &&
           command.birthDate <= today &&
@@ -268,6 +279,7 @@ export function applyCommand(
         name: required(command.name, 'Nome', 120),
         socialName: command.socialName.trim(),
         birthDate: command.birthDate,
+        ...(cpf ? { cpf } : {}),
         phone: command.phone.trim(),
         record: `DEMO-${String(sequence).padStart(4, '0')}`,
         allergies: [],

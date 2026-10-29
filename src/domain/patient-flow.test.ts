@@ -64,8 +64,7 @@ describe('sessões, jornada e totem', () => {
         {
           ...request,
           requestId: 'another-device-request',
-          record: p.record,
-          birthDate: p.birthDate,
+          identification: { kind: 'cpf', value: p.cpf!, birthDate: p.birthDate },
         },
         now,
       ),
@@ -205,11 +204,16 @@ describe('sessões, jornada e totem', () => {
       unitId: 'aurora-centro',
       service: 'Consulta',
       priority: 'routine' as const,
-      record: p.record,
-      birthDate: p.birthDate,
+      identification: { kind: 'cpf' as const, value: p.cpf!, birthDate: p.birthDate },
       requestId: 'solicitacao-totem-003',
     };
-    expect(() => issueKiosk(db, { ...request, birthDate: '1900-01-01' }, now)).toThrow('confirmar');
+    expect(() =>
+      issueKiosk(
+        db,
+        { ...request, identification: { ...request.identification, birthDate: '1900-01-01' } },
+        now,
+      ),
+    ).toThrow('confirmar');
     const receipt = issueKiosk(db, request, now);
     expect(JSON.stringify(receipt)).not.toContain(p.name);
     expect(JSON.stringify(receipt)).not.toContain(p.birthDate);

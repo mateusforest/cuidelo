@@ -6,6 +6,7 @@ import { can } from '../domain/model';
 import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
 import { VaccineHistory } from '../components/VaccineHistory';
 import { ageAt, dateKey, shortDate } from '../domain/dates';
+import { cpfDigits, formatCpf } from '../domain/identification';
 import {
   ActionForm,
   Avatar,
@@ -27,8 +28,10 @@ export function Patients() {
   const [search, setSearch] = useState(params.get('q') ?? ''),
     [create, setCreate] = useState(false);
   const normalized = search.toLocaleLowerCase('pt-BR');
-  const patients = data.patients.filter((p) =>
-    `${p.name} ${p.socialName} ${p.record}`.toLocaleLowerCase('pt-BR').includes(normalized),
+  const patients = data.patients.filter(
+    (p) =>
+      `${p.name} ${p.socialName} ${p.record}`.toLocaleLowerCase('pt-BR').includes(normalized) ||
+      (!!cpfDigits(search) && !!p.cpf?.includes(cpfDigits(search))),
   );
   return (
     <>
@@ -53,7 +56,7 @@ export function Patients() {
           <SearchField
             value={search}
             onChange={setSearch}
-            placeholder="Buscar por nome ou número do cadastro"
+            placeholder="Buscar por nome, CPF ou cadastro"
           />
           <span className="result-count">{patients.length} pessoas na rede</span>
         </div>
@@ -130,6 +133,7 @@ export function Patients() {
                 socialName: valueOf(f, 'socialName'),
                 birthDate: valueOf(f, 'birthDate'),
                 phone: valueOf(f, 'phone'),
+                cpf: valueOf(f, 'cpf'),
               });
               notify('Cadastro criado na rede selecionada.');
             }}
@@ -145,6 +149,18 @@ export function Patients() {
             </Field>
             <Field label="Nome social (opcional)">
               <input name="socialName" maxLength={120} autoComplete="off" />
+            </Field>
+            <Field
+              label="CPF (opcional)"
+              hint="Use somente um CPF fictício. Quem não tiver CPF pode se identificar pelo nome e nascimento."
+            >
+              <input
+                name="cpf"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={14}
+                placeholder="000.000.000-00"
+              />
             </Field>
             <div className="form-grid">
               <Field label="Data de nascimento">
@@ -387,6 +403,10 @@ export function PatientDetails() {
         <aside>
           <Panel title="Identificação">
             <dl className="definition-list panel-body">
+              <div>
+                <dt>CPF</dt>
+                <dd>{p.cpf ? formatCpf(p.cpf) : 'Não informado'}</dd>
+              </div>
               <div>
                 <dt>Cadastro</dt>
                 <dd>{p.record}</dd>

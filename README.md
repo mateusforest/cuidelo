@@ -6,7 +6,7 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.5.0**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.5.1**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
 
@@ -25,7 +25,7 @@ Já é possível testar:
 - Produção vacinal agregada por unidade e acompanhamento de retornos para a gestão.
 - Mapa de módulos e integrações ainda necessários para a primeira versão pública.
 - Emissão de senhas, chamada e rechamada por sala, com TV dedicada, histórico e áudio opcional.
-- Totem público de identificação e emissão/impressão de senha, com atendimento sem cadastro concluído na recepção.
+- Totem com identificação por CPF ou nome completo e nascimento, atendimento comum/preferencial, motivos opcionais de preferência e serviços por tipo de unidade. Quem não tem cadastro conclui a identificação na recepção. Emissão e impressão da senha sem dados pessoais.
 - Chamada da TV pelo consultório, períodos de consulta por profissional e métricas de recepção, escuta, espera e permanência.
 - Pré-natal, encontros, campanhas, lembretes, pendências, revisão operacional e comunicados com cadastro e histórico local.
 - Famílias, microáreas, visitas, ausências e produção do agente de saúde.

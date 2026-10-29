@@ -14,6 +14,8 @@ import type { CareRepository } from './repository';
 import { assignMissingTickets, readDisplay } from '../domain/queue';
 import { validateIntakeContent } from '../domain/intake';
 import { validateVaccinationDatabase } from '../domain/vaccination-validation';
+import { validCpf } from '../domain/identification';
+import { preferenceReasons } from '../domain/kiosk-options';
 
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -71,9 +73,25 @@ function parseDatabase(value: string): Database {
     db.kioskArrivals = [];
     db.workRecords = [];
   }
+  if (isRecord(db) && db.schemaVersion === 5 && Array.isArray(db.patients)) {
+    const initial = createSeed().patients;
+    for (const p of db.patients) {
+      if (!isRecord(p) || p.cpf !== undefined) continue;
+      const fixture = initial.find(
+        (f) =>
+          f.id === p.id &&
+          f.organizationId === p.organizationId &&
+          f.name === p.name &&
+          f.birthDate === p.birthDate &&
+          f.record === p.record,
+      );
+      if (fixture) p.cpf = fixture.cpf;
+    }
+    db.schemaVersion = 6;
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 5 ||
+    db.schemaVersion !== 6 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -86,6 +104,20 @@ function parseDatabase(value: string): Database {
       throw new Error('Duplicate identifiers');
   }
   const typed = db as unknown as Database;
+  const cpfKeys = typed.patients.filter((p) => p.cpf).map((p) => `${p.organizationId}:${p.cpf}`);
+  if (
+    new Set(cpfKeys).size !== cpfKeys.length ||
+    typed.patients.some(
+      (p) => p.cpf !== undefined && (typeof p.cpf !== 'string' || !validCpf(p.cpf)),
+    )
+  )
+    throw new Error('Invalid patient CPF');
+  for (const e of [...typed.encounters, ...typed.kioskArrivals])
+    if (
+      e.preferenceReason !== undefined &&
+      (e.priority !== 'priority' || !preferenceReasons.some((r) => r.id === e.preferenceReason))
+    )
+      throw new Error('Invalid administrative preference');
   for (const r of typed.workRecords) {
     const m = moduleFor(r.module);
     if (

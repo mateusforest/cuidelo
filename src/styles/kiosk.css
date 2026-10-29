@@ -1,0 +1,334 @@
+.kiosk-expanded .kiosk-body {
+  max-width: 1160px;
+  width: 100%;
+  padding-top: 40px;
+}
+.kiosk-expanded h1:focus {
+  outline: none;
+}
+.kiosk-expanded .kiosk-form {
+  max-width: none;
+}
+.kiosk-expanded .kiosk-choices {
+  margin: 20px 0 30px;
+}
+.kiosk-expanded .kiosk-identities {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.kiosk-identities button {
+  padding: 28px;
+  min-height: 200px;
+  gap: 18px;
+}
+.kiosk-identities strong {
+  font-size: 23px;
+}
+.kiosk-section-title {
+  text-align: left;
+  font-size: 19px;
+  margin: 30px 0 14px;
+}
+.kiosk-priority {
+  border: 0;
+  padding: 0;
+  text-align: left;
+  min-width: 0;
+  margin: 26px 0;
+}
+.kiosk-priority legend {
+  font-size: 19px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.kiosk-priority-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.kiosk-priority-options label,
+.kiosk-service-options label {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  padding: 20px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  min-width: 0;
+}
+.kiosk-priority-options label.selected,
+.kiosk-service-options label.selected {
+  border-color: var(--brand-primary);
+  background: #eaf5ef;
+}
+.kiosk-priority-options label:hover,
+.kiosk-service-options label:hover {
+  border-color: var(--brand-primary);
+}
+.kiosk-priority-options label:focus-within,
+.kiosk-service-options label:focus-within {
+  outline: 3px solid #79b6a1;
+  outline-offset: 3px;
+}
+.kiosk-priority-options input,
+.kiosk-form .kiosk-priority-options input,
+.kiosk-form .kiosk-service-options input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--brand-primary);
+}
+.kiosk-priority-options label > span,
+.kiosk-service-options label > span {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+.kiosk-priority-options strong {
+  font-size: 21px;
+}
+.kiosk-priority-options small,
+.kiosk-service-options small {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #536c64;
+}
+.kiosk-form-section {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 26px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.kiosk-form-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 21px;
+  margin: 0 0 22px;
+  line-height: 1.4;
+}
+.kiosk-form-section h2 > span {
+  background: #e5f2eb;
+  color: var(--brand-primary);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.kiosk-methods {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  background: var(--brand-surface);
+  flex-wrap: wrap;
+}
+.kiosk-methods button {
+  border: 0;
+  background: transparent;
+  border-radius: 9px;
+  padding: 14px 20px;
+  color: var(--brand-ink);
+  cursor: pointer;
+  min-height: 48px;
+  font-size: 16px;
+}
+.kiosk-methods button[aria-pressed='true'] {
+  background: var(--brand-primary);
+  color: white;
+}
+.kiosk-example {
+  padding: 16px 18px;
+  background: #f4f8f5;
+  border: 1px dashed #c7d9cf;
+  border-radius: 12px;
+  font-size: 14px;
+  margin: 15px 0;
+}
+.kiosk-example summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.kiosk-example p {
+  line-height: 1.6;
+}
+.kiosk-example button {
+  border: 0;
+  background: #dcefe2;
+  padding: 14px 18px;
+  border-radius: 8px;
+  color: var(--brand-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.kiosk-expanded .kiosk-fallback {
+  min-height: 48px;
+  font-size: 15px;
+  text-align: left;
+}
+.kiosk-service-priority {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.kiosk-service-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.kiosk-service-options label {
+  padding: 16px;
+  align-items: flex-start;
+  min-height: 112px;
+}
+.kiosk-service-options strong {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.kiosk-service-options small {
+  font-size: 13px;
+}
+.kiosk-service-priority .kiosk-priority {
+  margin-top: 0;
+}
+.kiosk-service-priority .kiosk-priority legend {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.kiosk-service-priority .kiosk-priority-options {
+  grid-template-columns: 1fr;
+}
+.kiosk-service-priority .kiosk-priority-options strong {
+  font-size: 18px;
+}
+.kiosk-note {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 18px 0 0;
+}
+.kiosk-form-section select {
+  max-width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+.kiosk-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: #eaf5ef;
+  border: 1px solid #cbe3d5;
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+.kiosk-confirmation > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kiosk-confirmation small {
+  color: var(--muted);
+}
+.kiosk-confirmation strong {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.kiosk-confirmation .kiosk-actions {
+  margin: 0;
+  flex-shrink: 0;
+}
+.kiosk-form .form-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px;
+}
+.kiosk-expanded .ticket-success {
+  max-width: 750px;
+  margin: auto;
+}
+@media (max-width: 900px) {
+  .kiosk-service-priority {
+    grid-template-columns: 1fr;
+  }
+  .kiosk-service-priority .kiosk-priority-options {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kiosk-confirmation {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kiosk-confirmation .kiosk-actions {
+    justify-content: space-between;
+  }
+  .kiosk-expanded .kiosk-identities {
+    grid-template-columns: 1fr;
+  }
+  .kiosk-identities button {
+    min-height: 155px;
+  }
+  .kiosk-expanded .kiosk-priority-options strong {
+    font-size: 18px;
+  }
+}
+@media (max-width: 600px) {
+  .kiosk-expanded .kiosk-body {
+    padding: 30px 16px;
+  }
+  .kiosk-priority-options,
+  .kiosk-service-priority .kiosk-priority-options,
+  .kiosk-service-options {
+    grid-template-columns: 1fr;
+  }
+  .kiosk-form-section {
+    padding: 20px 16px;
+  }
+  .kiosk-form-section .access-filters {
+    gap: 12px;
+  }
+  .kiosk-service-options label {
+    min-height: 90px;
+  }
+  .kiosk-confirmation {
+    padding: 20px 16px;
+  }
+  .kiosk-confirmation .button {
+    flex: 1;
+    padding: 15px 18px;
+    white-space: normal;
+  }
+  .kiosk-identities button {
+    padding: 24px;
+  }
+  .kiosk-methods button {
+    padding: 12px 14px;
+  }
+  .kiosk-form-section h2 {
+    font-size: 19px;
+  }
+  .kiosk-confirmation .kiosk-actions {
+    flex-direction: column;
+  }
+  .kiosk-form-section select {
+    font-size: 15px;
+  }
+}
