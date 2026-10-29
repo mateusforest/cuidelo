@@ -5,6 +5,7 @@ import { useApp } from '../app/context';
 import { emptySoap, type Soap } from '../domain/model';
 import { ageAt, clockTime, shortDate } from '../domain/dates';
 import { Avatar, Badge, Button, EmptyState, Field, Notice, Panel } from '../components/ui';
+import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
 
 const labels: Record<keyof Soap, { title: string; hint: string }> = {
   subjective: { title: 'S · Subjetivo', hint: 'Relato e contexto trazidos pela pessoa.' },
@@ -14,6 +15,9 @@ const labels: Record<keyof Soap, { title: string; hint: string }> = {
 };
 export function EncounterPage() {
   const { id } = useParams();
+  return <EncounterEditor key={id} id={id} />;
+}
+function EncounterEditor({ id }: { id?: string }) {
   const { data, context, repository, notify, setDirty } = useApp();
   const encounter = data.encounters.find((e) => e.id === id),
     patient = data.patients.find((p) => p.id === encounter?.patientId),
@@ -23,8 +27,11 @@ export function EncounterPage() {
     [baseRevision, setBaseRevision] = useState(repository.getRevision()),
     [pending, setPending] = useState(false),
     [error, setError] = useState('');
+  const [addendumText, setAddendumText] = useState(''),
+    [addendumReason, setAddendumReason] = useState('');
+  const intakes = data.intakes.filter((r) => r.encounterId === id);
   const finalized = encounter?.status === 'completed',
-    dirty = JSON.stringify(soap) !== baseline;
+    dirty = JSON.stringify(soap) !== baseline || !!(addendumText || addendumReason);
   useEffect(() => {
     setDirty(dirty);
     return () => setDirty(false);
@@ -84,6 +91,27 @@ export function EncounterPage() {
     }
   };
   const unit = data.units.find((u) => u.id === context.unitId);
+  const addendum = async () => {
+    if (!note) return;
+    setPending(true);
+    setError('');
+    try {
+      await repository.execute(context, {
+        type: 'note.addendum',
+        noteId: note.id,
+        text: addendumText,
+        reason: addendumReason,
+      });
+      setAddendumText('');
+      setAddendumReason('');
+      setDirty(false);
+      notify('Complemento salvo. O registro original permanece preservado.');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPending(false);
+    }
+  };
   return (
     <>
       <Link className="back-link" to="/recepcao">
@@ -109,6 +137,19 @@ export function EncounterPage() {
       </div>
       <div className="clinical-grid">
         <div>
+          <div className="clinical-record-links">
+            <Link className="button secondary" to={`/escuta/${encounter.id}`}>
+              Escuta e novas aferições
+            </Link>
+          </div>
+          {intakes.length > 0 && (
+            <Panel
+              title="Escuta e sinais vitais"
+              subtitle="Informações registradas pela equipe, com horário e autoria."
+            >
+              <IntakeHistory records={intakes} />
+            </Panel>
+          )}
           <Panel
             title="Registro do atendimento"
             subtitle="SOAP · campos preenchidos pelo profissional responsável."
@@ -151,7 +192,7 @@ export function EncounterPage() {
                 </Field>
               ))}
             </fieldset>
-            {error && (
+            {error && !finalized && (
               <div className="form-error" role="alert">
                 {error}
                 {error.includes('dados') && (
@@ -206,6 +247,50 @@ export function EncounterPage() {
               </div>
             )}
           </Panel>
+          {finalized && note && (
+            <Panel
+              title="Complementos do registro"
+              subtitle="Acrescente informações ou correções com justificativa. O SOAP concluído permanece intacto."
+            >
+              <NoteAddenda items={data.addenda.filter((a) => a.noteId === note.id)} />
+              <form
+                className="clinical-addendum-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void addendum();
+                }}
+              >
+                {error && (
+                  <div className="form-error" role="alert">
+                    {error}
+                  </div>
+                )}
+                <fieldset disabled={pending} className="intake-fields" style={{ padding: 0 }}>
+                  <Field label="Motivo do complemento">
+                    <input
+                      value={addendumReason}
+                      onChange={(e) => setAddendumReason(e.target.value)}
+                      required
+                      maxLength={1000}
+                    />
+                  </Field>
+                  <Field label="Texto do complemento">
+                    <textarea
+                      value={addendumText}
+                      onChange={(e) => setAddendumText(e.target.value)}
+                      required
+                      maxLength={10000}
+                      rows={4}
+                    />
+                  </Field>
+                  <Button type="submit">
+                    <Save size={16} />
+                    Registrar complemento
+                  </Button>
+                </fieldset>
+              </form>
+            </Panel>
+          )}
         </div>
         <aside>
           <Panel title="Resumo da pessoa">

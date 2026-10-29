@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ArrowUpRight, FileText, ShieldCheck } from 'lucide-react';
 import { useApp } from '../app/context';
 import { can } from '../domain/model';
+import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
 import { ageAt, dateKey, shortDate } from '../domain/dates';
 import {
   ActionForm,
@@ -253,6 +254,7 @@ export function PatientDetails() {
                           </div>
                         ),
                     )}
+                    <NoteAddenda items={data.addenda.filter((a) => a.noteId === n.id)} />
                   </article>
                 ))
               ) : (
@@ -283,6 +285,21 @@ export function PatientDetails() {
               </div>
             )}
           </Panel>
+          {can(context.role, 'clinical') && (
+            <Panel
+              title="Histórico de escuta e aferições"
+              subtitle="Registros da pessoa na rede selecionada, com a unidade de origem."
+            >
+              {data.intakes.some((r) => r.patientId === p.id) ? (
+                <IntakeHistory
+                  records={data.intakes.filter((r) => r.patientId === p.id)}
+                  unitNames={Object.fromEntries(data.units.map((u) => [u.id, u.name]))}
+                />
+              ) : (
+                <p className="panel-empty">Nenhuma escuta ou aferição registrada.</p>
+              )}
+            </Panel>
+          )}
           <Panel title="Próximos agendamentos nesta unidade">
             {appointments.length ? (
               <div className="compact-list">

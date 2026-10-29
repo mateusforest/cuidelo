@@ -13,6 +13,7 @@ import {
 import { addDays, dateKey, minuteOfDay, validDay, validTime } from './dates';
 import { DomainError } from './errors';
 import { makeQueueCall, nextTicket } from './queue';
+import { validateIntakeContent } from './intake';
 export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
@@ -93,6 +94,81 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'intake.record': {
+      permit(c, 'clinical');
+      const e = encounter(command.encounterId);
+      const previous = db.intakes.filter((r) => r.encounterId === e.id);
+      const original = command.correctionOf
+        ? member(db.intakes, command.correctionOf, c)
+        : undefined;
+      if (original) {
+        ensure(
+          original.encounterId === e.id,
+          'A correção deve pertencer ao mesmo atendimento.',
+          'scope',
+        );
+        ensure(
+          !previous.some((r) => r.correctionOf === original.id),
+          'Este registro já possui uma correção. Abra a versão mais recente.',
+          'conflict',
+        );
+      } else
+        ensure(
+          e.status !== 'completed',
+          'O atendimento foi concluído. Somente correções de registros existentes são permitidas.',
+          'immutable',
+        );
+      const content = validateIntakeContent(command.content);
+      if (!previous.length)
+        ensure(content.complaint, 'Informe o motivo da procura na escuta inicial.');
+      const correctionReason = original
+        ? required(command.correctionReason ?? '', 'Motivo da correção', 1000)
+        : undefined;
+      entityId = newId();
+      db.intakes.push({
+        id: entityId,
+        organizationId: c.organizationId,
+        unitId: c.unitId,
+        patientId: e.patientId,
+        encounterId: e.id,
+        ...content,
+        kind: original ? 'correction' : previous.length ? 'reassessment' : 'initial',
+        recordedAt: at,
+        author: `${roleNames[c.role]} · demonstração`,
+        ...(original ? { correctionOf: original.id, correctionReason } : {}),
+      });
+      action = original
+        ? 'Correção de escuta registrada'
+        : previous.length
+          ? 'Nova aferição registrada'
+          : 'Escuta inicial registrada';
+      break;
+    }
+    case 'note.addendum': {
+      permit(c, 'clinical');
+      const n = member(db.notes, command.noteId, c);
+      ensure(
+        n.status === 'final',
+        'Conclua o registro antes de adicionar um complemento.',
+        'conflict',
+      );
+      const text = required(command.text, 'Complemento', 10000),
+        reason = required(command.reason, 'Motivo', 1000);
+      entityId = newId();
+      db.addenda.push({
+        id: entityId,
+        organizationId: c.organizationId,
+        unitId: c.unitId,
+        patientId: n.patientId,
+        noteId: n.id,
+        text,
+        reason,
+        recordedAt: at,
+        author: `${roleNames[c.role]} · demonstração`,
+      });
+      action = 'Complemento de registro concluído adicionado';
+      break;
+    }
     case 'queue.call': {
       permit(c, 'queue');
       const e = encounter(command.encounterId);
@@ -521,6 +597,8 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     appointments: has('schedule') ? unit(db.appointments) : [],
     encounters: has('queue') ? unit(db.encounters) : [],
     notes: has('clinical') ? org(db.notes) : [],
+    intakes: has('clinical') ? org(db.intakes) : [],
+    addenda: has('clinical') ? org(db.addenda) : [],
     beds: has('beds') || has('manage') ? unit(db.beds) : [],
     admissions: has('beds') ? unit(db.admissions) : [],
     lots: has('stock') ? unit(db.lots) : [],

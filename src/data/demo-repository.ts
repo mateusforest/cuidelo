@@ -4,6 +4,7 @@ import { validDay, dateKey } from '../domain/dates';
 import { createSeed } from './seed';
 import type { CareRepository } from './repository';
 import { assignMissingTickets, readDisplay } from '../domain/queue';
+import { validateIntakeContent } from '../domain/intake';
 
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -21,6 +22,8 @@ const collections = [
   'referrals',
   'audit',
   'calls',
+  'intakes',
+  'addenda',
 ] as const;
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -32,9 +35,14 @@ function parseDatabase(value: string): Database {
     db.calls = [];
     assignMissingTickets(db.encounters as Database['encounters']);
   }
+  if (isRecord(db) && db.schemaVersion === 2) {
+    db.schemaVersion = 3;
+    db.intakes = [];
+    db.addenda = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 2 ||
+    db.schemaVersion !== 3 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -187,6 +195,58 @@ function parseDatabase(value: string): Database {
     throw new Error('Invalid referrals');
   if (typed.audit.some((r) => !strings(r, ['unitId', 'at', 'actor', 'action', 'entityId'])))
     throw new Error('Invalid audit');
+  for (const r of typed.intakes) {
+    validateIntakeContent(r);
+    if (
+      !strings(r, ['unitId', 'patientId', 'encounterId', 'author', 'recordedAt']) ||
+      !Number.isFinite(Date.parse(r.recordedAt)) ||
+      !['initial', 'reassessment', 'correction'].includes(r.kind) ||
+      !typed.encounters.some(
+        (e) =>
+          e.id === r.encounterId &&
+          e.unitId === r.unitId &&
+          e.organizationId === r.organizationId &&
+          e.patientId === r.patientId,
+      )
+    )
+      throw new Error('Invalid intake');
+    const previous = typed.intakes
+      .slice(0, typed.intakes.indexOf(r))
+      .filter((i) => i.encounterId === r.encounterId);
+    if (r.kind === 'initial' ? previous.length > 0 || !r.complaint.trim() : !previous.length)
+      throw new Error('Invalid intake sequence');
+    if (r.kind === 'correction') {
+      const sourceIndex = typed.intakes.findIndex(
+        (i) => i.id === r.correctionOf && i.encounterId === r.encounterId,
+      );
+      if (
+        sourceIndex < 0 ||
+        sourceIndex >= typed.intakes.indexOf(r) ||
+        !r.correctionReason?.trim() ||
+        r.correctionReason.length > 1000 ||
+        typed.intakes.filter((i) => i.correctionOf === r.correctionOf).length !== 1
+      )
+        throw new Error('Invalid correction chain');
+    } else if (r.correctionOf || r.correctionReason) throw new Error('Unexpected correction');
+  }
+  for (const r of typed.addenda)
+    if (
+      !strings(r, ['unitId', 'patientId', 'noteId', 'text', 'reason', 'recordedAt', 'author']) ||
+      !r.text.trim() ||
+      r.text.length > 10000 ||
+      !r.reason.trim() ||
+      r.reason.length > 1000 ||
+      !Number.isFinite(Date.parse(r.recordedAt)) ||
+      !typed.notes.some(
+        (n) =>
+          n.id === r.noteId &&
+          n.status === 'final' &&
+          n.unitId === r.unitId &&
+          n.organizationId === r.organizationId &&
+          n.patientId === r.patientId,
+      )
+    )
+      throw new Error('Invalid addendum');
   return typed;
 }
 

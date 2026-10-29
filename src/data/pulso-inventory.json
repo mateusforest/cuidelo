@@ -97,9 +97,9 @@
       "quem": "Enfermagem",
       "dispositivo": "desktop",
       "group": "UBS e assistência",
-      "status": "pendente",
-      "route": "",
-      "note": "Falta tela estruturada de sinais vitais, queixa, reavaliação e classificação de risco. A prioridade administrativa da recepção não substitui esse fluxo."
+      "status": "parcial",
+      "route": "/escuta",
+      "note": "Há escuta estruturada, sinais vitais, aferições seriadas, correções justificadas e ligação com o atendimento e o histórico. Faltam classificação de risco por protocolo aprovado e reavaliação clínica completa."
     },
     {
       "id": "consultorio",
@@ -111,7 +111,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/recepcao",
-      "note": "Há SOAP, rascunho, finalização e histórico demonstrativo. Faltam CIAP/CID, prescrição, pedidos de exames, documentos e assinatura aplicável."
+      "note": "Há SOAP, rascunho, finalização, complementos, escuta e histórico demonstrativo. Faltam CIAP/CID, prescrição, pedidos de exames, documentos e assinatura aplicável."
     },
     {
       "id": "vacina",

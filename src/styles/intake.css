@@ -1,0 +1,276 @@
+.intake-overview {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 26px;
+  background: var(--brand-ink);
+  color: white;
+  border-radius: var(--radius);
+  margin-bottom: 22px;
+}
+.intake-overview > svg {
+  color: var(--brand-soft);
+  flex-shrink: 0;
+}
+.intake-overview > div {
+  flex: 1;
+}
+.intake-overview strong {
+  font-family: var(--font-heading);
+  font-size: 18px;
+}
+.intake-overview p {
+  margin: 8px 0 0;
+  color: #d6e6df;
+  line-height: 1.6;
+  max-width: 700px;
+}
+.intake-stats {
+  grid-template-columns: repeat(3, 1fr);
+}
+.care-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  border-block: 1px solid var(--border);
+  padding: 16px 0;
+  margin: 0 0 24px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.care-steps .active {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+.care-steps .done {
+  color: var(--text);
+}
+.intake-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 24px;
+  align-items: start;
+}
+.intake-grid > *,
+.intake-grid .panel {
+  min-width: 0;
+}
+.intake-grid > aside > *,
+.intake-grid > div > .panel {
+  margin-bottom: 22px;
+}
+.intake-fields {
+  border: 0;
+  margin: 0;
+  padding: 24px;
+  min-width: 0;
+}
+.intake-fields > .field {
+  margin-bottom: 24px;
+}
+.intake-fields > .field:last-child {
+  margin-bottom: 0;
+}
+.measurement-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 20px;
+  color: var(--brand-primary);
+}
+.measurement-heading h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.measurement-heading p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.vital-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.vital-fields input {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  height: 49px;
+}
+.vital-fields input::placeholder {
+  font-size: 14px;
+}
+.intake-side-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--green-surface);
+  color: var(--brand-primary);
+  margin-bottom: 18px;
+}
+.intake-grid aside h3 {
+  font-size: 17px;
+  line-height: 1.5;
+}
+.intake-grid aside .button {
+  width: 100%;
+  font-size: 13px;
+}
+.field-hint {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.intake-entry {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.intake-entry:last-child {
+  border-bottom: 0;
+}
+.intake-entry-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.intake-entry-heading small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 6px;
+}
+.intake-entry.superseded {
+  background: var(--surface-subtle);
+  border-left: 3px solid var(--border);
+}
+.intake-entry > .button {
+  margin-top: 14px;
+}
+.vitals-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.vitals-summary > div {
+  background: var(--brand-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.vitals-summary dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.vitals-summary dd {
+  color: var(--brand-ink);
+  font-size: 23px;
+  font-weight: 600;
+  margin: 7px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.vitals-summary dd small {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.correction-reason {
+  padding: 10px 13px;
+  background: var(--surface-subtle);
+  border-left: 3px solid var(--brand-soft);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.clinical-prose {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.clinical-addendum-form {
+  padding: 24px;
+  border-top: 1px solid var(--border);
+}
+.clinical-addendum-form .field {
+  margin-bottom: 18px;
+}
+.clinical-record-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+@media (max-width: 1200px) {
+  .intake-grid {
+    grid-template-columns: minmax(0, 1fr) 265px;
+    gap: 18px;
+  }
+}
+@media (max-width: 1000px) {
+  .intake-grid {
+    grid-template-columns: 1fr;
+  }
+  .intake-grid > aside {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .intake-overview > .badge {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .intake-overview {
+    padding: 20px;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .intake-overview strong {
+    font-size: 16px;
+  }
+  .intake-overview p {
+    font-size: 13px;
+  }
+  .intake-stats {
+    grid-template-columns: 1fr;
+  }
+  .intake-stats button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .intake-stats strong {
+    font-size: 24px;
+  }
+  .intake-fields,
+  .clinical-addendum-form {
+    padding: 18px;
+  }
+  .vital-fields {
+    gap: 14px 12px;
+  }
+  .vital-fields label {
+    font-size: 12px;
+    min-height: 35px;
+  }
+  .intake-entry {
+    padding: 20px 18px;
+  }
+  .intake-grid > aside {
+    display: block;
+  }
+  .care-steps {
+    gap: 10px;
+    font-size: 11px;
+  }
+}

@@ -10,6 +10,7 @@ import { Patients, PatientDetails } from './pages/Patients';
 import { Agenda } from './pages/Agenda';
 import { Reception } from './pages/Reception';
 import { EncounterPage } from './pages/Encounter';
+import { IntakePage, IntakeQueue } from './pages/Intake';
 import { Hospital } from './pages/Hospital';
 import { Pharmacy } from './pages/Pharmacy';
 import { Referrals } from './pages/Referrals';
@@ -63,6 +64,8 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
       { path: 'pessoas/:id', element: protect('patients.read', <PatientDetails />) },
       { path: 'agenda', element: protect('schedule', <Agenda />) },
       { path: 'recepcao', element: protect('queue', <Reception />) },
+      { path: 'escuta', element: protect('clinical', <IntakeQueue />) },
+      { path: 'escuta/:id', element: protect('clinical', <IntakePage />) },
       { path: 'senhas', element: protect('queue', <QueueControl />) },
       { path: 'comparacao', element: <Coverage /> },
       { path: 'atendimento/:id', element: protect('clinical', <EncounterPage />) },

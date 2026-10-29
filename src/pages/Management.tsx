@@ -276,14 +276,14 @@ const scope = [
   [
     'Prontuário e enfermagem',
     'Fluxo local',
-    'Rascunho SOAP, conclusão e preservação do registro.',
-    'Assinatura, adendos, processo de enfermagem, documentos e ordens.',
+    'Escuta, sinais vitais, novas aferições, correções e SOAP com complementos preservados.',
+    'Autoria autenticada, assinatura, processo de enfermagem, documentos e ordens.',
   ],
   [
     'UPA e pronto atendimento',
     'Fluxo local',
-    'Acolhimento, atendimento e estado de observação.',
-    'Protocolo de risco aprovado, reavaliação, medicação e transferências.',
+    'Escuta, aferições seriadas, atendimento e estado de observação.',
+    'Protocolo de risco aprovado, reavaliação clínica estruturada, medicação e transferências.',
   ],
   [
     'Internação e leitos',

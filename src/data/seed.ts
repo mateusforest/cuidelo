@@ -62,7 +62,7 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     revision: 0,
     organizations,
     units,
@@ -77,6 +77,8 @@ export function createSeed(now = new Date()): Database {
     referrals: [],
     audit: [],
     calls: [],
+    intakes: [],
+    addenda: [],
   };
   const names = [
     'Ana Clara Martins',

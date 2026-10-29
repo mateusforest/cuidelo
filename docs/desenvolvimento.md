@@ -2,9 +2,9 @@
 
 O escopo público completo está em [plano-completo.md](plano-completo.md). Esta lista ordena dependências de construção, sem autorizar uma implantação incompleta. A primeira operação em UBS, UPA, pronto atendimento e hospital depende do aceite dos módulos e integrações exigidos pela rede contratada.
 
-## Marco atual: base local 0.1
+## Marco atual: base local 0.3
 
-Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, SOAP, observação, leitos, estoque e encaminhamentos. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
+Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, escuta, sinais vitais, correções, SOAP com complementos, painel de senhas, observação, leitos, estoque e encaminhamentos. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
 
 ## 1. Identidade de acesso e persistência
 
@@ -45,4 +45,4 @@ Completar suprimentos, compras, custos, contratos, equipes e escalas, produção
 
 Uma frente pode conduzir fluxos, interface e validação com unidades; outra pode conduzir dados, integrações e infraestrutura. Revisar em conjunto alterações de identidade do paciente, acesso, medicação, estado clínico e faturamento. A equipe de desenvolvimento precisa de participação assistencial e operacional dos serviços para homologar os módulos. Não é possível assumir um prazo de conclusão confiável apenas a partir desta base.
 
-O próximo trabalho concreto é transformar os cenários desta demonstração em contratos de acesso e persistência e validar esses contratos antes de ampliar os módulos.
+Os próximos incrementos locais incluem profissionais e vínculos, vacinação e linhas de cuidado. Em paralelo, preparar os contratos de acesso e persistência. A conexão do backend permanece para a etapa acordada com os fundadores, antes de qualquer uso com dados reais.

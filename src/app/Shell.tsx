@@ -22,6 +22,7 @@ import {
   Stethoscope,
   Monitor,
   SearchCheck,
+  HeartPulse,
 } from 'lucide-react';
 import { can, roleNames, type Permission, type Role } from '../domain/model';
 import { useApp } from './context';
@@ -39,6 +40,12 @@ const navigation = [
         permission: 'queue',
       },
       { path: '/agenda', label: 'Agenda', icon: CalendarDays, permission: 'schedule' },
+      {
+        path: '/escuta',
+        label: 'Escuta e sinais vitais',
+        icon: HeartPulse,
+        permission: 'clinical',
+      },
       { path: '/senhas', label: 'Painel de senhas', icon: Monitor, permission: 'queue' },
       {
         path: '/pessoas',
@@ -93,7 +100,7 @@ export function Shell() {
   }, [dirty]);
   const current =
     navigation.flatMap((g) => g.items).find((i) => i.path === location.pathname)?.label ??
-    'Prontuário';
+    (location.pathname.startsWith('/escuta/') ? 'Escuta e sinais vitais' : 'Prontuário');
   const org = data.organizations.find((o) => o.id === context.organizationId);
   const navContent = (
     <>
@@ -145,7 +152,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.2</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.3</span>
       </div>
     </>
   );

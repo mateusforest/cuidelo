@@ -14,7 +14,7 @@ Compartilhamento de informações entre municípios precisa de uma política exp
 
 ## Entidades iniciais
 
-Organizações, unidades, pessoas, agendamentos, atendimentos, notas, leitos, internações, lotes, movimentos de estoque, encaminhamentos e eventos locais. Os identificadores são demonstrativos. CPF, CNS, CNES, vínculos profissionais e nomenclaturas oficiais precisam de validação própria na etapa correspondente.
+Organizações, unidades, pessoas, agendamentos, atendimentos, notas, complementos, escutas e aferições, chamadas de senha, leitos, internações, lotes, movimentos de estoque, encaminhamentos e eventos locais. Os identificadores são demonstrativos. CPF, CNS, CNES, vínculos profissionais e nomenclaturas oficiais precisam de validação própria na etapa correspondente.
 
 Agendamentos ainda identificam o profissional por um nome de demonstração. Antes de uso real, profissionais devem ter identificadores estáveis, credenciais, vínculos por unidade, disponibilidade e regras transacionais de agenda.
 
@@ -48,3 +48,7 @@ Prioridades na recepção são administrativas. Não existe protocolo validado d
 ## Escala
 
 A meta de 100 postos é um requisito de projeto, ainda não comprovado. Dimensionar usuários simultâneos, atendimentos por hora, históricos, documentos e integrações. Dimensionar hospitais separadamente por leitos, episódios, exames, cirurgias e fluxos críticos. Executar testes com distribuição desigual de carga, picos, falhas e restauração antes de contratar níveis de serviço.
+
+## Escuta e complementos no formato 3
+
+Escutas e aferições são registros imutáveis na lógica dos comandos; correções criam sucessoras justificadas. Complementos referenciam notas finalizadas sem substituir o SOAP. A leitura clínica compartilha o histórico dentro da mesma organização, como as notas, e a escrita exige a unidade de origem. A projeção para recepção, gestão, regulação e farmácia exclui escutas e complementos. O DTO da TV continua restrito à chamada. Veja [escuta-e-registros.md](escuta-e-registros.md) para o percurso e os limites.

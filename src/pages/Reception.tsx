@@ -179,18 +179,27 @@ export function Reception() {
                       </td>
                       <td>
                         {can(context.role, 'clinical') ? (
-                          <Button
-                            variant={e.status === 'waiting' ? 'primary' : 'secondary'}
-                            onClick={() => attend(e.id, e.status)}
-                            disabled={busy === e.id}
-                          >
-                            {e.status === 'waiting'
-                              ? 'Atender'
-                              : e.status === 'completed'
-                                ? 'Ver registro'
-                                : 'Continuar'}
-                            <ArrowRight size={15} />
-                          </Button>
+                          <div className="row-actions">
+                            <Link className="button secondary" to={`/escuta/${e.id}`}>
+                              {data.intakes.some((r) => r.encounterId === e.id)
+                                ? 'Ver escuta'
+                                : e.status === 'completed'
+                                  ? 'Ver aferições'
+                                  : 'Escuta inicial'}
+                            </Link>
+                            <Button
+                              variant={e.status === 'waiting' ? 'primary' : 'secondary'}
+                              onClick={() => attend(e.id, e.status)}
+                              disabled={busy === e.id}
+                            >
+                              {e.status === 'waiting'
+                                ? 'Atender'
+                                : e.status === 'completed'
+                                  ? 'Ver registro'
+                                  : 'Continuar'}
+                              <ArrowRight size={15} />
+                            </Button>
+                          </div>
                         ) : (
                           <Link className="row-link" to={`/pessoas/${p?.id}`}>
                             Ver cadastro

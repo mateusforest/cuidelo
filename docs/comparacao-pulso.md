@@ -8,7 +8,7 @@ Leitura estática do catálogo de 46 telas, das funções de tela e dos fluxos n
 
 As cópias recebidas em Downloads e no WhatsApp têm o mesmo tamanho e SHA-256. O original foi preservado.
 
-**Resultado:** 1 tela demonstrável, 11 com cobertura parcial, 1 adaptada e 33 a desenvolver. Esta contagem compara telas; não mede percentual de conclusão do sistema.
+**Resultado:** 1 tela demonstrável, 12 com cobertura parcial, 1 adaptada e 32 a desenvolver. Esta contagem compara telas; não mede percentual de conclusão do sistema.
 
 ## Item a item
 
@@ -21,8 +21,8 @@ As cópias recebidas em Downloads e no WhatsApp têm o mesmo tamanho e SHA-256. 
 | Recepção (`recepcao`)                         | UBS e assistência | Parcial             | Há cadastro, busca, chegada e emissão de senha. Faltam conciliação de CPF/CNS e alerta de homônimos como fluxo próprio.                                                                                                                     |
 | Fila e salas (`fila`)                         | UBS e assistência | Parcial             | Há fila, senha, chamada, rechamada e sala de destino. Faltam gestão da ocupação das salas e ordenação por protocolo clínico validado.                                                                                                       |
 | TV da sala de espera (`tv`)                   | UBS e assistência | Demonstrável        | Tela dedicada com senha, destino, orientação, histórico, relógio, tela cheia e áudio opcional. A ligação entre recepção e TV é local, no mesmo navegador; não há conexão entre dispositivos. Nomes e dados clínicos não aparecem no painel. |
-| Escuta inicial (`escuta`)                     | UBS e assistência | A desenvolver       | Falta tela estruturada de sinais vitais, queixa, reavaliação e classificação de risco. A prioridade administrativa da recepção não substitui esse fluxo.                                                                                    |
-| Consultório (`consultorio`)                   | UBS e assistência | Parcial             | Há SOAP, rascunho, finalização e histórico demonstrativo. Faltam CIAP/CID, prescrição, pedidos de exames, documentos e assinatura aplicável.                                                                                                |
+| Escuta inicial (`escuta`)                     | UBS e assistência | Parcial             | Há escuta estruturada, sinais vitais, aferições seriadas, correções justificadas e ligação com o atendimento e o histórico. Faltam classificação de risco por protocolo aprovado e reavaliação clínica completa.                            |
+| Consultório (`consultorio`)                   | UBS e assistência | Parcial             | Há SOAP, rascunho, finalização, complementos, escuta e histórico demonstrativo. Faltam CIAP/CID, prescrição, pedidos de exames, documentos e assinatura aplicável.                                                                          |
 | Sala de vacina (`vacina`)                     | UBS e assistência | A desenvolver       | Faltam caderneta, aplicação por pessoa e lote, aprazamento, perdas, rede de frio e integração oficial.                                                                                                                                      |
 | Pré-natal (`prenatal`)                        | UBS e assistência | A desenvolver       | Faltam prontuário obstétrico estruturado, consultas, exames, curvas e pendências por gestante.                                                                                                                                              |
 | Farmácia (`farmacia`)                         | UBS e assistência | Parcial             | Há estoque por lote, entradas, saídas e vencimentos. Faltam dispensação por receita e pessoa, entrega parcial e integração e-SUS AF.                                                                                                        |
@@ -60,6 +60,8 @@ As cópias recebidas em Downloads e no WhatsApp têm o mesmo tamanho e SHA-256. 
 | Uso e custos (`bo-uso`)                       | Gestão da empresa | A desenvolver       | Faltam medição real de uso, custo de infraestrutura, IA, mensagens e margem por contrato.                                                                                                                                                   |
 | Suporte (`bo-suporte`)                        | Gestão da empresa | A desenvolver       | Faltam chamados, responsabilidades, prazos, base de conhecimento e gestão do suporte.                                                                                                                                                       |
 | Equipe (`bo-equipe`)                          | Gestão da empresa | A desenvolver       | Faltam equipe interna, papéis, segundo fator e acesso excepcional auditado da empresa.                                                                                                                                                      |
+
+Na versão 0.3, a escuta passou a ter registro estruturado, aferições e correções preservadas; o consultório ganhou complementos posteriores à conclusão. A classificação clínica de risco continua pendente.
 
 ## Além do catálogo original
 

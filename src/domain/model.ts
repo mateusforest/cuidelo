@@ -78,6 +78,40 @@ export interface ClinicalNote extends Scoped {
   author: string;
   finalizedAt?: string;
 }
+export interface Vitals {
+  systolic?: number;
+  diastolic?: number;
+  pulse?: number;
+  respiratoryRate?: number;
+  temperature?: number;
+  oxygenSaturation?: number;
+  weight?: number;
+  height?: number;
+}
+export interface IntakeContent {
+  complaint: string;
+  observations: string;
+  vitals: Vitals;
+}
+export interface IntakeRecord extends Scoped, IntakeContent {
+  unitId: string;
+  patientId: string;
+  encounterId: string;
+  kind: 'initial' | 'reassessment' | 'correction';
+  recordedAt: string;
+  author: string;
+  correctionOf?: string;
+  correctionReason?: string;
+}
+export interface NoteAddendum extends Scoped {
+  unitId: string;
+  patientId: string;
+  noteId: string;
+  text: string;
+  reason: string;
+  recordedAt: string;
+  author: string;
+}
 export type BedStatus = 'available' | 'occupied' | 'cleaning' | 'blocked';
 export interface Bed extends Scoped {
   unitId: string;
@@ -138,7 +172,7 @@ export interface QueueCall extends Scoped {
   calledAt: string;
 }
 export interface Database {
-  schemaVersion: 2;
+  schemaVersion: 3;
   revision: number;
   organizations: Organization[];
   units: Unit[];
@@ -153,8 +187,12 @@ export interface Database {
   referrals: Referral[];
   audit: AuditEvent[];
   calls: QueueCall[];
+  intakes: IntakeRecord[];
+  addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  intakes: IntakeRecord[];
+  addenda: NoteAddendum[];
   organizations: Organization[];
   units: Unit[];
   patients: Patient[];
@@ -188,6 +226,14 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | {
+      type: 'intake.record';
+      encounterId: string;
+      content: IntakeContent;
+      correctionOf?: string;
+      correctionReason?: string;
+    }
+  | { type: 'note.addendum'; noteId: string; text: string; reason: string }
   | { type: 'queue.call'; encounterId: string; roomId: string }
   | { type: 'queue.recall'; callId: string }
   | { type: 'patient.create'; name: string; socialName: string; birthDate: string; phone: string }
