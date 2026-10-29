@@ -1,4 +1,4 @@
-# Perfis, totem e acompanhamento — Cuidelo 0.5.1
+# Perfis, totem e acompanhamento — Cuidelo 0.6.0
 
 Esta entrega é um ambiente local de desenvolvimento com dados fictícios. O escopo de lançamento continua incluindo UBS, UPA, pronto atendimento e hospitais. As telas não substituem a implementação e a validação dos percursos clínicos, das integrações e da proteção em servidor.
 
@@ -78,3 +78,15 @@ O motivo chega à recepção, inclusive quando uma senha sem identificação é 
 O cadastro de pessoas aceita CPF opcional, valida seus dígitos e impede duplicidade na mesma prefeitura. Cadastros sem CPF continuam acessíveis por nome e nascimento. A migração preserva os dados anteriores e inclui CPFs sintéticos somente nos exemplos originais reconhecidos. O próprio totem oferece “Dados fictícios para testar”.
 
 Os serviços exibidos variam conforme o cenário UBS, UPA ou hospital. São opções demonstrativas; a oferta de cada estabelecimento será configurada e validada na implantação.
+
+## Recepção e triagem em 0.6
+
+A recepção recebe senhas identificadas e anônimas no mesmo quadro, com atualização local a cada dois segundos. A chamada ao guichê funciona antes de identificar o cadastro. Ao chegar ao balcão, a ação Conferir chegada registra o início da conferência. A equipe seleciona o cadastro, confirma CPF ou nome e nascimento, confere a preferência e escolhe triagem ou serviço direto. Cadastro sem CPF e cadastro novo no balcão estão disponíveis.
+
+O encaminhamento preserva senha e chegada. Chamadas não iniciam cronômetros de atendimento: o profissional registra a entrada na sala. Para as senhas novas do totem, a consulta aguarda conferência e conclusão da triagem quando prevista. Registros antigos sem controle dessas etapas continuam utilizáveis sem horários inventados para essas etapas. A recepção não acessa avaliações clínicas.
+
+Ajustes de conferência exigem justificativa e acrescentam histórico; depois do início da triagem ou consulta, o registro anterior é preservado. Ausência exige chamada anterior e justificativa; o retorno restaura a mesma senha, preservando horário e histórico. A ordem dos grupos preferenciais e a classificação clínica de risco não são automatizadas.
+
+O percurso da senha mostra chegada, chamadas, conferências, triagem e consulta. Os indicadores separam espera até o balcão, tempo de conferência, espera até a triagem, escuta e consulta. Métricas de balcão são agrupadas por quem iniciou a conferência; trocas completas de profissionais ainda precisam de controle por períodos. As exportações incluem contagens e médias sem nomes de pacientes. A gestão vê agregados por unidade, incluindo senhas ainda anônimas.
+
+Para testar o percurso completo, abra Cuidelo.html, escolha a sessão Recepção da UBS Centro e entre em Recepção e atendimento. Use Abrir totem conectado e Abrir TV conectada nessa tela. Arquivos diferentes e computadores diferentes não compartilham uma base nesta versão. Não há conexão com servidor ou impressora térmica dedicada.

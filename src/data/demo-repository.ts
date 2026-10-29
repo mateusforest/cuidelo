@@ -16,6 +16,7 @@ import { validateIntakeContent } from '../domain/intake';
 import { validateVaccinationDatabase } from '../domain/vaccination-validation';
 import { validCpf } from '../domain/identification';
 import { preferenceReasons } from '../domain/kiosk-options';
+import { validateReceptionDatabase } from '../domain/reception';
 
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -89,9 +90,17 @@ function parseDatabase(value: string): Database {
     }
     db.schemaVersion = 6;
   }
+  if (isRecord(db) && db.schemaVersion === 6) {
+    db.schemaVersion = 7;
+    if (Array.isArray(db.encounters))
+      for (const e of db.encounters) {
+        if (isRecord(e) && e.source === 'kiosk' && e.status === 'waiting' && !e.intakeStartedAt)
+          e.receptionRequired = true;
+      }
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 6 ||
+    db.schemaVersion !== 7 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -285,11 +294,12 @@ function parseDatabase(value: string): Database {
   if (
     typed.calls.some(
       (c) =>
-        !strings(c, ['unitId', 'encounterId', 'ticket', 'roomId', 'calledAt']) ||
+        !strings(c, ['unitId', 'ticket', 'roomId', 'calledAt']) ||
         !Number.isFinite(Date.parse(c.calledAt)) ||
-        !typed.encounters.some(
+        Boolean(c.encounterId) === Boolean(c.arrivalId) ||
+        !(c.arrivalId ? typed.kioskArrivals : typed.encounters).some(
           (e) =>
-            e.id === c.encounterId &&
+            e.id === (c.encounterId ?? c.arrivalId) &&
             e.unitId === c.unitId &&
             e.organizationId === c.organizationId &&
             e.ticket === c.ticket,
@@ -408,6 +418,7 @@ function parseDatabase(value: string): Database {
     )
       throw new Error('Invalid addendum');
   validateVaccinationDatabase(typed);
+  validateReceptionDatabase(typed);
   return typed;
 }
 

@@ -223,12 +223,7 @@ describe('sessões, jornada e totem', () => {
     const e = db.encounters.find(
       (e) => e.ticket === receipt.ticket && e.unitId === 'aurora-centro',
     )!;
-    applyCommand(
-      db,
-      doctor,
-      { type: 'queue.call', encounterId: e.id, roomId: 'consultorio-1' },
-      now,
-    );
+    applyCommand(db, doctor, { type: 'queue.call', encounterId: e.id, roomId: 'recepcao-1' }, now);
     expect(JSON.stringify(readDisplay(db, 'aurora', 'aurora-centro', now))).not.toContain(p.name);
   });
   it('migra base anterior sem marcar etapas fictícias e falha de armazenamento não emite senha', async () => {

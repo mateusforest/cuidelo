@@ -26,8 +26,8 @@ test('CPF, preferência e motivo chegam à recepção sem dados pessoais no reci
   await page.goto('/');
   await selectSession(page, { role: 'reception', unitId: 'aurora-centro' });
   await page.goto('/recepcao');
-  await expect(page.getByRole('row').filter({ hasText: 'Ana Clara Martins' })).toContainText(
-    'Preferencial: Gestante',
+  await expect(page.locator('.desk-row').filter({ hasText: 'Ana Clara Martins' })).toContainText(
+    'Preferencial · Gestante',
   );
 });
 

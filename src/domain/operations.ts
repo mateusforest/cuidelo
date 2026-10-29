@@ -19,6 +19,13 @@ import { identityFor } from './access';
 import { closeCare, ownCare, startCare } from './patient-flow';
 import { applyWorkCommand, visibleWorkRecords } from './work-modules';
 import { cpfDigits, validCpf } from './identification';
+import {
+  applyReceptionCommand,
+  assertCallDestination,
+  readyForIntake,
+  readyForConsultation,
+  flowStage,
+} from './reception';
 export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
@@ -110,6 +117,14 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'reception.start':
+    case 'reception.complete':
+    case 'reception.absent':
+    case 'reception.return':
+    case 'queue.call-arrival': {
+      ({ entityId, action } = applyReceptionCommand(db, c, command, now, newId));
+      break;
+    }
     case 'work.create':
     case 'work.transition':
     case 'work.update': {
@@ -119,6 +134,7 @@ export function applyCommand(
     case 'intake.start': {
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
+      ensure(readyForIntake(e), 'Conclua a conferência e o encaminhamento à triagem na recepção.');
       ensure(
         e.status === 'waiting' &&
           !e.intakeStartedAt &&
@@ -141,6 +157,11 @@ export function applyCommand(
       e.arrivedAt = arrival.arrivedAt;
       e.source = 'kiosk';
       e.preferenceReason = arrival.preferenceReason;
+      e.receptionRequired = true;
+      e.receptionStartedAt = arrival.receptionStartedAt;
+      e.receptionStartedBy = arrival.receptionStartedBy;
+      e.receptionHold = arrival.receptionHold;
+      e.receptionEvents = arrival.receptionEvents;
       arrival.encounterId = id;
       entityId = id;
       action = 'Senha do totem identificada na recepção';
@@ -159,6 +180,10 @@ export function applyCommand(
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
       const previous = db.intakes.filter((r) => r.encounterId === e.id);
+      if (!previous.length && e.receptionRequired) {
+        ensure(readyForIntake(e), 'A conferência e o encaminhamento à triagem estão pendentes.');
+        ensure(e.intakeStartedAt, 'Registre a entrada na sala antes de concluir a triagem.');
+      }
       const original = command.correctionOf
         ? member(db.intakes, command.correctionOf, c)
         : undefined;
@@ -234,6 +259,7 @@ export function applyCommand(
     case 'queue.call': {
       permit(c, 'queue');
       const e = encounter(command.encounterId);
+      assertCallDestination(e, command.roomId);
       const call = makeQueueCall(db, e, command.roomId, now, newId());
       db.calls.push(call);
       entityId = call.id;
@@ -243,7 +269,19 @@ export function applyCommand(
     case 'queue.recall': {
       permit(c, 'queue');
       const previous = member(db.calls, command.callId, c);
-      const e = encounter(previous.encounterId);
+      const a = previous.arrivalId ? member(db.kioskArrivals, previous.arrivalId, c) : undefined;
+      if (a && !a.encounterId) {
+        ({ entityId, action } = applyReceptionCommand(
+          db,
+          c,
+          { type: 'queue.call-arrival', arrivalId: a.id },
+          now,
+          newId,
+        ));
+        break;
+      }
+      const e = encounter(previous.encounterId ?? a!.encounterId!);
+      assertCallDestination(e, previous.roomId);
       const call = makeQueueCall(db, e, previous.roomId, now, newId());
       db.calls.push(call);
       entityId = call.id;
@@ -383,6 +421,10 @@ export function applyCommand(
     case 'encounter.start': {
       permit(c, 'clinical');
       const e = encounter(command.id);
+      ensure(
+        readyForConsultation(e),
+        'Conclua a conferência da recepção e a triagem antes de iniciar a consulta.',
+      );
       startCare(db, c, e, at, newId);
       e.status = 'in-care';
       e.startedAt ??= at;
@@ -668,6 +710,13 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     workRecords: visibleWorkRecords(db, c),
     units: org(db.units),
     careSegments: has('clinical') ? unit(db.careSegments) : [],
+    calls: has('queue')
+      ? unit(db.calls).map((call) => {
+          const linked =
+            call.arrivalId && db.kioskArrivals.find((a) => a.id === call.arrivalId)?.encounterId;
+          return linked ? { ...call, arrivalId: undefined, encounterId: linked } : call;
+        })
+      : [],
     kioskArrivals: has('queue') ? unit(db.kioskArrivals).filter((a) => !a.encounterId) : [],
     patients: has('patients.read')
       ? org(db.patients).map((p) => ({ ...p, allergies: has('clinical') ? p.allergies : [] }))
@@ -701,7 +750,29 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
     items.filter((x) => x.organizationId === c.organizationId && included.has(x.unitId));
   const encounters = scoped(db.encounters),
     beds = scoped(db.beds);
+  const flowFor = (unitId?: string) => {
+    const list = encounters.filter(
+      (e) => (!unitId || e.unitId === unitId) && dateKey(new Date(e.arrivedAt)) === today,
+    );
+    const anonymous = scoped(db.kioskArrivals).filter(
+      (a) =>
+        !a.encounterId &&
+        (!unitId || a.unitId === unitId) &&
+        dateKey(new Date(a.arrivedAt)) === today,
+    );
+    const count = (labels: string[]) => list.filter((e) => labels.includes(flowStage(e))).length;
+    return {
+      reception:
+        anonymous.filter((a) => !a.receptionHold).length +
+        count(['Aguardando recepção', 'Em conferência', 'Em espera']),
+      triageWaiting: count(['Aguardando triagem']),
+      triageActive: count(['Em triagem']),
+      careWaiting: count(['Aguardando atendimento']),
+      absent: anonymous.filter((a) => !!a.receptionHold).length + count(['Ausente na chamada']),
+    };
+  };
   return {
+    flow: flowFor(),
     vaccination: vaccinationSummary(db, c, now),
     today: encounters.filter((e) => dateKey(new Date(e.arrivedAt)) === today).length,
     waiting: encounters.filter((e) => e.status === 'waiting').length,
@@ -716,6 +787,7 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
     pendingReferrals: scoped(db.referrals).filter((r) => r.status === 'requested').length,
     units: units.map((unit) => ({
       unit,
+      flow: flowFor(unit.id),
       today: encounters.filter(
         (e) => e.unitId === unit.id && dateKey(new Date(e.arrivedAt)) === today,
       ).length,

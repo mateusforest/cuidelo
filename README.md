@@ -6,14 +6,15 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.5.1**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.6.0**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
 
 - Entrada de demonstração com nove perfis: prefeitura, administração local, recepção, equipe médica, enfermagem, farmácia, regulação, agente de saúde e operação da Cuidelo. As sessões operacionais ficam vinculadas à unidade; somente a prefeitura filtra unidades da própria rede.
 - Cadastro de pessoas, busca, nome social e consulta do histórico demonstrativo.
 - Agenda com bloqueio de sobreposição, cancelamento justificado e confirmação de chegada.
-- Recepção, início do atendimento, registro SOAP, rascunho e conclusão imutável na lógica da demonstração.
+- Recepção com senhas do totem, chamada antes da identificação, conferência presencial de CPF ou nome e nascimento, preferência confirmada, cadastro no balcão e encaminhamento à triagem ou serviço. Ausência e retorno preservam a senha.
+- Passagem da recepção para a triagem e o consultório, com chamadas na TV e tempos medidos por etapa. Início do atendimento, registro SOAP, rascunho e conclusão imutável na lógica da demonstração.
 - Escuta inicial, sinais vitais, novas aferições e correções justificadas, vinculadas ao atendimento e ao histórico.
 - Complementos de notas concluídas, preservando o texto original.
 - Observação na urgência, admissão em leito, bloqueio de ocupação duplicada, saída e higienização.
@@ -38,7 +39,7 @@ Já é possível testar:
 pnpm build:html
 ```
 
-Abra `dist-standalone/Cuidelo.html` com dois cliques. O arquivo funciona sem servidor e contém código, estilos, marca e fontes. `Cuidelo-TV.html` abre diretamente a prévia da TV. `Cuidelo-Totem.html` abre a retirada de senha da UBS Centro de demonstração. Para testar chamada entre janelas, use o botão **Abrir TV desta unidade** dentro de um mesmo arquivo, no mesmo navegador. A demonstração não conecta TVs de outros dispositivos.
+Abra `dist-standalone/Cuidelo.html` com dois cliques. O arquivo funciona sem servidor e contém código, estilos, marca e fontes. `Cuidelo-TV.html` abre diretamente a prévia da TV. `Cuidelo-Totem.html` abre a retirada de senha da UBS Centro de demonstração. Para testar chamada entre janelas, use os botões **Abrir totem conectado** e **Abrir TV conectada** na Recepção (ou **Abrir TV desta unidade** no painel de senhas) dentro de um mesmo arquivo, no mesmo navegador. A demonstração não conecta TVs de outros dispositivos.
 
 O painel de comparação registra **1 tela demonstrável, 44 parciais e 1 adaptada**, considerando o catálogo de 46 telas do Pulso. As 30 telas antes sem base agora possuem correspondência local, mas os percursos continuam parciais. Essa contagem não mede conclusão do sistema nem homologação.
 

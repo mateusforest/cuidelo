@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Megaphone, Play, Clock3 } from 'lucide-react';
 import { useApp } from '../app/context';
 import { demoIdentities } from '../domain/access';
-import { preferenceLabel } from '../domain/kiosk-options';
+import { readyForConsultation } from '../domain/reception';
 import type { Encounter } from '../domain/model';
 import { roomsForUnit } from '../domain/queue';
 import { clockTime, dateKey } from '../domain/dates';
@@ -127,7 +127,7 @@ export function ConsultingRoom() {
   const waiting = data.encounters
     .filter(
       (e) =>
-        e.status === 'waiting' ||
+        (e.status === 'waiting' && readyForConsultation(e)) ||
         e.status === 'observation' ||
         (e.status === 'in-care' &&
           !data.careSegments.some((s) => s.encounterId === e.id && !s.endedAt)),
@@ -228,6 +228,32 @@ export function Performance() {
         p.duration.average ?? '',
         p.active,
       ]),
+      [],
+      ['Etapa', 'Medições completas', 'Média em minutos'],
+      ...(
+        [
+          ['Espera pelo balcão', report.beforeReception],
+          ['Conferência na recepção', report.desk],
+          ['Espera pela triagem', report.beforeTriage],
+          ['Duração da triagem', report.intake],
+          ['Espera pela consulta', report.beforeConsult],
+        ] as const
+      ).map(([label, s]) => [label, s.count, s.average ?? '']),
+      [],
+      [
+        'Profissional da recepção',
+        'Unidade',
+        'Conferências concluídas',
+        'Medições completas',
+        'Média em minutos',
+      ],
+      ...report.byReception.map((p) => [
+        p.name,
+        p.unitName,
+        p.checked,
+        p.duration.count,
+        p.duration.average ?? '',
+      ]),
     ];
     const csv = rows
       .map((r) =>
@@ -264,7 +290,7 @@ export function Performance() {
         }
         action={
           <Button variant="secondary" onClick={download} disabled={!report}>
-            Exportar dados por profissional
+            Exportar tempos e profissionais
           </Button>
         }
       />
@@ -296,7 +322,10 @@ export function Performance() {
           <Panel title="Etapas da jornada">
             <div className="flow-stats journey-stats">
               {[
-                ['Recepção → início da escuta', report.reception],
+                ['Chegada → balcão', report.beforeReception],
+                ['Conferência na recepção', report.desk],
+                ['Encaminhamento → triagem', report.beforeTriage],
+                ['Chegada → início da escuta', report.reception],
                 ['Duração da escuta', report.intake],
                 ['Fim da escuta → consulta', report.beforeConsult],
               ].map(([label, value]) => {
@@ -351,6 +380,38 @@ export function Performance() {
               />
             )}
           </Panel>
+          {!!report.byReception.length && (
+            <Panel
+              title="Conferência por profissional da recepção"
+              subtitle="Agrupado por quem iniciou a conferência. Período entre a chegada ao balcão e a primeira conferência concluída."
+            >
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Profissional / unidade</th>
+                      <th>Conferências concluídas</th>
+                      <th>Tempo médio no balcão</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.byReception.map((p) => (
+                      <tr key={p.actorId}>
+                        <td>
+                          <strong>{p.name}</strong>
+                          <small className="table-subtitle">{p.unitName}</small>
+                        </td>
+                        <td>{p.checked}</td>
+                        <td>
+                          {duration(p.duration.average)} · {p.duration.count} medições
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          )}
           <Panel title="Movimento por unidade">
             <div className="table-scroll">
               <table>
@@ -376,72 +437,15 @@ export function Performance() {
             </div>
           </Panel>
           <Notice>
-            O período considera a data da chegada. Registros antigos sem marcação de etapas não
-            geram tempos estimados: {report.unassigned} atendimentos sem período de consulta
-            atribuído. Se não houver escuta, a espera na recepção termina na primeira entrada em
-            consulta. Estes indicadores descrevem a operação e não avaliam qualidade clínica.
+            {report.unidentifiedWaiting} senhas do totem ainda aguardam identificação e não entram
+            nas médias por pessoa. O período considera a data da chegada. Registros antigos sem
+            marcação de etapas não geram tempos estimados: {report.unassigned} atendimentos sem
+            período de consulta atribuído. Se não houver escuta, a espera na recepção termina na
+            primeira entrada em consulta. Estes indicadores descrevem a operação e não avaliam
+            qualidade clínica.
           </Notice>
         </>
       )}
     </>
-  );
-}
-export function UnidentifiedArrivals() {
-  const { data, context, repository, notify } = useApp();
-  const [selected, setSelected] = useState<Record<string, string>>({}),
-    [busy, setBusy] = useState('');
-  const link = async (id: string) => {
-    setBusy(id);
-    try {
-      await repository.execute(context, {
-        type: 'kiosk.link',
-        arrivalId: id,
-        patientId: selected[id],
-      });
-      notify('Pessoa identificada. O horário de chegada do totem foi preservado.');
-    } catch (e) {
-      notify((e as Error).message, 'error');
-    } finally {
-      setBusy('');
-    }
-  };
-  if (!data.kioskArrivals.length) return null;
-  return (
-    <Panel
-      title="Senhas do totem · identificar na recepção"
-      subtitle="Se necessário, cadastre a pessoa em Pessoas e prontuários; depois vincule a senha aqui."
-    >
-      <div className="panel-body">
-        {data.kioskArrivals.map((a) => (
-          <div className="arrival-link" key={a.id}>
-            <strong>{a.ticket}</strong>
-            <span>
-              {a.service} · <LiveDuration since={a.arrivedAt} />
-              {a.priority === 'priority' && (
-                <small className="table-subtitle">
-                  Preferencial: {preferenceLabel(a.preferenceReason)}
-                </small>
-              )}
-            </span>
-            <Field label={`Pessoa da senha ${a.ticket}`}>
-              <select
-                value={selected[a.id] ?? ''}
-                onChange={(e) => setSelected({ ...selected, [a.id]: e.target.value })}
-              >
-                <option value="">Selecionar cadastro</option>
-                {data.patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.socialName || p.name} · {p.record}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Button disabled={!selected[a.id] || !!busy} onClick={() => link(a.id)}>
-              Confirmar identificação
-            </Button>
-          </div>
-        ))}
-      </div>
-    </Panel>
   );
 }

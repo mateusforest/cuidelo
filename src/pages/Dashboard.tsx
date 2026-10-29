@@ -42,6 +42,11 @@ export function Dashboard() {
         'Em cuidado',
         'Leitos ocupados',
         'Total de leitos',
+        'Senhas na recepção hoje',
+        'Aguardando triagem hoje',
+        'Em triagem hoje',
+        'Aguardando atendimento hoje',
+        'Ausentes hoje',
       ],
       ...summary.units.map((s) => [
         s.unit.name,
@@ -51,6 +56,11 @@ export function Dashboard() {
         s.inCare,
         s.occupied,
         s.totalBeds,
+        s.flow.reception,
+        s.flow.triageWaiting,
+        s.flow.triageActive,
+        s.flow.careWaiting,
+        s.flow.absent,
       ]),
     ];
     const url = URL.createObjectURL(
@@ -117,6 +127,27 @@ export function Dashboard() {
           ) : undefined
         }
       />
+      {can(context.role, 'manage') && (
+        <Panel
+          title="Fluxo das senhas de hoje"
+          subtitle="Recepção inclui senhas ainda sem identificação. Contagem local por etapa, sem expor dados pessoais."
+        >
+          <div className="flow-stats journey-stats">
+            {[
+              ['Na recepção', summary.flow.reception],
+              ['Aguardando triagem', summary.flow.triageWaiting],
+              ['Em triagem', summary.flow.triageActive],
+              ['Aguardando atendimento', summary.flow.careWaiting],
+              ['Ausentes na chamada', summary.flow.absent],
+            ].map(([label, value]) => (
+              <article key={String(label)}>
+                <small>{label}</small>
+                <strong>{value}</strong>
+              </article>
+            ))}
+          </div>
+        </Panel>
+      )}
       <div className="review-banner">
         <Monitor size={27} />
         <div>

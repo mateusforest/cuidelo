@@ -47,8 +47,21 @@ test('totem → identificação → chamada da estação → TV → consulta →
   await kiosk.getByRole('button', { name: 'Imprimir senha' }).click();
   await expect(kiosk.locator('body')).toHaveAttribute('data-print', 'requested');
   await page.goto('/recepcao');
+  await page
+    .getByTestId(`desk-${ticket}`)
+    .getByRole('button', { name: 'Conferir chegada' })
+    .click();
   await page.getByLabel(`Pessoa da senha ${ticket}`, { exact: true }).selectOption('aurora-p12');
-  await page.getByRole('button', { name: 'Confirmar identificação' }).click();
+  await page.getByLabel('Conferir por', { exact: true }).selectOption('name');
+  await page.getByLabel('Nome informado pela pessoa', { exact: true }).fill('Lucas Pereira');
+  await page.getByLabel('Nascimento informado pela pessoa', { exact: true }).fill('1962-08-10');
+  await page
+    .getByRole('checkbox', { name: 'Conferi a identificação com a pessoa ou responsável' })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Conferi a preferência de atendimento com a pessoa' })
+    .check();
+  await page.getByRole('button', { name: 'Conferir e encaminhar' }).click();
   await expect(page.getByRole('status')).toContainText('horário de chegada');
   await selectSession(page, { role: 'clinical', unitId: 'aurora-centro' });
   await page.goto('/consultorio');

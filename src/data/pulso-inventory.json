@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.5. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.6. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -63,7 +63,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/recepcao",
-      "note": "Cadastro, chegada, fila, senha e identificação de senhas anônimas vindas do totem, preservando o horário de chegada. Conciliação CPF/CNS e homônimos continuam pendentes."
+      "note": "Senha do totem identificada ou anônima, busca por CPF/nome, cadastro no balcão, conferência de CPF ou nome e nascimento, preferência confirmada, ajuste justificado e encaminhamento à triagem/serviço. Ausência e retorno preservam a senha. Faltam conciliação cadastral nacional, validação documental e operação entre dispositivos."
     },
     {
       "id": "fila",
@@ -75,7 +75,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/consultorio",
-      "note": "Chamada e rechamada pelo consultório, início separado da chamada, autoria e duração por profissional. Ocupação de salas e ordenação clínica validada continuam pendentes."
+      "note": "Etapas explícitas de recepção, triagem e atendimento; chamada de senha anônima no guichê, chamada/rechamada à sala, ausências, retorno e percurso com horários. A consulta aguarda conferência e triagem quando previstas. Ocupação de salas, protocolos de ordenação e sincronização remota continuam pendentes."
     },
     {
       "id": "tv",
@@ -99,7 +99,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/escuta",
-      "note": "Há escuta estruturada, sinais vitais, aferições seriadas, correções justificadas e ligação com o atendimento e o histórico. Faltam classificação de risco por protocolo aprovado e reavaliação clínica completa."
+      "note": "Recebe a fila encaminhada pela recepção, chama/rechama na TV e registra início e fim da triagem. Escuta, sinais vitais, aferições seriadas e correções preservadas. Faltam classificação de risco por protocolo aprovado e reavaliação clínica completa."
     },
     {
       "id": "consultorio",
@@ -111,7 +111,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/consultorio",
-      "note": "SOAP, rascunho, conclusão, complementos, histórico da prefeitura, chamada na TV e períodos de consulta. CIAP/CID, prescrição, pedidos e assinatura continuam pendentes."
+      "note": "Fila após recepção e triagem quando previstas, SOAP, rascunho, conclusão, complementos, histórico da prefeitura, chamada na TV e períodos por profissional. CIAP/CID, prescrição, pedidos e assinatura continuam pendentes."
     },
     {
       "id": "vacina",
@@ -171,7 +171,7 @@
       "group": "Gestão municipal",
       "status": "parcial",
       "route": "/",
-      "note": "Há indicadores locais por rede e unidade. Faltam mapa territorial, séries históricas, financiamento e decisões gerenciais vinculadas a dados reais."
+      "note": "Indicadores locais por rede/unidade, com acompanhamento agregado de recepção, triagem, espera e ausência. Faltam mapa territorial, séries históricas, financiamento e decisões gerenciais vinculadas a dados reais."
     },
     {
       "id": "lotacao",
@@ -183,7 +183,7 @@
       "group": "Gestão municipal",
       "status": "parcial",
       "route": "/",
-      "note": "Há resumo de espera e ocupação por unidade. Falta telemetria entre estabelecimentos e acompanhamento operacional entre dispositivos."
+      "note": "Gestão vê contagens locais de senhas na recepção (incluindo anônimas), espera e atendimento na triagem, espera pelo cuidado e ausências, sem dados pessoais. Falta telemetria entre estabelecimentos e dispositivos."
     },
     {
       "id": "indicadores",
@@ -207,7 +207,7 @@
       "group": "Gestão municipal",
       "status": "parcial",
       "route": "/desempenho",
-      "note": "Marcos de chegada e escuta, períodos de consulta por profissional, observação separada, filtros por chegada, visão por unidade e exportação. Registros antigos sem marcação não geram tempos inventados; telemetria remota continua pendente."
+      "note": "Mede espera pelo balcão, duração da conferência, espera pela triagem, escuta, consulta e permanência. Inclui autoria da conferência, períodos por profissional, percurso da senha e exportação. Registros antigos não recebem horários inventados; telemetria remota e gestão completa de trocas de profissionais continuam pendentes."
     },
     {
       "id": "prenatal-municipio",
@@ -267,7 +267,7 @@
       "group": "Gestão municipal",
       "status": "parcial",
       "route": "/paineis/relatorios",
-      "note": "Relatórios operacionais, exportação CSV por unidade e desempenho por período/profissional. Relatórios oficiais e produção faturável continuam pendentes."
+      "note": "Exportação CSV inclui etapas da recepção/triagem, médias com quantidade de medições, profissionais do balcão e consulta, além de contagens por unidade. Relatórios oficiais e produção faturável continuam pendentes."
     },
     {
       "id": "config",

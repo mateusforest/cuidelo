@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight, ClipboardCheck, HeartPulse, Save } from 'lucide-
 import { useApp } from '../app/context';
 import type { IntakeRecord, Vitals } from '../domain/model';
 import { activeIntakes, vitalFields } from '../domain/intake';
+import { readyForIntake, lastReceptionCheck } from '../domain/reception';
+import { TriageCall } from '../components/TriageCall';
 import { ageAt, clockTime } from '../domain/dates';
 import {
   Avatar,
@@ -25,7 +27,9 @@ export function IntakeQueue() {
   const [search, setSearch] = useState(''),
     [filter, setFilter] = useState('pending');
   const hasRecord = (id: string) => data.intakes.some((r) => r.encounterId === id);
-  const pending = data.encounters.filter((e) => e.status === 'waiting' && !hasRecord(e.id));
+  const pending = data.encounters.filter(
+    (e) => e.status === 'waiting' && readyForIntake(e) && !hasRecord(e.id),
+  );
   const recorded = data.encounters.filter((e) => e.status !== 'completed' && hasRecord(e.id));
   const list = data.encounters
     .filter((e) => {
@@ -203,6 +207,18 @@ function IntakeEditor({ id }: { id?: string }) {
         }
       />
     );
+  if (!records.length && !readyForIntake(encounter))
+    return (
+      <>
+        <PageHeader
+          title="Conferência da recepção pendente"
+          description="A pessoa precisa ser conferida e encaminhada à triagem antes de iniciar esta etapa."
+        />
+        <Link className="button secondary" to="/recepcao">
+          Voltar à recepção
+        </Link>
+      </>
+    );
   const clear = () => {
     setComplaint('');
     setObservations('');
@@ -299,6 +315,19 @@ function IntakeEditor({ id }: { id?: string }) {
         <span className="active">2 · Escuta e aferições</span>
         <span>3 · Atendimento e acompanhamento</span>
       </div>
+      {!completed && (
+        <TriageCall
+          encounter={encounter}
+          onChange={() => setBaseRevision(repository.getRevision())}
+        />
+      )}
+      {lastReceptionCheck(encounter) && (
+        <Notice>
+          Identificação e preferência conferidas na recepção às{' '}
+          {clockTime(lastReceptionCheck(encounter)!.at)}. A triagem clínica e a avaliação de risco
+          são responsabilidade da equipe assistencial.
+        </Notice>
+      )}
       <div className="intake-grid">
         <div>
           {!completed || correcting ? (

@@ -70,7 +70,15 @@ export interface Appointment extends Scoped {
   cancellationReason?: string;
 }
 export type EncounterStatus = 'waiting' | 'in-care' | 'observation' | 'completed';
-export interface Encounter extends Scoped {
+export interface ReceptionTracking {
+  receptionRequired?: boolean;
+  receptionEvents?: { at: string; actorId: string; kind: 'absent' | 'returned'; reason: string }[];
+  receptionStartedAt?: string;
+  receptionStartedBy?: string;
+  receptionHold?: { at: string; actorId: string; reason: string };
+  receptionChecks?: import('./reception').ReceptionCheck[];
+}
+export interface Encounter extends Scoped, ReceptionTracking {
   preferenceReason?: import('./kiosk-options').PreferenceReason;
   source?: 'reception' | 'kiosk';
   intakeStartedAt?: string;
@@ -190,7 +198,8 @@ export interface AuditEvent extends Scoped {
 }
 export interface QueueCall extends Scoped {
   unitId: string;
-  encounterId: string;
+  encounterId?: string;
+  arrivalId?: string;
   ticket: string;
   roomId: string;
   calledAt: string;
@@ -314,7 +323,7 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
-  schemaVersion: 6;
+  schemaVersion: 7;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -341,6 +350,7 @@ export interface Database {
   addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  calls: QueueCall[];
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -364,7 +374,15 @@ export interface Snapshot {
   referrals: Referral[];
   audit: AuditEvent[];
 }
+export interface FlowCounts {
+  reception: number;
+  triageWaiting: number;
+  triageActive: number;
+  careWaiting: number;
+  absent: number;
+}
 export interface UnitSummary {
+  flow: FlowCounts;
   unit: Unit;
   today: number;
   waiting: number;
@@ -373,6 +391,7 @@ export interface UnitSummary {
   totalBeds: number;
 }
 export interface Summary {
+  flow: FlowCounts;
   vaccination: VaccinationSummary;
   today: number;
   waiting: number;
@@ -385,6 +404,7 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | import('./reception').ReceptionCommand
   | VaccinationCommand
   | { type: 'work.create'; module: string; values: Record<string, string> }
   | { type: 'work.transition'; id: string; status: string; reason: string }
@@ -535,7 +555,7 @@ export interface CareSegment extends Scoped {
   endedAt?: string;
   endReason?: 'observation' | 'completed';
 }
-export interface KioskArrival extends Scoped {
+export interface KioskArrival extends Scoped, ReceptionTracking {
   preferenceNeedsReview?: boolean;
   preferenceReason?: import('./kiosk-options').PreferenceReason;
   unitId: string;

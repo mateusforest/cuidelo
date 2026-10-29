@@ -4,6 +4,7 @@ import { dateKey, validDay } from './dates';
 import { DomainError } from './errors';
 import { nextTicket } from './queue';
 import { cpfDigits, validCpf, normalizedName } from './identification';
+import { lastReceptionCheck } from './reception';
 import { preferenceReasons, servicesForUnit, type PreferenceReason } from './kiosk-options';
 export { kioskServices } from './kiosk-options';
 
@@ -165,13 +166,16 @@ export function issueKiosk(
       'Há um atendimento de outro dia em aberto. Procure a recepção para conferir sua chegada.',
     );
   if (existing) {
+    if (existing.status === 'waiting' && !existing.intakeStartedAt)
+      existing.receptionRequired = true;
     const review =
       request.priority === 'priority' &&
-      existing.status !== 'waiting' &&
-      existing.priority !== 'priority';
+      (existing.status !== 'waiting' || !!lastReceptionCheck(existing)) &&
+      (existing.priority !== 'priority' || existing.preferenceReason !== reason);
     if (
       request.priority === 'priority' &&
       existing.status === 'waiting' &&
+      !lastReceptionCheck(existing) &&
       (existing.priority !== 'priority' || (existing.preferenceReason ?? 'reception') !== reason)
     ) {
       existing.priority = 'priority';
@@ -255,6 +259,7 @@ export function issueKiosk(
       arrivedAt: at,
       status: 'waiting',
       source: 'kiosk',
+      receptionRequired: true,
     });
   db.audit.push({
     id: id(),
@@ -320,6 +325,39 @@ export function performance(db: Database, c: Context, from: string, to: string, 
         ),
       ),
     ),
+    beforeReception: sample(encounters.map((e) => elapsed(e.arrivedAt, e.receptionStartedAt))),
+    desk: sample(encounters.map((e) => elapsed(e.receptionStartedAt, e.receptionChecks?.[0]?.at))),
+    beforeTriage: sample(
+      encounters.map((e) =>
+        lastReceptionCheck(e)?.destination === 'triage'
+          ? elapsed(lastReceptionCheck(e)?.at, e.intakeStartedAt)
+          : null,
+      ),
+    ),
+    unidentifiedWaiting: own
+      ? 0
+      : db.kioskArrivals.filter(
+          (a) =>
+            scoped(a) &&
+            !a.encounterId &&
+            !a.receptionHold &&
+            dateKey(new Date(a.arrivedAt)) >= from &&
+            dateKey(new Date(a.arrivedAt)) <= to,
+        ).length,
+    byReception: own
+      ? []
+      : [...new Set(encounters.map((e) => e.receptionStartedBy).filter(Boolean))].map((actorId) => {
+          const list = encounters.filter((e) => e.receptionStartedBy === actorId);
+          return {
+            actorId,
+            name: identities.find((i) => i.sessionId === actorId)?.name ?? 'Profissional',
+            unitName: db.units.find((u) => u.id === list[0].unitId)?.name ?? '',
+            checked: list.filter((e) => e.receptionChecks?.length).length,
+            duration: sample(
+              list.map((e) => elapsed(e.receptionStartedAt, e.receptionChecks?.[0]?.at)),
+            ),
+          };
+        }),
     intake: sample(encounters.map((e) => elapsed(e.intakeStartedAt, e.intakeCompletedAt))),
     beforeConsult: sample(encounters.map((e) => elapsed(e.intakeCompletedAt, e.startedAt))),
     total: sample(encounters.map((e) => elapsed(e.arrivedAt, e.completedAt))),

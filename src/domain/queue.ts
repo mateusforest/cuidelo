@@ -23,7 +23,11 @@ export interface DisplayFeed {
 export function roomsForUnit(unit: Unit): Room[] {
   return [
     { id: 'recepcao-1', name: 'Guichê 01', direction: 'Recepção · entrada principal' },
-    { id: 'escuta-1', name: 'Sala 01', direction: 'Corredor principal · primeira porta à direita' },
+    {
+      id: 'escuta-1',
+      name: 'Triagem · Sala 01',
+      direction: 'Corredor principal · primeira porta à direita',
+    },
     {
       id: 'consultorio-1',
       name: 'Consultório 01',

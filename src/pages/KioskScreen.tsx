@@ -194,8 +194,8 @@ export function Kiosk() {
             </div>
             {receipt.preferenceNeedsReview && (
               <Notice tone="amber">
-                Seu atendimento já começou. A solicitação de preferência precisa ser conferida
-                diretamente com a recepção.
+                A preferência já foi conferida ou seu atendimento começou. Qualquer alteração
+                precisa ser conferida diretamente com a recepção.
               </Notice>
             )}
             {receipt.existing && (

@@ -49,6 +49,26 @@ export function Coverage() {
           </p>
         </div>
       </Notice>
+      <Panel
+        title="Avanços da versão 0.6"
+        subtitle="O percurso de chegada agora conecta mais etapas dos módulos parciais."
+      >
+        <div className="panel-body">
+          <p>
+            Recepção com conferência de CPF ou nome, preferência confirmada, triagem, chamadas na TV
+            e controle de ausência e retorno. Fila, escuta e consultório respeitam o encaminhamento;
+            gestão e relatórios recebem os tempos e as contagens por etapa.
+          </p>
+          <p>
+            Os 44 módulos continuam parciais porque suas pendências completas ainda incluem
+            integração, protocolos, autenticação e outras funções. A descrição de cada módulo abaixo
+            mostra o avanço e o que falta.
+          </p>
+          <Link className="row-link" to="/recepcao">
+            Testar o percurso da recepção
+          </Link>
+        </div>
+      </Panel>
       <div className="coverage-stats">
         {Object.entries(labels).map(([key, label]) => (
           <button
