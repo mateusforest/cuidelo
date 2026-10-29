@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   ArrowUpRight,
   Users,
@@ -13,11 +13,13 @@ import {
   ArrowRight,
   CalendarDays,
   ClipboardList,
+  Monitor,
 } from 'lucide-react';
 import { useApp } from '../app/context';
 import { can, unitKindNames, type UnitKind } from '../domain/model';
 import { dateKey, shortDate } from '../domain/dates';
 import { Badge, Button, PageHeader, Panel, TextLink } from '../components/ui';
+import { displayRoute } from '../app/links';
 
 const kindIcons = { ubs: Stethoscope, upa: HeartPulse, hospital: Building2 };
 export function Dashboard() {
@@ -115,6 +117,23 @@ export function Dashboard() {
           ) : undefined
         }
       />
+      <div className="review-banner">
+        <Monitor size={27} />
+        <div>
+          <strong>A sala de espera também faz parte do cuidado.</strong>
+          <p>Conheça o painel de senhas e confira a cobertura do protótipo original.</p>
+        </div>
+        <Link
+          className="button primary"
+          to={displayRoute(context.organizationId, (currentUnit ?? data.units[0]).id, true)}
+        >
+          Ver tela da TV
+          <ArrowUpRight size={16} />
+        </Link>
+        <Link className="button secondary" to="/comparacao">
+          Comparar com Pulso
+        </Link>
+      </div>
       <div className="overview-banner">
         <div className="banner-icon">
           <img src="/brand/simbolo.svg" alt="" />

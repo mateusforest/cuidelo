@@ -1,5 +1,6 @@
 import type { Database, Organization, Unit } from '../domain/model';
 import { addDays, dateKey } from '../domain/dates';
+import { assignMissingTickets } from '../domain/queue';
 
 export function createSeed(now = new Date()): Database {
   const today = dateKey(now);
@@ -61,7 +62,7 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 0,
     organizations,
     units,
@@ -75,6 +76,7 @@ export function createSeed(now = new Date()): Database {
     movements: [],
     referrals: [],
     audit: [],
+    calls: [],
   };
   const names = [
     'Ana Clara Martins',
@@ -121,6 +123,7 @@ export function createSeed(now = new Date()): Database {
       if (unit.kind !== 'hospital') {
         for (let i = 0; i < 4; i++)
           db.encounters.push({
+            ticket: '',
             id: `${unit.id}-e${i}`,
             organizationId: org.id,
             unitId: unit.id,
@@ -208,5 +211,6 @@ export function createSeed(now = new Date()): Database {
       }),
     );
   }
+  assignMissingTickets(db.encounters);
   return db;
 }

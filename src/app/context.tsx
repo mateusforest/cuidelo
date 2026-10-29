@@ -10,6 +10,7 @@ import {
 import type { Context, Snapshot, Summary } from '../domain/model';
 import type { CareRepository } from '../data/repository';
 import { browserRepository } from '../data/demo-repository';
+import { storageKey } from '../data/demo-repository';
 import { can } from '../domain/model';
 
 type Toast = { id: number; message: string; kind: 'success' | 'error' };
@@ -44,6 +45,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return initial;
   });
   const revision = useSyncExternalStore(repository.subscribe, repository.getRevision);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === storageKey) repository.refresh();
+    };
+    const onFocus = () => repository.refresh();
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [repository]);
   const [toast, setToast] = useState<Toast | null>(null);
   const [dirty, setDirty] = useState(false);
   const data = useMemo(() => repository.snapshot(context), [repository, context, revision]);

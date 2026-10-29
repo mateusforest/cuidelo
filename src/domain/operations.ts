@@ -11,16 +11,9 @@ import {
   type Encounter,
 } from './model';
 import { addDays, dateKey, minuteOfDay, validDay, validTime } from './dates';
-
-export class DomainError extends Error {
-  constructor(
-    message: string,
-    public code = 'invalid',
-  ) {
-    super(message);
-    this.name = 'DomainError';
-  }
-}
+import { DomainError } from './errors';
+import { makeQueueCall, nextTicket } from './queue';
+export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
 }
@@ -86,6 +79,7 @@ export function applyCommand(
       'conflict',
     );
     const e: Encounter = {
+      ticket: nextTicket(db.encounters, c.organizationId, c.unitId, today),
       id: newId(),
       organizationId: c.organizationId,
       unitId: c.unitId,
@@ -99,6 +93,25 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'queue.call': {
+      permit(c, 'queue');
+      const e = encounter(command.encounterId);
+      const call = makeQueueCall(db, e, command.roomId, now, newId());
+      db.calls.push(call);
+      entityId = call.id;
+      action = `Senha ${call.ticket} chamada`;
+      break;
+    }
+    case 'queue.recall': {
+      permit(c, 'queue');
+      const previous = member(db.calls, command.callId, c);
+      const e = encounter(previous.encounterId);
+      const call = makeQueueCall(db, e, previous.roomId, now, newId());
+      db.calls.push(call);
+      entityId = call.id;
+      action = `Senha ${call.ticket} chamada novamente`;
+      break;
+    }
     case 'patient.create': {
       permit(c, 'patients.write');
       ensure(

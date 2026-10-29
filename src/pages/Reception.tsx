@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Clock3, ArrowRight, HeartPulse } from 'lucide-react';
+import { Plus, Clock3, ArrowRight, HeartPulse, Monitor } from 'lucide-react';
 import { can, type EncounterStatus } from '../domain/model';
 import { clockTime, minutesWaiting } from '../domain/dates';
 import { useApp } from '../app/context';
@@ -75,10 +75,16 @@ export function Reception() {
         title={urgent ? 'Acolhimento e atendimento' : 'Recepção e atendimento'}
         description="Acompanhe a chegada, a espera e a continuidade de cada atendimento."
         action={
-          <Button onClick={() => setCreate(true)} disabled={context.unitId === 'all'}>
-            <Plus size={18} />
-            Registrar chegada
-          </Button>
+          <div className="row-actions">
+            <Link className="button secondary" to="/senhas">
+              <Monitor size={18} />
+              Painel de senhas
+            </Link>
+            <Button onClick={() => setCreate(true)} disabled={context.unitId === 'all'}>
+              <Plus size={18} />
+              Registrar chegada
+            </Button>
+          </div>
         }
       />
       <UnitRequired>
@@ -118,6 +124,7 @@ export function Reception() {
             <table>
               <thead>
                 <tr>
+                  <th>Senha</th>
                   <th>Pessoa</th>
                   <th>Serviço</th>
                   <th>Chegada</th>
@@ -132,6 +139,9 @@ export function Reception() {
                   const p = data.patients.find((p) => p.id === e.patientId);
                   return (
                     <tr key={e.id}>
+                      <td>
+                        <strong className="queue-ticket-small">{e.ticket}</strong>
+                      </td>
                       <td>
                         <Link className="person-link" to={`/pessoas/${p?.id}`}>
                           <Avatar name={p?.name ?? 'Pessoa'} />

@@ -52,6 +52,7 @@ export interface Appointment extends Scoped {
 }
 export type EncounterStatus = 'waiting' | 'in-care' | 'observation' | 'completed';
 export interface Encounter extends Scoped {
+  ticket: string;
   unitId: string;
   patientId: string;
   service: string;
@@ -129,8 +130,15 @@ export interface AuditEvent extends Scoped {
   action: string;
   entityId: string;
 }
+export interface QueueCall extends Scoped {
+  unitId: string;
+  encounterId: string;
+  ticket: string;
+  roomId: string;
+  calledAt: string;
+}
 export interface Database {
-  schemaVersion: 1;
+  schemaVersion: 2;
   revision: number;
   organizations: Organization[];
   units: Unit[];
@@ -144,6 +152,7 @@ export interface Database {
   movements: StockMovement[];
   referrals: Referral[];
   audit: AuditEvent[];
+  calls: QueueCall[];
 }
 export interface Snapshot {
   organizations: Organization[];
@@ -179,6 +188,8 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | { type: 'queue.call'; encounterId: string; roomId: string }
+  | { type: 'queue.recall'; callId: string }
   | { type: 'patient.create'; name: string; socialName: string; birthDate: string; phone: string }
   | {
       type: 'appointment.create';

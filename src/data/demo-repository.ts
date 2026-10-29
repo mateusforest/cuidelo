@@ -1,8 +1,9 @@
 import type { Command, Context, Database } from '../domain/model';
 import { applyCommand, DomainError, readSnapshot, readSummary } from '../domain/operations';
-import { validDay } from '../domain/dates';
+import { validDay, dateKey } from '../domain/dates';
 import { createSeed } from './seed';
 import type { CareRepository } from './repository';
+import { assignMissingTickets, readDisplay } from '../domain/queue';
 
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -19,14 +20,21 @@ const collections = [
   'movements',
   'referrals',
   'audit',
+  'calls',
 ] as const;
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 function parseDatabase(value: string): Database {
   const db: unknown = JSON.parse(value);
+  if (isRecord(db) && db.schemaVersion === 1 && Array.isArray(db.encounters)) {
+    // A migração é gravada na próxima operação bem-sucedida; o dado antigo não é apagado.
+    db.schemaVersion = 2;
+    db.calls = [];
+    assignMissingTickets(db.encounters as Database['encounters']);
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 1 ||
+    db.schemaVersion !== 2 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -95,12 +103,32 @@ function parseDatabase(value: string): Database {
   if (
     typed.encounters.some(
       (r) =>
-        !strings(r, ['patientId', 'unitId', 'service', 'arrivedAt']) ||
+        !strings(r, ['patientId', 'unitId', 'service', 'arrivedAt', 'ticket']) ||
+        !/^A-\d{3,4}$/.test(r.ticket) ||
         !['waiting', 'in-care', 'observation', 'completed'].includes(r.status) ||
         !Number.isFinite(Date.parse(r.arrivedAt)),
     )
   )
     throw new Error('Invalid encounters');
+  const ticketKeys = typed.encounters.map(
+    (e) => `${e.organizationId}:${e.unitId}:${dateKey(new Date(e.arrivedAt))}:${e.ticket}`,
+  );
+  if (new Set(ticketKeys).size !== ticketKeys.length) throw new Error('Duplicate tickets');
+  if (
+    typed.calls.some(
+      (c) =>
+        !strings(c, ['unitId', 'encounterId', 'ticket', 'roomId', 'calledAt']) ||
+        !Number.isFinite(Date.parse(c.calledAt)) ||
+        !typed.encounters.some(
+          (e) =>
+            e.id === c.encounterId &&
+            e.unitId === c.unitId &&
+            e.organizationId === c.organizationId &&
+            e.ticket === c.ticket,
+        ),
+    )
+  )
+    throw new Error('Invalid queue calls');
   if (
     typed.notes.some(
       (r) =>
@@ -185,6 +213,24 @@ export class DemoRepository implements CareRepository {
     }
   }
   getRevision = () => this.db.revision;
+  display = (organizationId: string, unitId: string) =>
+    readDisplay(this.db, organizationId, unitId, this.now());
+  refresh = () => {
+    if (!this.storage || this.recoveryMessage) return;
+    try {
+      const value = this.storage.getItem(storageKey);
+      if (!value) return;
+      const next = parseDatabase(value);
+      if (next.revision !== this.db.revision) {
+        this.db = next;
+        this.notify();
+      }
+    } catch {
+      this.recoveryMessage =
+        'A base de demonstração mudou para um formato inválido. Preserve os dados e redefina o cenário para continuar.';
+      this.notify();
+    }
+  };
   directory = () => structuredClone({ organizations: this.db.organizations, units: this.db.units });
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);

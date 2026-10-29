@@ -1,6 +1,6 @@
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider, Link } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter, RouterProvider, Link } from 'react-router-dom';
 import { AppProvider, useApp } from './app/context';
 import { Shell } from './app/Shell';
 import { can, type Permission } from './domain/model';
@@ -14,6 +14,9 @@ import { Hospital } from './pages/Hospital';
 import { Pharmacy } from './pages/Pharmacy';
 import { Referrals } from './pages/Referrals';
 import { Units, Audit, Integrations, Development } from './pages/Management';
+import { QueueControl, QueueDisplay } from './pages/QueueDisplay';
+import { Coverage } from './pages/Coverage';
+import { isPortable } from './app/links';
 import './styles/tokens.css';
 import './styles/app.css';
 
@@ -36,7 +39,8 @@ function Gate({ permission, children }: { permission: Permission; children: Reac
 const protect = (permission: Permission, node: ReactNode) => (
   <Gate permission={permission}>{node}</Gate>
 );
-const router = createBrowserRouter([
+const router = (isPortable() ? createHashRouter : createBrowserRouter)([
+  { path: '/painel', element: <QueueDisplay /> },
   {
     path: '/',
     element: <Shell />,
@@ -48,7 +52,7 @@ const router = createBrowserRouter([
           Recarregue o ambiente. Se o problema continuar, preserve os dados locais e informe o que
           estava fazendo.
         </p>
-        <a className="button primary" href="/">
+        <a className="button primary" href={isPortable() ? '#/' : '/'}>
           Voltar ao início
         </a>
       </div>
@@ -59,6 +63,8 @@ const router = createBrowserRouter([
       { path: 'pessoas/:id', element: protect('patients.read', <PatientDetails />) },
       { path: 'agenda', element: protect('schedule', <Agenda />) },
       { path: 'recepcao', element: protect('queue', <Reception />) },
+      { path: 'senhas', element: protect('queue', <QueueControl />) },
+      { path: 'comparacao', element: <Coverage /> },
       { path: 'atendimento/:id', element: protect('clinical', <EncounterPage />) },
       { path: 'hospital', element: protect('beds', <Hospital />) },
       { path: 'farmacia', element: protect('stock', <Pharmacy />) },

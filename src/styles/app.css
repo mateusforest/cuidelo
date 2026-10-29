@@ -952,6 +952,7 @@ small {
   white-space: nowrap;
 }
 .table-scroll {
+  position: relative;
   overflow: auto;
   max-width: 100%;
 }

@@ -20,6 +20,8 @@ import {
   Search,
   ChevronRight,
   Stethoscope,
+  Monitor,
+  SearchCheck,
 } from 'lucide-react';
 import { can, roleNames, type Permission, type Role } from '../domain/model';
 import { useApp } from './context';
@@ -37,6 +39,7 @@ const navigation = [
         permission: 'queue',
       },
       { path: '/agenda', label: 'Agenda', icon: CalendarDays, permission: 'schedule' },
+      { path: '/senhas', label: 'Painel de senhas', icon: Monitor, permission: 'queue' },
       {
         path: '/pessoas',
         label: 'Pessoas e prontuários',
@@ -65,6 +68,7 @@ const navigation = [
       },
       { path: '/integracoes', label: 'Integrações', icon: Cable },
       { path: '/desenvolvimento', label: 'Plano de entrega', icon: Workflow },
+      { path: '/comparacao', label: 'Comparar com Pulso', icon: SearchCheck },
     ],
   },
 ];
@@ -141,7 +145,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.1</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.2</span>
       </div>
     </>
   );
