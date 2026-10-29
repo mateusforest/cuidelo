@@ -1,3 +1,4 @@
+import { PatientDocumentHistory } from '../components/ClinicalDocuments';
 import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ArrowUpRight, FileText, ShieldCheck } from 'lucide-react';
@@ -302,6 +303,7 @@ export function PatientDetails() {
               </div>
             )}
           </Panel>
+          {can(context.role, 'clinical') && <PatientDocumentHistory patientId={p.id} />}
           {can(context.role, 'clinical') && (
             <Panel
               title="Histórico de escuta e aferições"

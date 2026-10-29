@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
 import { useApp } from '../app/context';
+import { EncounterDocuments } from '../components/ClinicalDocuments';
 import { DoctorCall } from './PatientFlow';
 import { emptySoap, type Soap } from '../domain/model';
 import { ageAt, clockTime, shortDate } from '../domain/dates';
@@ -30,9 +31,11 @@ function EncounterEditor({ id }: { id?: string }) {
     [error, setError] = useState('');
   const [addendumText, setAddendumText] = useState(''),
     [addendumReason, setAddendumReason] = useState('');
+  const [documentDirty, setDocumentDirty] = useState(false);
   const intakes = data.intakes.filter((r) => r.encounterId === id);
   const finalized = encounter?.status === 'completed',
-    dirty = JSON.stringify(soap) !== baseline || !!(addendumText || addendumReason);
+    dirty =
+      documentDirty || JSON.stringify(soap) !== baseline || !!(addendumText || addendumReason);
   useEffect(() => {
     setDirty(dirty);
     return () => setDirty(false);
@@ -144,6 +147,15 @@ function EncounterEditor({ id }: { id?: string }) {
             onChange={(previousRevision) =>
               setBaseRevision((current) =>
                 current === previousRevision ? repository.getRevision() : current,
+              )
+            }
+          />
+          <EncounterDocuments
+            encounter={encounter}
+            onDirtyChange={setDocumentDirty}
+            onChanged={(previous) =>
+              setBaseRevision((current) =>
+                current === previous ? repository.getRevision() : current,
               )
             }
           />

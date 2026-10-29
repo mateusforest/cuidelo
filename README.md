@@ -6,7 +6,7 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.6.0**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.7.0**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
 
@@ -19,7 +19,9 @@ Já é possível testar:
 - Complementos de notas concluídas, preservando o texto original.
 - Observação na urgência, admissão em leito, bloqueio de ocupação duplicada, saída e higienização.
 - Estoque por lote, entradas e saídas, alertas de vencimento e bloqueio de saldo negativo.
-- Encaminhamento, registro local de agendamento e cancelamento.
+- Receitas com vários medicamentos, pedidos de exames e encaminhamentos vinculados à consulta: rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado.
+- Acompanhamento por exame, agendamento local, realização, resultado transcrito e revisão médica.
+- Encaminhamento do consultório para a regulação, agendamento, cancelamento sincronizado e contrarreferência manual. Histórico de documentos e retornos compartilhado na mesma prefeitura.
 - Resumo da rede, exportação agregada, diretório de unidades e histórico local de operações.
 - Vacinação com caderneta, aplicação e baixa de dose, transcrição, anulação, aprazamentos e histórico.
 - Lotes de imunobiológicos, recebimentos, perdas, quarentena e liberação justificada.
@@ -92,6 +94,7 @@ No Windows os testes de navegador usam Microsoft Edge instalado. Nos demais sist
 - [Comparação das 46 telas do Pulso](docs/comparacao-pulso.md)
 - [HTML independente e painel da TV](docs/html-e-painel-tv.md)
 - [Escuta, aferições e complementos](docs/escuta-e-registros.md)
+- [Consultório: receitas, exames, encaminhamentos e roteiro de teste](docs/consultorio-documentos.md)
 - [Vacinação: percursos e pendências](docs/vacinacao.md)
 - [Perfis, totem, tempos e novos acompanhamentos](docs/perfis-totem-tempos.md)
 - [Manual visual](public/brand/guia.html) - abra pelo link na aplicação ou em um navegador.

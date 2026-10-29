@@ -1,3 +1,5 @@
+import { ClinicalDocumentPrint } from './pages/ClinicalDocumentPrint';
+import { ExamFollowUp } from './pages/ExamFollowUp';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, createHashRouter, RouterProvider, Link } from 'react-router-dom';
@@ -63,6 +65,7 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
   { path: '/painel', element: <QueueDisplay /> },
   { path: '/totem', element: <Kiosk /> },
   { path: '/acesso', element: <Access /> },
+  { path: '/documentos/:id', element: protect('clinical', <ClinicalDocumentPrint />) },
   {
     path: '/',
     element: <Shell />,
@@ -84,6 +87,7 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
       { path: 'modulos', element: <ModulesHub /> },
       { path: 'modulos/:module', element: <WorkPage /> },
       { path: 'paineis/:report', element: <WorkReport /> },
+      { path: 'exames', element: protect('clinical', <ExamFollowUp />) },
       { path: 'consultorio', element: protect('clinical', <ConsultingRoom />) },
       { path: 'desempenho', element: protect('performance', <Performance />) },
       { path: 'dispositivos', element: protect('devices', <Devices />) },

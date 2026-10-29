@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.6. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.7. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -111,7 +111,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/consultorio",
-      "note": "Fila após recepção e triagem quando previstas, SOAP, rascunho, conclusão, complementos, histórico da prefeitura, chamada na TV e períodos por profissional. CIAP/CID, prescrição, pedidos e assinatura continuam pendentes."
+      "note": "SOAP e complementos; receitas, exames e encaminhamentos com rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado. Exames têm acompanhamento por item, resultado manual e revisão médica. Histórico compartilhado na prefeitura. Faltam CIAP/CID, receituários especiais, validações clínicas, assinatura e integrações."
     },
     {
       "id": "vacina",
@@ -243,7 +243,7 @@
       "group": "Gestão municipal",
       "status": "parcial",
       "route": "/regulacao",
-      "note": "Há solicitação, agendamento local e cancelamento. Faltam vagas externas, autorização, devolução, contrarreferência e integração de regulação."
+      "note": "Recebe encaminhamentos emitidos no consultório; agendamento local, cancelamento sincronizado e contrarreferência manual preservada no histórico da pessoa. Faltam vagas externas, autorização, devolução, contrarreferência recebida automaticamente e integração oficial."
     },
     {
       "id": "envio",

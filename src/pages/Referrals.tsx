@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { Plus, CalendarDays, X } from 'lucide-react';
 import { useApp } from '../app/context';
@@ -24,11 +25,21 @@ export function Referrals() {
     [create, setCreate] = useState(false),
     [schedule, setSchedule] = useState<Referral | null>(null),
     [cancel, setCancel] = useState<Referral | null>(null);
-  const list = data.referrals.filter((r) =>
-    `${r.specialty} ${data.patients.find((p) => p.id === r.patientId)?.name}`
-      .toLocaleLowerCase('pt-BR')
-      .includes(search.toLocaleLowerCase('pt-BR')),
-  );
+  const [params, setParams] = useSearchParams();
+  const [detail, setDetail] = useState<Referral | null>(null),
+    [complete, setComplete] = useState<Referral | null>(null);
+  const canResponse = context.role === 'clinical' || context.role === 'regulation';
+  const list = data.referrals
+    .filter(
+      (r) =>
+        r.unitId === context.unitId &&
+        (!params.get('encaminhamento') || r.id === params.get('encaminhamento')),
+    )
+    .filter((r) =>
+      `${r.specialty} ${data.patients.find((p) => p.id === r.patientId)?.name}`
+        .toLocaleLowerCase('pt-BR')
+        .includes(search.toLocaleLowerCase('pt-BR')),
+    );
   return (
     <>
       <PageHeader
@@ -55,9 +66,21 @@ export function Referrals() {
               placeholder="Buscar pessoa ou especialidade"
             />
             <span className="result-count">
-              {data.referrals.filter((r) => r.status === 'requested').length} solicitações pendentes
+              {
+                data.referrals.filter(
+                  (r) => r.unitId === context.unitId && r.status === 'requested',
+                ).length
+              }{' '}
+              solicitações pendentes
             </span>
           </div>
+          {params.get('encaminhamento') && (
+            <div className="panel-body">
+              <button className="text-button" onClick={() => setParams({})}>
+                Mostrar todos os encaminhamentos
+              </button>
+            </div>
+          )}
           <div className="table-scroll">
             <table>
               <thead>
@@ -77,6 +100,12 @@ export function Referrals() {
                     <td>
                       <strong>{data.patients.find((p) => p.id === r.patientId)?.name}</strong>
                       <small className="cell-secondary">{r.specialty}</small>
+                      {r.sourceDocumentId && (
+                        <small className="cell-secondary">
+                          Solicitado no consultório ·{' '}
+                          {r.priority === 'urgent' ? 'Urgente' : 'Rotina'}
+                        </small>
+                      )}
                     </td>
                     <td>
                       {r.destination}
@@ -90,29 +119,37 @@ export function Referrals() {
                     <td>
                       <Badge
                         tone={
-                          r.status === 'scheduled'
+                          r.status === 'scheduled' || r.status === 'completed'
                             ? 'green'
                             : r.status === 'requested'
                               ? 'amber'
                               : 'neutral'
                         }
                       >
-                        {r.status === 'scheduled'
-                          ? 'Agendado'
-                          : r.status === 'requested'
-                            ? 'Solicitado'
-                            : 'Cancelado'}
+                        {r.status === 'completed'
+                          ? 'Concluído com retorno'
+                          : r.status === 'scheduled'
+                            ? 'Agendado'
+                            : r.status === 'requested'
+                              ? 'Solicitado'
+                              : 'Cancelado'}
                       </Badge>
                     </td>
                     <td>
                       <div className="row-actions">
+                        <Button variant="secondary" onClick={() => setDetail(r)}>
+                          Detalhes
+                        </Button>
+                        {r.status === 'scheduled' && canResponse && (
+                          <Button onClick={() => setComplete(r)}>Registrar retorno</Button>
+                        )}
                         {r.status === 'requested' && (
                           <Button variant="secondary" onClick={() => setSchedule(r)}>
                             <CalendarDays size={15} />
                             Agendar
                           </Button>
                         )}
-                        {r.status !== 'cancelled' && (
+                        {r.status !== 'cancelled' && r.status !== 'completed' && (
                           <button
                             className="icon-button"
                             aria-label={`Cancelar encaminhamento de ${data.patients.find((p) => p.id === r.patientId)?.name}`}
@@ -136,6 +173,109 @@ export function Referrals() {
           )}
         </Panel>
       </UnitRequired>
+      {detail && (
+        <Modal
+          wide
+          title="Detalhes do encaminhamento"
+          description={data.patients.find((p) => p.id === detail.patientId)?.name}
+          onClose={() => setDetail(null)}
+        >
+          <div className="panel-body document-body">
+            <h3>{detail.specialty}</h3>
+            <p>{detail.destination}</p>
+            {detail.reason && (
+              <section>
+                <h3>Justificativa da solicitação</h3>
+                <p>{detail.reason}</p>
+              </section>
+            )}
+            {detail.sourceDocumentId && context.role === 'clinical' && (
+              <Link
+                className="button secondary"
+                to={`/documentos/${detail.sourceDocumentId}`}
+                target="_blank"
+              >
+                Ver solicitação médica preservada
+              </Link>
+            )}
+            {detail.response && (
+              <section>
+                <h3>Contrarreferência · {shortDate(detail.response.date)}</h3>
+                <p>{detail.response.summary}</p>
+                <small>
+                  Registrado em {shortDate(detail.response.at)} ·{' '}
+                  {detail.response.actorId === context.sessionId
+                    ? 'por você'
+                    : 'por profissional autorizado da unidade'}
+                </small>
+              </section>
+            )}
+            {detail.cancellationReason && <p>Cancelamento: {detail.cancellationReason}</p>}
+            {detail.history?.length && (
+              <details className="document-history" open>
+                <summary>Histórico da solicitação</summary>
+                <ol>
+                  {detail.history.map((h, i) => (
+                    <li key={i}>
+                      {shortDate(h.at)} ·{' '}
+                      {
+                        {
+                          requested: 'Solicitado',
+                          scheduled: 'Agendamento registrado',
+                          completed: 'Retorno registrado',
+                          cancelled: 'Cancelado',
+                        }[h.action]
+                      }
+                      {h.note && <p>{h.note}</p>}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
+            {context.role === 'admin' && detail.sourceDocumentId && (
+              <Notice>
+                Este perfil acompanha a operação da unidade. Justificativas clínicas e
+                contrarreferências ficam disponíveis à equipe médica e à regulação.
+              </Notice>
+            )}
+          </div>
+        </Modal>
+      )}
+      {complete && (
+        <Modal
+          title="Registrar retorno do encaminhamento"
+          description="Transcrição manual de contrarreferência recebida. Não há comunicação automática com outro serviço."
+          onClose={() => setComplete(null)}
+        >
+          <ActionForm
+            onClose={() => setComplete(null)}
+            submitLabel="Concluir com contrarreferência"
+            onSubmit={async (f) => {
+              await repository.execute(context, {
+                type: 'referral.complete',
+                id: complete.id,
+                date: valueOf(f, 'date'),
+                summary: valueOf(f, 'summary'),
+              });
+              notify('Retorno registrado e preservado no histórico.');
+            }}
+          >
+            <Field label="Data do atendimento no serviço">
+              <input
+                name="date"
+                type="date"
+                required
+                min={complete.appointmentDate}
+                max={dateKey()}
+                defaultValue={dateKey()}
+              />
+            </Field>
+            <Field label="Resumo da contrarreferência">
+              <textarea name="summary" required maxLength={4000} rows={6} />
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
       {create && (
         <Modal title="Novo encaminhamento" onClose={() => setCreate(false)}>
           <ActionForm

@@ -64,7 +64,8 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 7,
+    schemaVersion: 8,
+    clinicalDocuments: [],
     workRecords: [],
     careSegments: [],
     kioskArrivals: [],

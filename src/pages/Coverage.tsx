@@ -50,22 +50,23 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.6"
-        subtitle="O percurso de chegada agora conecta mais etapas dos módulos parciais."
+        title="Avanços da versão 0.7"
+        subtitle="Consultório, exames, regulação e histórico da pessoa estão mais conectados."
       >
         <div className="panel-body">
           <p>
-            Recepção com conferência de CPF ou nome, preferência confirmada, triagem, chamadas na TV
-            e controle de ausência e retorno. Fila, escuta e consultório respeitam o encaminhamento;
-            gestão e relatórios recebem os tempos e as contagens por etapa.
+            Receitas com vários itens, pedidos de exames e encaminhamentos com rascunho, revisão,
+            emissão de demonstração e impressão. Exames recebem acompanhamento por item e revisão
+            médica; encaminhamentos chegam à regulação e recebem contrarreferência. Documentos e
+            retornos compõem o histórico da pessoa na prefeitura.
           </p>
           <p>
             Os 44 módulos continuam parciais porque suas pendências completas ainda incluem
             integração, protocolos, autenticação e outras funções. A descrição de cada módulo abaixo
             mostra o avanço e o que falta.
           </p>
-          <Link className="row-link" to="/recepcao">
-            Testar o percurso da recepção
+          <Link className="row-link" to="/consultorio">
+            Testar o consultório
           </Link>
         </div>
       </Panel>

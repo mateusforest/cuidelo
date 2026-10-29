@@ -55,6 +55,7 @@ const navigation = [
         icon: HeartPulse,
         permission: 'clinical',
       },
+      { path: '/exames', label: 'Exames e resultados', icon: Stethoscope, permission: 'clinical' },
       { path: '/consultorio', label: 'Meu consultório', icon: Stethoscope, permission: 'clinical' },
       { path: '/senhas', label: 'Painel de senhas', icon: Monitor, permission: 'queue' },
       {
@@ -184,7 +185,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.6</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.7</span>
       </div>
     </>
   );

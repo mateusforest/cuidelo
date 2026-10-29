@@ -178,12 +178,22 @@ export interface StockMovement extends Scoped {
   at: string;
 }
 export interface Referral extends Scoped {
+  encounterId?: string;
+  sourceDocumentId?: string;
+  priority?: 'routine' | 'urgent';
+  history?: {
+    at: string;
+    actorId: string;
+    action: 'requested' | 'scheduled' | 'cancelled' | 'completed';
+    note: string;
+  }[];
+  response?: { date: string; summary: string; at: string; actorId: string };
   unitId: string;
   patientId: string;
   specialty: string;
   destination: string;
   reason: string;
-  status: 'requested' | 'scheduled' | 'cancelled';
+  status: 'requested' | 'scheduled' | 'cancelled' | 'completed';
   createdAt: string;
   appointmentDate?: string;
   appointmentTime?: string;
@@ -323,7 +333,8 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
-  schemaVersion: 7;
+  clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
+  schemaVersion: 8;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -350,6 +361,7 @@ export interface Database {
   addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
   calls: QueueCall[];
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
@@ -404,6 +416,8 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | import('./clinical-documents').ClinicalDocumentCommand
+  | { type: 'referral.complete'; id: string; date: string; summary: string }
   | import('./reception').ReceptionCommand
   | VaccinationCommand
   | { type: 'work.create'; module: string; values: Record<string, string> }

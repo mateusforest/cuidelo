@@ -17,10 +17,12 @@ import { validateVaccinationDatabase } from '../domain/vaccination-validation';
 import { validCpf } from '../domain/identification';
 import { preferenceReasons } from '../domain/kiosk-options';
 import { validateReceptionDatabase } from '../domain/reception';
+import { validateClinicalDocuments } from '../domain/clinical-documents';
 
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const collections = [
+  'clinicalDocuments',
   'workRecords',
   'careSegments',
   'kioskArrivals',
@@ -98,9 +100,13 @@ function parseDatabase(value: string): Database {
           e.receptionRequired = true;
       }
   }
+  if (isRecord(db) && db.schemaVersion === 7) {
+    db.schemaVersion = 8;
+    db.clinicalDocuments = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 7 ||
+    db.schemaVersion !== 8 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -359,7 +365,7 @@ function parseDatabase(value: string): Database {
     typed.referrals.some(
       (r) =>
         !strings(r, ['unitId', 'patientId', 'specialty', 'destination', 'reason', 'createdAt']) ||
-        !['requested', 'scheduled', 'cancelled'].includes(r.status),
+        !['requested', 'scheduled', 'cancelled', 'completed'].includes(r.status),
     )
   )
     throw new Error('Invalid referrals');
@@ -419,6 +425,7 @@ function parseDatabase(value: string): Database {
       throw new Error('Invalid addendum');
   validateVaccinationDatabase(typed);
   validateReceptionDatabase(typed);
+  validateClinicalDocuments(typed);
   return typed;
 }
 

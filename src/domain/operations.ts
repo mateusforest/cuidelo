@@ -26,6 +26,7 @@ import {
   readyForConsultation,
   flowStage,
 } from './reception';
+import { applyDocumentCommand, cancelReferralDocument } from './clinical-documents';
 export { DomainError } from './errors';
 function ensure(condition: unknown, message: string, code?: string): asserts condition {
   if (!condition) throw new DomainError(message, code);
@@ -117,6 +118,14 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'document.save':
+    case 'document.issue':
+    case 'document.cancel':
+    case 'document.discard':
+    case 'exam.event': {
+      ({ entityId, action } = applyDocumentCommand(db, c, command, now, newId));
+      break;
+    }
     case 'reception.start':
     case 'reception.complete':
     case 'reception.absent':
@@ -520,6 +529,10 @@ export function applyCommand(
       ensure(note && note.status === 'draft', 'Salve o rascunho antes de concluir.');
       required(note.soap.assessment, 'Avaliação');
       required(note.soap.plan, 'Plano');
+      ensure(
+        !db.clinicalDocuments.some((d) => d.encounterId === e.id && d.status === 'draft'),
+        'Há documentos em rascunho. Emita ou descarte cada um antes de concluir o atendimento.',
+      );
       note.status = 'final';
       note.finalizedAt = at;
       note.updatedAt = at;
@@ -668,16 +681,62 @@ export function applyCommand(
       r.appointmentDate = command.date;
       r.appointmentTime = command.time;
       r.status = 'scheduled';
+      (r.history ??= []).push({
+        at,
+        actorId: c.sessionId,
+        action: 'scheduled',
+        note: 'Agendamento local registrado',
+      });
       entityId = r.id;
       action = 'Agendamento de encaminhamento registrado';
+      break;
+    }
+    case 'referral.complete': {
+      permit(c, 'regulation');
+      ensure(
+        c.role === 'clinical' || c.role === 'regulation',
+        'A contrarreferência é registrada pelo médico ou pela regulação.',
+        'permission',
+      );
+      const r = member(db.referrals, command.id, c);
+      ensure(r.status === 'scheduled', 'Agende o encaminhamento antes de registrar o retorno.');
+      ensure(
+        validDay(command.date) && command.date <= today && command.date >= r.appointmentDate!,
+        'Informe uma data de atendimento entre o agendamento e hoje.',
+      );
+      r.response = {
+        at,
+        actorId: c.sessionId,
+        date: command.date,
+        summary: required(command.summary, 'Resumo da contrarreferência', 4000),
+      };
+      r.status = 'completed';
+      (r.history ??= []).push({
+        at,
+        actorId: c.sessionId,
+        action: 'completed',
+        note: 'Contrarreferência registrada',
+      });
+      entityId = r.id;
+      action = 'Retorno do encaminhamento registrado';
       break;
     }
     case 'referral.cancel': {
       permit(c, 'regulation');
       const r = member(db.referrals, command.id, c);
-      ensure(r.status !== 'cancelled', 'Solicitação já cancelada.');
+      ensure(
+        r.status !== 'cancelled' && r.status !== 'completed',
+        'Solicitação já cancelada ou concluída.',
+      );
       r.cancellationReason = required(command.reason, 'Motivo');
       r.status = 'cancelled';
+      (r.history ??= []).push({
+        at,
+        actorId: c.sessionId,
+        action: 'cancelled',
+        note: r.cancellationReason,
+      });
+      cancelReferralDocument(db, r.id, c, r.cancellationReason, at);
       entityId = r.id;
       action = 'Encaminhamento cancelado';
       break;
@@ -723,6 +782,14 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
       : [],
     appointments: has('schedule') ? unit(db.appointments) : [],
     encounters: has('queue') ? unit(db.encounters) : [],
+    clinicalDocuments: has('clinical')
+      ? org(db.clinicalDocuments).filter(
+          (d) =>
+            d.status === 'issued' ||
+            d.status === 'cancelled' ||
+            (c.role === 'clinical' && d.unitId === c.unitId),
+        )
+      : [],
     notes: has('clinical') ? org(db.notes) : [],
     intakes: has('clinical') ? org(db.intakes) : [],
     addenda: has('clinical') ? org(db.addenda) : [],
@@ -735,7 +802,21 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     admissions: has('beds') ? unit(db.admissions) : [],
     lots: has('stock') ? unit(db.lots) : [],
     movements: has('stock') ? unit(db.movements) : [],
-    referrals: has('regulation') ? unit(db.referrals) : [],
+    referrals: has('clinical')
+      ? org(db.referrals)
+      : has('regulation')
+        ? unit(db.referrals).map((r) =>
+            c.role === 'admin' && r.sourceDocumentId
+              ? {
+                  ...r,
+                  reason: '',
+                  cancellationReason: undefined,
+                  response: undefined,
+                  history: r.history?.map((h) => ({ ...h, note: '' })),
+                }
+              : r,
+          )
+        : [],
     audit: has('manage') ? unit(db.audit).slice(-150).reverse() : [],
   });
 }

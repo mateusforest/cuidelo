@@ -1,4 +1,4 @@
-# Perfis, totem e acompanhamento — Cuidelo 0.6.0
+# Perfis, totem e acompanhamento — Cuidelo 0.7.0
 
 Esta entrega é um ambiente local de desenvolvimento com dados fictícios. O escopo de lançamento continua incluindo UBS, UPA, pronto atendimento e hospitais. As telas não substituem a implementação e a validação dos percursos clínicos, das integrações e da proteção em servidor.
 
@@ -90,3 +90,9 @@ Ajustes de conferência exigem justificativa e acrescentam histórico; depois do
 O percurso da senha mostra chegada, chamadas, conferências, triagem e consulta. Os indicadores separam espera até o balcão, tempo de conferência, espera até a triagem, escuta e consulta. Métricas de balcão são agrupadas por quem iniciou a conferência; trocas completas de profissionais ainda precisam de controle por períodos. As exportações incluem contagens e médias sem nomes de pacientes. A gestão vê agregados por unidade, incluindo senhas ainda anônimas.
 
 Para testar o percurso completo, abra Cuidelo.html, escolha a sessão Recepção da UBS Centro e entre em Recepção e atendimento. Use Abrir totem conectado e Abrir TV conectada nessa tela. Arquivos diferentes e computadores diferentes não compartilham uma base nesta versão. Não há conexão com servidor ou impressora térmica dedicada.
+
+## Consultório e documentos em 0.7
+
+O médico responsável pelo atendimento cria, revisa e emite documentos de demonstração; apenas o autor cancela documentos emitidos. A enfermagem consulta documentos e registra acompanhamento de exames, com revisão final exclusiva do perfil médico nesta versão. A regulação recebe os encaminhamentos e registra agendamento, cancelamento e contrarreferência manual. A administração local acompanha situação e agenda, sem acessar conteúdo clínico originado no consultório.
+
+Documentos emitidos, resultados e contrarreferências ficam disponíveis à equipe assistencial da mesma prefeitura, inclusive de outras unidades. Escritas continuam restritas à unidade de origem. Rascunhos ficam na unidade, não são impressos e precisam ser emitidos ou descartados antes de concluir a consulta. Ver [roteiro do consultório](consultorio-documentos.md).

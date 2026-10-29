@@ -119,6 +119,12 @@ const shortcuts: { path: string; title: string; detail: string; permission: Perm
     permission: 'clinical',
   },
   {
+    path: '/exames',
+    title: 'Exames e resultados',
+    detail: 'Acompanhar pedidos, resultados recebidos e revisão médica.',
+    permission: 'clinical',
+  },
+  {
     path: '/escuta',
     title: 'Escuta e sinais vitais',
     detail: 'Registrar o acolhimento antes da consulta.',
