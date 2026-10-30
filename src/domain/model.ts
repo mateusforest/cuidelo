@@ -57,6 +57,19 @@ export interface Patient extends Scoped {
   phone: string;
   record: string;
   allergies: string[];
+  changes?: RecordChange<PatientRegistration>[];
+}
+export type PatientRegistration = Pick<Patient, 'name' | 'socialName' | 'birthDate' | 'phone'> & {
+  cpf: string;
+};
+export interface RecordChange<T> {
+  at: string;
+  actorId: string;
+  author: string;
+  unitId: string;
+  reason: string;
+  before: T;
+  after: T;
 }
 export type AppointmentStatus = 'scheduled' | 'checked-in' | 'cancelled';
 export interface Appointment extends Scoped {
@@ -69,7 +82,12 @@ export interface Appointment extends Scoped {
   duration: number;
   status: AppointmentStatus;
   cancellationReason?: string;
+  reschedules?: RecordChange<AppointmentSlot>[];
 }
+export type AppointmentSlot = Pick<
+  Appointment,
+  'professional' | 'service' | 'date' | 'time' | 'duration'
+>;
 export type EncounterStatus = 'waiting' | 'in-care' | 'observation' | 'completed';
 export interface ReceptionTracking {
   receptionRequired?: boolean;
@@ -424,6 +442,20 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | {
+      type: 'patient.update';
+      id: string;
+      values: PatientRegistration;
+      reason: string;
+      expectedChangeCount: number;
+    }
+  | {
+      type: 'appointment.reschedule';
+      id: string;
+      values: AppointmentSlot;
+      reason: string;
+      expectedChangeCount: number;
+    }
   | import('./pharmacy').PharmacyCommand
   | import('./clinical-documents').ClinicalDocumentCommand
   | { type: 'referral.complete'; id: string; date: string; summary: string }

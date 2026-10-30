@@ -50,20 +50,19 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.10"
-        subtitle="Recepção, consultório e farmácia renovados. Totem guiado em quatro etapas."
+        title="Avanços da versão 0.11"
+        subtitle="Agenda, cadastro de pacientes e triagem com organização visual unificada."
       >
         <div className="panel-body">
           <p>
-            Recepção, consultório e farmácia passam a usar a mesma hierarquia visual, com filas,
-            ações e informações mais organizadas. O totem separa identificação, serviço, preferência
-            e conferência, com retorno às etapas e emissão somente ao confirmar.
+            A agenda permite remarcar atendimentos pendentes com motivo e histórico de horários,
+            mantendo os bloqueios de sobreposição. O cadastro permite atualizar identificação e
+            contato com autoria e valores anteriores, sem reescrever documentos já emitidos.
           </p>
           <p>
-            Farmácia recebe receitas emitidas na unidade, confere a identificação de quem recebe e
-            registra entrega total ou parcial. Cada baixa fica vinculada ao item e ao lote; os
-            saldos pendentes, comprovantes e entregas aparecem no histórico da pessoa. Lotes
-            vencidos, excesso prescrito e saldo insuficiente são bloqueados.
+            A triagem separa pessoas aguardando escuta, em escuta e com registro concluído, com
+            filtros de busca e data. Os tempos de espera, início e duração ficam visíveis na fila e
+            no atendimento. Chamadas na TV, aferições e correções preservadas continuam disponíveis.
           </p>
           <p>
             Os 44 módulos continuam parciais porque suas pendências completas ainda incluem

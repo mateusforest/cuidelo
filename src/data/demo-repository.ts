@@ -1,3 +1,4 @@
+import { validateAdministrativeHistory } from '../domain/administrative-records';
 import { validatePharmacy } from '../domain/pharmacy';
 import type { Command, Context, Database } from '../domain/model';
 import {
@@ -433,6 +434,7 @@ function parseDatabase(value: string): Database {
   validateReceptionDatabase(typed);
   validateClinicalDocuments(typed);
   validatePharmacy(typed);
+  validateAdministrativeHistory(typed);
   return typed;
 }
 

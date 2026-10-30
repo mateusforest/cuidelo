@@ -1,4 +1,5 @@
-import type { IntakeContent, IntakeRecord, Vitals } from './model';
+import type { Encounter, IntakeContent, IntakeRecord, Vitals } from './model';
+import { readyForIntake } from './reception';
 import { DomainError } from './errors';
 
 // Limites de formato e capacidade de armazenamento, não faixas clínicas ou de normalidade.
@@ -62,4 +63,11 @@ export function validateIntakeContent(content: IntakeContent): IntakeContent {
 export function activeIntakes(records: IntakeRecord[]) {
   const corrected = new Set(records.map((r) => r.correctionOf).filter(Boolean));
   return records.filter((r) => !corrected.has(r.id));
+}
+
+export function intakeQueueState(encounter: Encounter, hasRecord: boolean) {
+  if (encounter.status === 'completed') return 'completed';
+  if (hasRecord) return 'recorded';
+  if (encounter.status !== 'waiting' || !readyForIntake(encounter)) return 'other';
+  return encounter.intakeStartedAt ? 'active' : 'pending';
 }

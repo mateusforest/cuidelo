@@ -193,7 +193,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.10</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.11</span>
       </div>
     </>
   );

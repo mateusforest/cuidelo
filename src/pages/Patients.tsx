@@ -1,3 +1,8 @@
+import {
+  PatientRegistrationForm,
+  RegistrationHistory,
+} from '../components/PatientRegistrationForm';
+import type { Patient } from '../domain/model';
 import { PatientDocumentHistory } from '../components/ClinicalDocuments';
 import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -6,36 +11,34 @@ import { useApp } from '../app/context';
 import { can } from '../domain/model';
 import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
 import { VaccineHistory } from '../components/VaccineHistory';
-import { ageAt, dateKey, shortDate } from '../domain/dates';
-import { cpfDigits, formatCpf } from '../domain/identification';
+import { ageAt, shortDate } from '../domain/dates';
+import { cpfDigits, formatCpf, normalizedName } from '../domain/identification';
 import {
-  ActionForm,
   Avatar,
   Badge,
   Button,
   EmptyState,
-  Field,
-  Modal,
   Notice,
   PageHeader,
   Panel,
   SearchField,
-  valueOf,
 } from '../components/ui';
 
 export function Patients() {
-  const { data, context, repository, notify } = useApp();
+  const { data, context } = useApp();
   const [params] = useSearchParams();
   const [search, setSearch] = useState(params.get('q') ?? ''),
-    [create, setCreate] = useState(false);
-  const normalized = search.toLocaleLowerCase('pt-BR');
+    [create, setCreate] = useState(false),
+    [filter, setFilter] = useState('all');
+  const normalized = normalizedName(search);
   const patients = data.patients.filter(
     (p) =>
-      `${p.name} ${p.socialName} ${p.record}`.toLocaleLowerCase('pt-BR').includes(normalized) ||
-      (!!cpfDigits(search) && !!p.cpf?.includes(cpfDigits(search))),
+      (filter === 'all' || (filter === 'cpf' ? !p.cpf : !p.phone)) &&
+      (normalizedName(`${p.name} ${p.socialName} ${p.record}`).includes(normalized) ||
+        (!!cpfDigits(search) && !!p.cpf?.includes(cpfDigits(search)))),
   );
   return (
-    <>
+    <div className="operations-page patients-workspace">
       <PageHeader
         eyebrow="CADASTRO E CONTINUIDADE"
         title="Pessoas e prontuários"
@@ -52,7 +55,27 @@ export function Patients() {
       {context.unitId === 'all' && can(context.role, 'patients.write') && (
         <Notice>Para cadastrar uma pessoa, selecione a unidade responsável no topo.</Notice>
       )}
-      <Panel>
+      <div className="registry-stats desk-filters" aria-label="Filtros do cadastro">
+        {[
+          ['all', 'Pessoas cadastradas', data.patients.length],
+          ['cpf', 'Sem CPF informado', data.patients.filter((p) => !p.cpf).length],
+          ['contact', 'Sem telefone informado', data.patients.filter((p) => !p.phone).length],
+        ].map(([key, label, count]) => (
+          <button
+            key={key}
+            aria-pressed={filter === key}
+            className={filter === key ? 'selected' : ''}
+            onClick={() => setFilter(String(key))}
+          >
+            <span>{label}</span>
+            <strong>{count}</strong>
+          </button>
+        ))}
+      </div>
+      <Panel
+        title="Cadastros da prefeitura"
+        subtitle="Busque por nome civil, nome social, CPF ou número do cadastro."
+      >
         <div className="table-toolbar">
           <SearchField
             value={search}
@@ -94,6 +117,9 @@ export function Patients() {
                   </td>
                   <td>
                     <span className="record-number">{p.record}</span>
+                    <small className="cell-secondary">
+                      {p.cpf ? formatCpf(p.cpf) : 'CPF não informado'}
+                    </small>
                   </td>
                   <td>{p.phone || <span className="muted">Não informado</span>}</td>
                   <td>
@@ -118,74 +144,15 @@ export function Patients() {
           />
         )}
       </Panel>
-      {create && (
-        <Modal
-          title="Cadastrar pessoa"
-          description="Use apenas informações fictícias neste ambiente."
-          onClose={() => setCreate(false)}
-        >
-          <ActionForm
-            onClose={() => setCreate(false)}
-            submitLabel="Criar cadastro"
-            onSubmit={async (f) => {
-              await repository.execute(context, {
-                type: 'patient.create',
-                name: valueOf(f, 'name'),
-                socialName: valueOf(f, 'socialName'),
-                birthDate: valueOf(f, 'birthDate'),
-                phone: valueOf(f, 'phone'),
-                cpf: valueOf(f, 'cpf'),
-              });
-              notify('Cadastro criado na rede selecionada.');
-            }}
-          >
-            <Field label="Nome completo">
-              <input
-                name="name"
-                required
-                maxLength={120}
-                autoComplete="off"
-                placeholder="Nome da pessoa fictícia"
-              />
-            </Field>
-            <Field label="Nome social (opcional)">
-              <input name="socialName" maxLength={120} autoComplete="off" />
-            </Field>
-            <Field
-              label="CPF (opcional)"
-              hint="Use somente um CPF fictício. Quem não tiver CPF pode se identificar pelo nome e nascimento."
-            >
-              <input
-                name="cpf"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={14}
-                placeholder="000.000.000-00"
-              />
-            </Field>
-            <div className="form-grid">
-              <Field label="Data de nascimento">
-                <input name="birthDate" type="date" required min="1850-01-01" max={dateKey()} />
-              </Field>
-              <Field label="Telefone (opcional)">
-                <input
-                  name="phone"
-                  maxLength={30}
-                  autoComplete="off"
-                  placeholder="Contato de demonstração"
-                />
-              </Field>
-            </div>
-          </ActionForm>
-        </Modal>
-      )}
-    </>
+      {create && <PatientRegistrationForm onClose={() => setCreate(false)} />}
+    </div>
   );
 }
 
 export function PatientDetails() {
   const { id } = useParams();
   const { data, context } = useApp();
+  const [editing, setEditing] = useState<Patient | null>(null);
   const p = data.patients.find((p) => p.id === id);
   if (!p)
     return (
@@ -206,7 +173,7 @@ export function PatientDetails() {
     (a) => a.patientId === p.id && a.status === 'scheduled',
   );
   return (
-    <>
+    <div className="operations-page patient-detail-workspace">
       <Link className="back-link" to="/pessoas">
         <ArrowLeft size={16} />
         Pessoas e prontuários
@@ -221,7 +188,14 @@ export function PatientDetails() {
             {p.socialName ? ` · Nome civil: ${p.name}` : ''}
           </p>
         </div>
-        <Badge tone="green">Cadastro na rede</Badge>
+        <div className="patient-hero-actions">
+          <Badge tone="green">Cadastro na rede</Badge>
+          {can(context.role, 'patients.write') && context.unitId !== 'all' && (
+            <Button variant="secondary" onClick={() => setEditing(p)}>
+              Atualizar cadastro
+            </Button>
+          )}
+        </div>
       </div>
       <div className="detail-grid">
         <div>
@@ -440,6 +414,12 @@ export function PatientDetails() {
               </div>
             </Panel>
           )}
+          <Panel
+            title="Histórico cadastral"
+            subtitle="Valores anteriores, motivo e autoria de cada alteração."
+          >
+            <RegistrationHistory patient={p} />
+          </Panel>
           <div className="quiet-callout">
             <ShieldCheck size={22} />
             <h3>Contexto preservado</h3>
@@ -450,6 +430,7 @@ export function PatientDetails() {
           </div>
         </aside>
       </div>
-    </>
+      {editing && <PatientRegistrationForm patient={editing} onClose={() => setEditing(null)} />}
+    </div>
   );
 }

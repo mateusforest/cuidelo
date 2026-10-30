@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { normalizedName } from '../domain/identification';
 import { ChevronLeft, ChevronRight, Plus, Check, X, CalendarDays } from 'lucide-react';
 import { useApp } from '../app/context';
 import { addDays, dateKey, shortDate } from '../domain/dates';
@@ -14,6 +16,7 @@ import {
   PageHeader,
   Panel,
   UnitRequired,
+  SearchField,
   valueOf,
 } from '../components/ui';
 
@@ -22,11 +25,25 @@ export function Agenda() {
   const [day, setDay] = useState(dateKey()),
     [professional, setProfessional] = useState('all'),
     [create, setCreate] = useState(false),
+    [editing, setEditing] = useState<Appointment | null>(null),
+    [search, setSearch] = useState(''),
+    [status, setStatus] = useState('all'),
     [cancel, setCancel] = useState<Appointment | null>(null),
     [busy, setBusy] = useState('');
-  const appointments = data.appointments
+  const dayAppointments = data.appointments
     .filter((a) => a.date === day && (professional === 'all' || a.professional === professional))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const appointments = dayAppointments.filter((a) => {
+    const p = data.patients.find((p) => p.id === a.patientId);
+    return (
+      (status === 'all' || a.status === status) &&
+      normalizedName(`${p?.name} ${p?.socialName} ${a.service}`).includes(normalizedName(search))
+    );
+  });
+  const closeForm = () => {
+    setCreate(false);
+    setEditing(null);
+  };
   const professionals = [
     ...new Set([
       'Dra. Marina · demo',
@@ -46,7 +63,7 @@ export function Agenda() {
     }
   };
   return (
-    <>
+    <div className="operations-page agenda-workspace">
       <PageHeader
         eyebrow="ORGANIZAÇÃO DO CUIDADO"
         title="Agenda da unidade"
@@ -59,7 +76,7 @@ export function Agenda() {
         }
       />
       <UnitRequired>
-        <Panel>
+        <Panel className="agenda-calendar">
           <div className="agenda-toolbar">
             <div className="date-controls">
               <button
@@ -100,12 +117,38 @@ export function Agenda() {
               ))}
             </select>
           </div>
-          <div className="agenda-summary">
-            <span>{appointments.length} agendamentos</span>
-            <span>{appointments.filter((a) => a.status === 'scheduled').length} pendentes</span>
-            <span>
-              {appointments.filter((a) => a.status === 'checked-in').length} chegadas confirmadas
-            </span>
+        </Panel>
+        <div className="agenda-metrics desk-filters" aria-label="Situações da agenda">
+          {[
+            ['all', 'Agendamentos do dia'],
+            ['scheduled', 'Aguardando chegada'],
+            ['checked-in', 'Chegadas confirmadas'],
+            ['cancelled', 'Cancelados'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              aria-pressed={status === key}
+              className={status === key ? 'selected' : ''}
+              onClick={() => setStatus(key)}
+            >
+              <span>{label}</span>
+              <strong>
+                {dayAppointments.filter((a) => key === 'all' || a.status === key).length}
+              </strong>
+            </button>
+          ))}
+        </div>
+        <Panel
+          title={`Atendimentos · ${shortDate(day)}`}
+          subtitle="Horários por profissional. Remarcações e cancelamentos preservam o histórico."
+        >
+          <div className="table-toolbar">
+            <SearchField
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar pessoa ou serviço na agenda"
+            />
+            <span className="result-count">{appointments.length} agendamentos neste filtro</span>
           </div>
           <div className="appointment-list">
             {appointments.map((a) => {
@@ -127,6 +170,30 @@ export function Agenda() {
                         {a.service} · {a.professional}
                       </small>
                       {a.cancellationReason && <small>Motivo: {a.cancellationReason}</small>}
+                      {!!a.reschedules?.length && (
+                        <details className="appointment-history">
+                          <summary>Histórico de remarcações ({a.reschedules.length})</summary>
+                          {[...a.reschedules].reverse().map((h, i) => (
+                            <div key={i}>
+                              <strong>
+                                {shortDate(h.before.date)} às {h.before.time} →{' '}
+                                {shortDate(h.after.date)} às {h.after.time}
+                              </strong>
+                              <p>
+                                {h.before.professional} → {h.after.professional}
+                              </p>
+                              <p>
+                                {h.before.service} · {h.before.duration} min → {h.after.service} ·{' '}
+                                {h.after.duration} min
+                              </p>
+                              <p>{h.reason}</p>
+                              <small>
+                                {shortDate(h.at)} · {h.author}
+                              </small>
+                            </div>
+                          ))}
+                        </details>
+                      )}
                     </div>
                   </div>
                   <Badge
@@ -149,6 +216,13 @@ export function Agenda() {
                       <>
                         <Button
                           variant="secondary"
+                          onClick={() => setEditing(a)}
+                          aria-label={`Remarcar agendamento de ${p?.name}`}
+                        >
+                          Remarcar
+                        </Button>
+                        <Button
+                          variant="secondary"
                           onClick={() => arrive(a)}
                           disabled={busy === a.id || day !== dateKey()}
                           aria-label={`Confirmar chegada de ${p?.name}`}
@@ -164,6 +238,11 @@ export function Agenda() {
                           <X size={17} />
                         </button>
                       </>
+                    )}
+                    {a.status === 'checked-in' && (
+                      <Link className="button secondary" to="/recepcao">
+                        Ver recepção
+                      </Link>
                     )}
                   </div>
                 </article>
@@ -184,31 +263,64 @@ export function Agenda() {
           )}
         </Panel>
       </UnitRequired>
-      {create && (
+      {(create || editing) && (
         <Modal
-          title="Novo agendamento"
+          title={editing ? 'Remarcar agendamento' : 'Novo agendamento'}
           description="Horários conflitantes da pessoa ou do profissional são bloqueados."
-          onClose={() => setCreate(false)}
+          onClose={closeForm}
         >
           <ActionForm
-            onClose={() => setCreate(false)}
-            submitLabel="Agendar atendimento"
+            onClose={closeForm}
+            submitLabel={editing ? 'Confirmar remarcação' : 'Agendar atendimento'}
             onSubmit={async (f) => {
-              await repository.execute(context, {
-                type: 'appointment.create',
-                patientId: valueOf(f, 'patient'),
+              const values = {
                 professional: valueOf(f, 'professional'),
                 service: valueOf(f, 'service'),
                 date: valueOf(f, 'date'),
                 time: valueOf(f, 'time'),
                 duration: Number(valueOf(f, 'duration')),
-              });
-              setDay(valueOf(f, 'date'));
-              notify('Atendimento agendado.');
+              };
+              await repository.execute(
+                context,
+                editing
+                  ? {
+                      type: 'appointment.reschedule',
+                      id: editing.id,
+                      values,
+                      reason: valueOf(f, 'reason'),
+                      expectedChangeCount: editing.reschedules?.length ?? 0,
+                    }
+                  : { type: 'appointment.create', patientId: valueOf(f, 'patient'), ...values },
+              );
+              setDay(values.date);
+              setProfessional('all');
+              setStatus('all');
+              setSearch('');
+              notify(
+                editing
+                  ? 'Agendamento remarcado. O horário anterior foi preservado no histórico.'
+                  : 'Atendimento agendado.',
+              );
             }}
           >
+            {editing && (
+              <div className="appointment-previous">
+                <span>Agendamento atual</span>
+                <strong>
+                  {shortDate(editing.date)} · {editing.time} · {editing.duration} min
+                </strong>
+                <small>
+                  {editing.professional} · {editing.service}
+                </small>
+              </div>
+            )}
             <Field label="Pessoa">
-              <select name="patient" required defaultValue="">
+              <select
+                name="patient"
+                required
+                defaultValue={editing?.patientId ?? ''}
+                disabled={!!editing}
+              >
                 <option value="" disabled>
                   Selecione uma pessoa fictícia
                 </option>
@@ -221,17 +333,30 @@ export function Agenda() {
             </Field>
             <div className="form-grid">
               <Field label="Profissional">
-                <select name="professional">
+                <select
+                  name="professional"
+                  defaultValue={
+                    editing?.professional ??
+                    (professional !== 'all' ? professional : professionals[0])
+                  }
+                >
                   {professionals.map((p) => (
                     <option key={p}>{p}</option>
                   ))}
                 </select>
               </Field>
               <Field label="Serviço">
-                <select name="service">
-                  <option>Consulta médica</option>
-                  <option>Enfermagem</option>
-                  <option>Retorno</option>
+                <select name="service" defaultValue={editing?.service ?? 'Consulta médica'}>
+                  {[
+                    ...new Set([
+                      'Consulta médica',
+                      'Enfermagem',
+                      'Retorno',
+                      ...(editing ? [editing.service] : []),
+                    ]),
+                  ].map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
                 </select>
               </Field>
             </div>
@@ -240,24 +365,39 @@ export function Agenda() {
                 <input
                   type="date"
                   name="date"
-                  defaultValue={day < dateKey() ? dateKey() : day}
+                  defaultValue={
+                    editing
+                      ? editing.date < dateKey()
+                        ? dateKey()
+                        : editing.date
+                      : day < dateKey()
+                        ? dateKey()
+                        : day
+                  }
                   min={dateKey()}
                   required
                 />
               </Field>
               <Field label="Horário">
-                <input type="time" name="time" defaultValue="14:00" required />
+                <input type="time" name="time" defaultValue={editing?.time ?? '14:00'} required />
               </Field>
               <Field label="Duração">
-                <select name="duration" defaultValue="30">
-                  {[15, 20, 30, 40, 60].map((m) => (
-                    <option key={m} value={m}>
-                      {m} minutos
-                    </option>
-                  ))}
+                <select name="duration" defaultValue={String(editing?.duration ?? 30)}>
+                  {[...new Set([15, 20, 30, 40, 60, ...(editing ? [editing.duration] : [])])]
+                    .sort((a, b) => a - b)
+                    .map((m) => (
+                      <option key={m} value={m}>
+                        {m} minutos
+                      </option>
+                    ))}
                 </select>
               </Field>
             </div>
+            {editing && (
+              <Field label="Motivo da remarcação">
+                <textarea name="reason" required maxLength={1000} rows={3} />
+              </Field>
+            )}
           </ActionForm>
         </Modal>
       )}
@@ -285,6 +425,6 @@ export function Agenda() {
           </ActionForm>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

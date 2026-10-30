@@ -6,7 +6,7 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.10.0**, de 30/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.11.0**, de 30/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
 
@@ -17,11 +17,11 @@ Já é possível testar:
 - Visual renovado com menu lateral, contexto da unidade e da sessão, painel de indicadores e adaptação para celular. Na primeira abertura do endereço principal, a entrada demonstrativa é exibida antes da visão de trabalho; depois, a escolha é lembrada no navegador.
 
 - Entrada de demonstração com nove perfis: prefeitura, administração local, recepção, equipe médica, enfermagem, farmácia, regulação, agente de saúde e operação da Cuidelo. As sessões operacionais ficam vinculadas à unidade; somente a prefeitura filtra unidades da própria rede.
-- Cadastro de pessoas, busca, nome social e consulta do histórico demonstrativo.
-- Agenda com bloqueio de sobreposição, cancelamento justificado e confirmação de chegada.
+- Cadastro de pessoas com atualização justificada de identificação e contato, histórico antes/depois e autoria. Busca por nome/CPF e filtros para CPF ou telefone não informados. Documentos emitidos preservam sua identificação original.
+- Agenda com busca, filtros por profissional/situação, remarcação justificada com histórico, bloqueio de sobreposição de pessoa/profissional, cancelamento justificado e confirmação de chegada.
 - Recepção com senhas do totem, chamada antes da identificação, conferência presencial de CPF ou nome e nascimento, preferência confirmada, cadastro no balcão e encaminhamento à triagem ou serviço. Ausência e retorno preservam a senha.
 - Passagem da recepção para a triagem e o consultório, com chamadas na TV e tempos medidos por etapa. Início do atendimento, registro SOAP, rascunho e conclusão imutável na lógica da demonstração.
-- Escuta inicial, sinais vitais, novas aferições e correções justificadas, vinculadas ao atendimento e ao histórico.
+- Triagem com filas de espera, escuta em andamento e registros concluídos, filtro de data e tempos por etapa. Escuta inicial, sinais vitais, novas aferições e correções justificadas, vinculadas ao atendimento e ao histórico.
 - Complementos de notas concluídas, preservando o texto original.
 - Observação na urgência, admissão em leito, bloqueio de ocupação duplicada, saída e higienização.
 - Farmácia recebe receitas do consultório: entrega total ou parcial, pessoa ou representante, vários lotes por item, saldo restante, baixa vinculada e comprovante para impressão. O histórico fica disponível à equipe assistencial da prefeitura.
@@ -110,6 +110,7 @@ No Windows os testes de navegador usam Microsoft Edge instalado. Nos demais sist
 - [Identidade e aplicação da marca](docs/identidade.md)
 - [Comparação das 46 telas do Pulso](docs/comparacao-pulso.md)
 - [HTML independente e painel da TV](docs/html-e-painel-tv.md)
+- [Agenda, cadastro e triagem: roteiro da versão 0.11](docs/agenda-cadastro-triagem.md)
 - [Escuta, aferições e complementos](docs/escuta-e-registros.md)
 - [Farmácia: entregas por receita, estoque e roteiro de teste](docs/farmacia-dispensacao.md)
 - [Consultório: receitas, exames, encaminhamentos e roteiro de teste](docs/consultorio-documentos.md)

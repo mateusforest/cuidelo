@@ -3,10 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ClipboardCheck, HeartPulse, Save } from 'lucide-react';
 import { useApp } from '../app/context';
 import type { IntakeRecord, Vitals } from '../domain/model';
-import { activeIntakes, vitalFields } from '../domain/intake';
+import { activeIntakes, vitalFields, intakeQueueState } from '../domain/intake';
 import { readyForIntake, lastReceptionCheck } from '../domain/reception';
 import { TriageCall } from '../components/TriageCall';
-import { ageAt, clockTime } from '../domain/dates';
+import { LiveDuration, duration } from './PatientFlow';
+import { normalizedName } from '../domain/identification';
+import { ageAt, clockTime, dateKey, shortDate } from '../domain/dates';
 import {
   Avatar,
   Badge,
@@ -25,26 +27,29 @@ import '../styles/intake.css';
 export function IntakeQueue() {
   const { data } = useApp();
   const [search, setSearch] = useState(''),
-    [filter, setFilter] = useState('pending');
+    [filter, setFilter] = useState('pending'),
+    [day, setDay] = useState('');
   const hasRecord = (id: string) => data.intakes.some((r) => r.encounterId === id);
-  const pending = data.encounters.filter(
-    (e) => e.status === 'waiting' && readyForIntake(e) && !hasRecord(e.id),
-  );
-  const recorded = data.encounters.filter((e) => e.status !== 'completed' && hasRecord(e.id));
-  const list = data.encounters
+  const dated = data.encounters.filter((e) => !day || dateKey(new Date(e.arrivedAt)) === day);
+  const stage = (e: (typeof data.encounters)[number]) => intakeQueueState(e, hasRecord(e.id));
+  const stageLabel = {
+    pending: 'Aguardando escuta',
+    active: 'Em escuta',
+    recorded: 'Registrada',
+    completed: 'Atendimento concluído',
+    other: 'Fora da fila de escuta',
+  };
+  const list = dated
     .filter((e) => {
       const p = data.patients.find((p) => p.id === e.patientId);
       return (
-        (filter === 'all' ||
-          (filter === 'pending' ? pending : recorded).some((item) => item.id === e.id)) &&
-        `${p?.name} ${p?.socialName} ${e.ticket}`
-          .toLocaleLowerCase('pt-BR')
-          .includes(search.toLocaleLowerCase('pt-BR'))
+        (filter === 'all' || stage(e) === filter) &&
+        normalizedName(`${p?.name} ${p?.socialName} ${e.ticket}`).includes(normalizedName(search))
       );
     })
     .sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt));
   return (
-    <>
+    <div className="operations-page intake-workspace">
       <PageHeader
         eyebrow="ACOLHIMENTO E CONTINUIDADE"
         title="Escuta e sinais vitais"
@@ -56,28 +61,23 @@ export function IntakeQueue() {
         }
       />
       <UnitRequired>
-        <div className="intake-overview">
-          <HeartPulse size={30} />
-          <div>
-            <strong>Da chegada ao cuidado, com o histórico por perto.</strong>
-            <p>
-              Escuta inicial, novas aferições e correções ficam vinculadas à mesma pessoa e ao mesmo
-              atendimento.
-            </p>
-          </div>
-          <Badge tone="green">Novo na demonstração</Badge>
-        </div>
-        <div className="queue-stats intake-stats">
+        <div className="desk-filters intake-stats">
           {(
             [
-              ['pending', 'Aguardando escuta', pending.length],
-              ['recorded', 'Com escuta registrada', recorded.length],
-              ['all', 'Todos os atendimentos', data.encounters.length],
+              ['pending', 'Aguardando escuta', dated.filter((e) => stage(e) === 'pending').length],
+              ['active', 'Em escuta', dated.filter((e) => stage(e) === 'active').length],
+              [
+                'recorded',
+                'Com escuta registrada',
+                dated.filter((e) => stage(e) === 'recorded').length,
+              ],
+              ['all', 'Todos os atendimentos', dated.length],
             ] as const
           ).map(([key, label, count]) => (
             <button
               key={key}
               className={filter === key ? 'selected' : ''}
+              aria-pressed={filter === key}
               onClick={() => setFilter(key)}
             >
               <span>{label}</span>
@@ -95,6 +95,9 @@ export function IntakeQueue() {
               onChange={setSearch}
               placeholder="Buscar por nome ou senha"
             />
+            <Field label="Data da chegada (opcional)">
+              <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+            </Field>
             <span className="result-count">{list.length} atendimentos</span>
           </div>
           <div className="table-scroll">
@@ -103,7 +106,7 @@ export function IntakeQueue() {
                 <tr>
                   <th>Senha / pessoa</th>
                   <th>Serviço</th>
-                  <th>Chegada</th>
+                  <th>Chegada / tempo</th>
                   <th>Escuta</th>
                   <th>
                     <span className="sr-only">Ações</span>
@@ -127,23 +130,45 @@ export function IntakeQueue() {
                         </div>
                       </td>
                       <td>{e.service}</td>
-                      <td>{clockTime(e.arrivedAt)}</td>
                       <td>
-                        <Badge tone={hasRecord(e.id) ? 'green' : 'neutral'}>
-                          {hasRecord(e.id) ? 'Registrada' : 'Não registrada'}
+                        {clockTime(e.arrivedAt)}
+                        <small className="cell-secondary">{shortDate(e.arrivedAt)}</small>
+                        {stage(e) === 'active' && e.intakeStartedAt ? (
+                          <small className="intake-time">
+                            <LiveDuration since={e.intakeStartedAt} /> em escuta
+                          </small>
+                        ) : stage(e) === 'pending' ? (
+                          <small className="intake-time">
+                            <LiveDuration since={lastReceptionCheck(e)?.at ?? e.arrivedAt} />{' '}
+                            aguardando escuta
+                          </small>
+                        ) : null}
+                      </td>
+                      <td>
+                        <Badge
+                          tone={
+                            stage(e) === 'recorded'
+                              ? 'green'
+                              : stage(e) === 'active'
+                                ? 'blue'
+                                : 'neutral'
+                          }
+                        >
+                          {stageLabel[stage(e)]}
                         </Badge>
-                        {e.status === 'completed' && (
-                          <small className="cell-secondary">Atendimento concluído</small>
-                        )}
                       </td>
                       <td>
                         <Link
-                          className={`button ${hasRecord(e.id) || e.status === 'completed' ? 'secondary' : 'primary'}`}
+                          className={`button ${stage(e) === 'pending' || stage(e) === 'active' ? 'primary' : 'secondary'}`}
                           to={`/escuta/${e.id}`}
                         >
-                          {hasRecord(e.id) || e.status === 'completed'
-                            ? 'Abrir histórico'
-                            : 'Registrar escuta'}
+                          {stage(e) === 'active'
+                            ? 'Continuar escuta'
+                            : stage(e) === 'pending'
+                              ? 'Registrar escuta'
+                              : stage(e) === 'other'
+                                ? 'Ver encaminhamento'
+                                : 'Abrir histórico'}
                           <ArrowRight size={15} />
                         </Link>
                       </td>
@@ -165,7 +190,7 @@ export function IntakeQueue() {
           registram informações e não definem prioridade clínica ou conduta.
         </Notice>
       </UnitRequired>
-    </>
+    </div>
   );
 }
 
@@ -285,7 +310,7 @@ function IntakeEditor({ id }: { id?: string }) {
     }
   };
   return (
-    <>
+    <div className="operations-page intake-editor-workspace">
       <Link className="back-link" to="/escuta">
         <ArrowLeft size={16} />
         Escuta e sinais vitais
@@ -307,13 +332,55 @@ function IntakeEditor({ id }: { id?: string }) {
             ? 'Escuta registrada'
             : completed
               ? 'Sem escuta registrada'
-              : 'Aguardando escuta'}
+              : encounter.intakeStartedAt
+                ? 'Em escuta'
+                : 'Aguardando escuta'}
         </Badge>
       </div>
       <div className="care-steps">
         <span className="done">1 · Chegada registrada</span>
-        <span className="active">2 · Escuta e aferições</span>
+        <span className={records.length ? 'done' : 'active'}>2 · Escuta e aferições</span>
         <span>3 · Atendimento e acompanhamento</span>
+      </div>
+      <div className="triage-timing" aria-label="Tempos desta escuta">
+        <span>
+          <small>Chegada à unidade</small>
+          <strong>{clockTime(encounter.arrivedAt)}</strong>
+        </span>
+        <span>
+          <small>Início da escuta</small>
+          <strong>
+            {encounter.intakeStartedAt ? clockTime(encounter.intakeStartedAt) : 'Não iniciado'}
+          </strong>
+        </span>
+        <span>
+          <small>
+            {encounter.intakeCompletedAt
+              ? 'Duração da escuta inicial'
+              : encounter.intakeStartedAt
+                ? 'Tempo em escuta'
+                : 'Espera pela escuta'}
+          </small>
+          <strong>
+            {encounter.intakeStartedAt ? (
+              encounter.intakeCompletedAt ? (
+                duration(
+                  (Date.parse(encounter.intakeCompletedAt) -
+                    Date.parse(encounter.intakeStartedAt)) /
+                    60000,
+                )
+              ) : completed ? (
+                'Sem medição completa'
+              ) : (
+                <LiveDuration since={encounter.intakeStartedAt} />
+              )
+            ) : records.length || completed ? (
+              'Sem medição completa'
+            ) : (
+              <LiveDuration since={lastReceptionCheck(encounter)?.at ?? encounter.arrivedAt} />
+            )}
+          </strong>
+        </span>
       </div>
       {!completed && (
         <TriageCall
@@ -549,6 +616,9 @@ function IntakeEditor({ id }: { id?: string }) {
                     : 'Continuar atendimento'}
                 <ArrowRight size={16} />
               </Button>
+              <Link className="button secondary intake-back-queue" to="/escuta">
+                Voltar à fila de escuta
+              </Link>
               {dirty && (
                 <small className="field-hint">
                   Salve o formulário antes de seguir para o atendimento.
@@ -586,6 +656,6 @@ function IntakeEditor({ id }: { id?: string }) {
           </Notice>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

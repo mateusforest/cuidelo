@@ -1,3 +1,8 @@
+import {
+  updateRegistration,
+  rescheduleAppointment,
+  validateAppointmentSlot,
+} from './administrative-records';
 import { applyPharmacyCommand, pharmacyPrescription } from './pharmacy';
 import {
   can,
@@ -11,7 +16,7 @@ import {
   type Summary,
   type Encounter,
 } from './model';
-import { addDays, dateKey, minuteOfDay, validDay, validTime } from './dates';
+import { addDays, dateKey, validDay, validTime } from './dates';
 import { DomainError } from './errors';
 import { makeQueueCall, nextTicket } from './queue';
 import { validateIntakeContent } from './intake';
@@ -119,6 +124,16 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'patient.update': {
+      entityId = updateRegistration(db, c, command, now);
+      action = 'Cadastro atualizado com histórico preservado';
+      break;
+    }
+    case 'appointment.reschedule': {
+      entityId = rescheduleAppointment(db, c, command, now);
+      action = 'Agendamento remarcado com histórico preservado';
+      break;
+    }
     case 'stock.register':
     case 'stock.identify':
     case 'pharmacy.dispense': {
@@ -344,53 +359,14 @@ export function applyCommand(
     case 'appointment.create': {
       permit(c, 'schedule');
       patient(command.patientId);
-      ensure(validDay(command.date) && command.date >= today, 'Escolha uma data a partir de hoje.');
-      ensure(validTime(command.time), 'Informe um horário válido.');
-      ensure(
-        Number.isInteger(command.duration) && command.duration >= 5 && command.duration <= 240,
-        'Duração inválida.',
-      );
-      const professional = required(command.professional, 'Profissional', 120);
-      const start = minuteOfDay(command.time),
-        end = start + command.duration;
-      ensure(end <= 24 * 60, 'O atendimento deve terminar no mesmo dia.');
-      ensure(
-        !db.appointments.some(
-          (a) =>
-            a.organizationId === c.organizationId &&
-            a.status !== 'cancelled' &&
-            a.date === command.date &&
-            a.professional === professional &&
-            start < minuteOfDay(a.time) + a.duration &&
-            end > minuteOfDay(a.time),
-        ),
-        'Este profissional já tem um agendamento que ocupa esse horário.',
-        'conflict',
-      );
-      ensure(
-        !db.appointments.some(
-          (a) =>
-            a.organizationId === c.organizationId &&
-            a.patientId === command.patientId &&
-            a.status !== 'cancelled' &&
-            a.date === command.date &&
-            start < minuteOfDay(a.time) + a.duration &&
-            end > minuteOfDay(a.time),
-        ),
-        'Esta pessoa já tem um agendamento que ocupa esse horário.',
-        'conflict',
-      );
+      const slot = validateAppointmentSlot(db, c, command.patientId, command, today);
       entityId = newId();
       db.appointments.push({
         id: entityId,
         organizationId: c.organizationId,
         unitId: c.unitId,
         patientId: command.patientId,
-        professional,
-        service: required(command.service, 'Serviço', 120),
-        date: command.date,
-        time: command.time,
-        duration: command.duration,
+        ...slot,
         status: 'scheduled',
       });
       action = 'Agendamento criado';

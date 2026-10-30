@@ -1,0 +1,597 @@
+/* Agenda, cadastro e escuta seguem o mesmo acabamento das estações assistenciais. */
+@media screen {
+  .operations-page .agenda-metrics,
+  .operations-page .intake-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .operations-page .registry-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .agenda-calendar {
+    margin-bottom: 18px;
+  }
+  .agenda-workspace .agenda-toolbar {
+    padding: 18px 22px;
+    gap: 22px;
+  }
+  .agenda-workspace .date-controls {
+    gap: 10px;
+  }
+  .agenda-workspace .date-input {
+    border: 1px solid #dce7e1;
+    border-radius: 9px;
+    padding: 2px 12px;
+    background: #fafcfb;
+  }
+  .agenda-workspace .date-input input {
+    background: transparent;
+    font-size: 14px;
+  }
+  .agenda-workspace .agenda-toolbar > select {
+    min-width: 220px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .agenda-workspace .appointment-list {
+    background: #fafcfb;
+    padding: 4px 20px;
+  }
+  .agenda-workspace .appointment-row {
+    display: grid;
+    grid-template-columns: 76px minmax(160px, 1fr) auto auto;
+    gap: 20px;
+    background: white;
+    border: 1px solid #e2eae5;
+    border-radius: 12px;
+    margin: 16px 0;
+    padding: 22px;
+    align-items: center;
+  }
+  .agenda-workspace .appointment-row.cancelled {
+    opacity: 1;
+    background: #f7f9f8;
+  }
+  .agenda-workspace .appointment-time {
+    width: auto;
+    text-align: center;
+    padding: 14px 8px;
+    background: #f0f6f2;
+    border: 1px solid #e2ece5;
+    border-radius: 10px;
+  }
+  .agenda-workspace .appointment-time strong {
+    font-size: 21px;
+    font-weight: 500;
+  }
+  .agenda-workspace .appointment-time small {
+    font-size: 11px;
+  }
+  .agenda-workspace .appointment-person {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .agenda-workspace .appointment-person > div {
+    min-width: 0;
+  }
+  .agenda-workspace .appointment-person > div > strong {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .agenda-workspace .appointment-person small {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .agenda-workspace .appointment-row .badge {
+    font-size: 10px;
+    justify-self: start;
+  }
+  .agenda-workspace .appointment-row .row-actions {
+    min-width: 0;
+    gap: 8px;
+  }
+  .agenda-workspace .appointment-row .row-actions .button {
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+  .appointment-history {
+    margin-top: 12px;
+    color: #526d60;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .appointment-history summary {
+    padding: 7px 0;
+    cursor: pointer;
+  }
+  .appointment-history > div {
+    margin-top: 10px;
+    padding: 14px;
+    border: 1px solid #e2eae5;
+    border-radius: 9px;
+    background: #f6f9f7;
+    overflow-wrap: anywhere;
+  }
+  .appointment-history p {
+    margin: 6px 0;
+  }
+  .appointment-previous {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f0f7f2;
+    border: 1px solid #d9e8de;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .appointment-previous span,
+  .appointment-previous small {
+    font-size: 12px;
+    color: #577567;
+    line-height: 1.5;
+  }
+  .appointment-previous strong {
+    font-size: 17px;
+  }
+  .patients-workspace .person-link .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .patients-workspace .person-link strong {
+    font-size: 14px;
+  }
+  .patients-workspace th,
+  .intake-workspace th {
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    background: #f8faf9;
+  }
+  .patients-workspace td,
+  .intake-workspace td {
+    padding-block: 21px;
+    font-size: 13px;
+  }
+  .patients-workspace tbody tr:hover,
+  .intake-workspace tbody tr:hover {
+    background: #f8fbf9;
+  }
+  .patients-workspace .row-link {
+    border: 1px solid #dce7e1;
+    padding: 9px 12px;
+    min-height: 40px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .patient-detail-workspace .patient-hero > .patient-hero-actions {
+    flex: initial;
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 14px;
+    margin-left: auto;
+  }
+  .patient-detail-workspace .detail-grid {
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 24px;
+  }
+  .patient-detail-workspace .detail-grid > aside .panel-heading {
+    padding: 20px;
+  }
+  .patient-detail-workspace .detail-grid > aside .panel-heading h2 {
+    font-size: 14px;
+  }
+  .patient-detail-workspace .quiet-callout {
+    background: #edf5f0;
+    border: 1px solid #dfe9e2;
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .registration-form-section {
+    padding-bottom: 22px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid #e2eae5;
+  }
+  .registration-form-section h3 {
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 22px;
+  }
+  .registration-form-section h3 > span {
+    color: #4d8670;
+    background: #f0f6f2;
+    border: 1px solid #dce8df;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 500;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+  }
+  .registration-form-section > .field {
+    margin-bottom: 18px;
+  }
+  .registration-form-section > .field:last-child {
+    margin-bottom: 0;
+  }
+  .registration-history article {
+    padding: 20px;
+    border-top: 1px solid #e2eae5;
+    overflow-wrap: anywhere;
+  }
+  .registration-history article:first-child {
+    border-top: 0;
+  }
+  .record-change-heading {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .record-change-heading > strong {
+    font-size: 13px;
+  }
+  .record-change-heading time {
+    font-size: 11px;
+    color: #62796c;
+  }
+  .registration-history p {
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 10px 0;
+  }
+  .registration-history dl {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0 0;
+  }
+  .registration-history dl > div {
+    border: 1px solid #e2eae5;
+    background: #f7faf8;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .registration-history dt {
+    font-size: 11px;
+    color: #62796c;
+    margin-bottom: 8px;
+  }
+  .registration-history dd {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .registration-history dd span {
+    color: #62796c;
+  }
+  .registration-history dd strong {
+    font-weight: 500;
+  }
+  .intake-workspace .intake-stats {
+    margin-bottom: 24px;
+  }
+  .intake-workspace .table-toolbar .field {
+    max-width: 200px;
+  }
+  .intake-workspace .person-link .avatar {
+    border-radius: 11px;
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .intake-workspace .person-link strong {
+    font-size: 14px;
+  }
+  .intake-workspace .badge {
+    font-size: 10px;
+  }
+  .intake-workspace .intake-time {
+    display: block;
+    color: #126d65;
+    font-size: 11px;
+    margin-top: 7px;
+    white-space: nowrap;
+  }
+  .intake-workspace td .button {
+    font-size: 12px;
+  }
+  .triage-timing {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid #e2eae5;
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 22px;
+    gap: 24px;
+  }
+  .triage-timing > span {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-left: 1px solid #e2eae5;
+    padding-left: 24px;
+  }
+  .triage-timing > span:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .triage-timing small {
+    font-size: 11px;
+    color: #62796c;
+  }
+  .triage-timing strong {
+    font-size: 21px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+  }
+  .intake-editor-workspace .care-steps {
+    border: 0;
+    padding: 0;
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+  .intake-editor-workspace .care-steps > span {
+    padding: 10px 14px;
+    border: 1px solid #e2eae5;
+    background: white;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+  .intake-editor-workspace .care-steps .active {
+    background: #edf6f0;
+    border-color: #b8d7c6;
+  }
+  .intake-editor-workspace .triage-call-bar {
+    background: #f0f6f2;
+    padding: 18px 22px;
+    border-color: #dce8df;
+  }
+  .intake-editor-workspace .triage-call-bar strong {
+    font-size: 14px;
+  }
+  .intake-editor-workspace .triage-call-bar p {
+    font-size: 12px;
+    max-width: 540px;
+    line-height: 1.7;
+  }
+  .intake-editor-workspace .intake-grid {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .intake-editor-workspace .intake-grid > aside .panel-heading h2 {
+    font-size: 14px;
+  }
+  .intake-editor-workspace .intake-grid > aside h3 {
+    font-size: 16px;
+  }
+  .intake-editor-workspace .intake-grid > aside .muted {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .intake-editor-workspace .intake-back-queue {
+    margin-top: 12px;
+  }
+  .intake-editor-workspace .intake-fields {
+    padding: 24px;
+  }
+  .intake-editor-workspace .vital-fields {
+    gap: 16px;
+  }
+  .intake-editor-workspace .vital-fields .field {
+    padding: 16px;
+    margin-bottom: 0;
+    border: 1px solid #e2eae5;
+    border-radius: 10px;
+    background: #fafcfb;
+  }
+  .intake-editor-workspace .vital-fields label {
+    font-size: 12px;
+    min-height: 18px;
+  }
+  .intake-editor-workspace .vital-fields input {
+    font-size: 19px;
+    height: 48px;
+    background: white;
+    border-color: #d9e5dd;
+  }
+  .intake-editor-workspace .intake-fields > .field textarea {
+    background: #fafcfb;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .intake-editor-workspace .intake-side-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .intake-editor-workspace .intake-entry {
+    padding: 22px 24px;
+  }
+  .intake-editor-workspace .clinical-prose {
+    font-size: 13px;
+  }
+  @media (max-width: 1150px) {
+    .agenda-workspace .appointment-row {
+      grid-template-columns: 76px minmax(180px, 1fr) auto;
+      gap: 16px;
+    }
+    .agenda-workspace .appointment-row > .row-actions {
+      grid-column: 2/-1;
+      justify-content: flex-start;
+    }
+    .agenda-workspace .appointment-row > .badge {
+      justify-self: end;
+    }
+  }
+  @media (max-width: 1150px) {
+    .patient-detail-workspace .detail-grid,
+    .intake-editor-workspace .intake-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .patient-detail-workspace .detail-grid > aside,
+    .intake-editor-workspace .intake-grid > aside {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+  }
+  @media (max-width: 700px) {
+    .intake-editor-workspace .patient-hero,
+    .patient-detail-workspace .patient-hero {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: start;
+    }
+    .intake-editor-workspace .patient-hero > .badge {
+      grid-column: 2;
+      margin-left: 0;
+      justify-self: start;
+    }
+    .patient-detail-workspace .patient-hero > .patient-hero-actions {
+      grid-column: 1/-1;
+      margin-left: 0;
+      flex-wrap: wrap;
+    }
+    .operations-page .agenda-metrics,
+    .operations-page .registry-stats,
+    .operations-page .intake-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .agenda-workspace .agenda-toolbar {
+      flex-direction: column;
+      padding: 16px;
+      gap: 14px;
+    }
+    .agenda-workspace .date-controls {
+      width: 100%;
+      justify-content: space-between;
+      gap: 3px;
+    }
+    .agenda-workspace .date-input {
+      padding: 2px 7px;
+      gap: 5px;
+    }
+    .agenda-workspace .date-input input {
+      width: 128px;
+      font-size: 12px;
+    }
+    .agenda-workspace .date-controls .button {
+      padding: 9px;
+      min-width: 0;
+    }
+    .agenda-workspace .date-controls .icon-button {
+      width: 30px;
+      min-width: 30px;
+    }
+    .agenda-workspace .agenda-toolbar > select {
+      width: 100%;
+      min-width: 0;
+    }
+    .agenda-workspace .appointment-list {
+      padding: 0 12px;
+    }
+    .agenda-workspace .appointment-row {
+      grid-template-columns: 64px minmax(0, 1fr);
+      gap: 16px 12px;
+      padding: 18px 14px;
+    }
+    .agenda-workspace .appointment-row > .badge {
+      grid-column: 2;
+      justify-self: start;
+    }
+    .agenda-workspace .appointment-row > .row-actions {
+      grid-column: 1/-1;
+      padding-top: 14px;
+      border-top: 1px solid #e6eee8;
+    }
+    .agenda-workspace .appointment-person > .avatar {
+      display: none;
+    }
+    .agenda-workspace .appointment-row .row-actions .button {
+      font-size: 12px;
+      flex: 1;
+    }
+    .agenda-workspace .appointment-time strong {
+      font-size: 19px;
+    }
+    .patient-detail-workspace .patient-hero > .patient-hero-actions {
+      flex-direction: row;
+      flex: 1 1 100%;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .patient-detail-workspace .detail-grid > aside,
+    .intake-editor-workspace .intake-grid > aside {
+      display: block;
+    }
+    .registration-form-section .form-grid {
+      grid-template-columns: 1fr;
+    }
+    .registration-form-section {
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+    }
+    .intake-workspace .table-toolbar .field {
+      max-width: none;
+    }
+    .triage-timing {
+      padding: 18px;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .triage-timing > span {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      border: 0;
+      padding-left: 0;
+      gap: 20px;
+    }
+    .triage-timing strong {
+      font-size: 17px;
+      text-align: right;
+    }
+    .intake-editor-workspace .care-steps {
+      gap: 8px;
+    }
+    .intake-editor-workspace .care-steps > span {
+      padding: 8px 10px;
+      font-size: 10px;
+    }
+    .intake-editor-workspace .triage-call-bar {
+      padding: 18px;
+    }
+    .intake-editor-workspace .intake-fields {
+      padding: 20px 18px;
+    }
+    .intake-editor-workspace .vital-fields {
+      gap: 12px;
+    }
+    .intake-editor-workspace .vital-fields .field {
+      padding: 12px;
+    }
+    .intake-editor-workspace .vital-fields label {
+      min-height: 35px;
+      font-size: 11px;
+    }
+    .intake-editor-workspace .vital-fields input {
+      font-size: 17px;
+    }
+    .intake-editor-workspace .vital-fields input::placeholder {
+      font-size: 12px;
+    }
+  }
+}
