@@ -1,4 +1,4 @@
-# Perfis, totem e acompanhamento — Cuidelo 0.9.0
+# Perfis, totem e acompanhamento — Cuidelo 0.10.0
 
 Esta entrega é um ambiente local de desenvolvimento com dados fictícios. O escopo de lançamento continua incluindo UBS, UPA, pronto atendimento e hospitais. As telas não substituem a implementação e a validação dos percursos clínicos, das integrações e da proteção em servidor.
 
@@ -23,7 +23,7 @@ O histórico clínico é compartilhado entre unidades **da mesma prefeitura**, c
 ## Testar chegada, totem, TV e consulta
 
 1. Na administração da unidade, abra **Totem e TV**. Use os links dessa página para testar todas as janelas pelo mesmo arquivo/endereço e navegador.
-2. No totem, escolha cadastro existente ou atendimento pela recepção. A identificação usa CPF ou nome completo (civil ou social), junto da data de nascimento. Confere apenas o cadastro fictício local, sem consultar a Receita Federal ou CNS. Nomes iguais com o mesmo nascimento exigem conferência na recepção.
+2. No totem, percorra identificação → serviço → preferência → conferência. Escolha CPF, nome ou atendimento pela recepção, avance com **Continuar** e revise em **Conferir minha senha**. Somente **Emitir minha senha** registra a chegada. Use **Voltar** ou **Alterar** para corrigir as escolhas antes de confirmar. A identificação usa CPF ou nome completo (civil ou social), junto da data de nascimento. Confere apenas o cadastro fictício local, sem consultar a Receita Federal ou CNS. Nomes iguais com o mesmo nascimento exigem conferência na recepção.
 3. Quem não se identifica recebe uma senha para o balcão. A recepção seleciona o cadastro correspondente; o horário de chegada do totem é preservado.
 4. A senha pode ser impressa pela janela de impressão do navegador, com recibo sem nome ou informação clínica. A comunicação direta com impressora térmica ainda depende do equipamento.
 5. Na escuta, registre o início quando a pessoa entrar. Salvar a primeira avaliação registra o fim dessa etapa. Aferições posteriores e correções continuam preservadas.
@@ -69,7 +69,7 @@ Não foram conectados Supabase, autenticação, SUS, WhatsApp, assinatura digita
 
 ## Atualização do totem em 0.5.1
 
-Atendimento comum e preferencial aparecem como opções grandes na entrada e durante a emissão. O motivo é opcional: a pessoa pode escolher informar à recepção. Os exemplos incluem pessoas idosas, pessoas com deficiência, autismo, gestantes, lactantes, criança de colo, obesidade, mobilidade reduzida e doadores de sangue. A interface distingue maiores de 80 anos e orienta o doador a apresentar comprovante de até 120 dias. Não automatiza a ordem entre grupos prioritários nem a classificação clínica de risco; a equipe confere o fluxo.
+Atendimento comum e preferencial aparecem como opções grandes; desde a versão 0.10 ficam na terceira etapa, após a escolha do serviço. O motivo é opcional: a pessoa pode escolher informar à recepção. Os exemplos incluem pessoas idosas, pessoas com deficiência, autismo, gestantes, lactantes, criança de colo, obesidade, mobilidade reduzida e doadores de sangue. A interface distingue maiores de 80 anos e orienta o doador a apresentar comprovante de até 120 dias. Não automatiza a ordem entre grupos prioritários nem a classificação clínica de risco; a equipe confere o fluxo.
 
 Referências consultadas em 29/10/2026: [Lei 10.048, texto atualizado na Câmara](https://www2.camara.leg.br/legin/fed/lei/2000/lei-10048-8-novembro-2000-376937-normaatualizada-pl.html) e [Estatuto da Pessoa Idosa, art. 15, § 7º](https://www2.camara.leg.br/legin/fed/lei/2003/lei-10741-1-outubro-2003-497511-normaatualizada-pl.html). Regras locais e protocolos assistenciais precisam ser validados antes de implantação.
 
@@ -102,3 +102,7 @@ Documentos emitidos, resultados e contrarreferências ficam disponíveis à equi
 O perfil Farmácia recebe apenas receitas emitidas da própria unidade e os dados necessários à conferência e entrega, sem acesso ao SOAP, exames ou encaminhamentos. Registra entrega total/parcial por lote, com identidade de quem recebe, confirmações, histórico e comprovante. A equipe médica e a enfermagem consultam as entregas no histórico compartilhado da prefeitura, sem registrar a baixa. Administração local mantém acesso ao estoque; recebe movimentos operacionais sem a vinculação clínica das entregas.
 
 Cancelamento da receita bloqueia novas entregas e preserva as anteriores, sem estorno automático. Veja o [roteiro da farmácia](farmacia-dispensacao.md).
+
+## Organização visual em 0.10
+
+A recepção destaca os contadores da fila e mantém os links de totem e TV em uma faixa compacta. O consultório apresenta o resumo da fila, o atendimento ativo e cartões individuais com chamada e início de consulta. A farmácia separa visualmente receitas/entregas e estoque/movimentações, com atalhos que funcionam também no HTML. Os formulários, conferências, permissões e dados existentes são preservados.

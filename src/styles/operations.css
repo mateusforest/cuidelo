@@ -1,0 +1,698 @@
+/* Estações de trabalho: mesma hierarquia visual da entrada e do painel da rede. */
+@media screen {
+  .operations-page {
+    --ops-line: #e2eae5;
+    --ops-subtle: #f6f9f7;
+  }
+  .operations-page .page-description {
+    max-width: 620px;
+    font-size: 13px;
+  }
+  .operations-page .page-heading {
+    margin-bottom: 28px;
+  }
+  .operations-page .panel {
+    overflow: hidden;
+  }
+  .operations-page .panel-heading h2 {
+    font-size: 16px;
+  }
+  .operations-page .panel-heading p {
+    font-size: 12px;
+    max-width: 740px;
+  }
+  .operations-page .table-toolbar {
+    padding: 18px 24px;
+    background: #fafcfb;
+    border-bottom: 1px solid var(--ops-line);
+    gap: 18px;
+  }
+  .operations-page .table-toolbar .field {
+    margin: 0;
+  }
+  .operations-page .table-toolbar .field label {
+    font-size: 11px;
+  }
+  .operations-page .search-field {
+    background: #fff;
+  }
+  .operations-page .notice {
+    font-size: 12px;
+    line-height: 1.7;
+    border-radius: 10px;
+  }
+  .operations-page .button {
+    min-height: 42px;
+    line-height: 1.4;
+  }
+  .operations-page .modal .button {
+    min-height: 44px;
+  }
+  .operations-page .modal-header {
+    background: #f7faf8;
+    border-bottom: 1px solid var(--ops-line);
+  }
+  .operations-page .modal-header h2 {
+    font-size: 21px;
+  }
+  .operations-page .modal-header p {
+    line-height: 1.6;
+  }
+  .operations-page .desk-filters,
+  .operations-page .pharmacy-stats {
+    margin: 0 0 22px;
+    gap: 14px;
+  }
+  .operations-page .desk-filters button,
+  .operations-page .pharmacy-stats button {
+    border-radius: 13px;
+    border-color: var(--ops-line);
+    padding: 21px 22px;
+    gap: 10px;
+    box-shadow: 0 2px 8px #153d4103;
+    position: relative;
+  }
+  .operations-page .desk-filters button.selected,
+  .operations-page .pharmacy-stats button.selected {
+    background: white;
+    border-color: #589787;
+    box-shadow: inset 0 3px 0 #126d65;
+  }
+  .operations-page .desk-filters button:hover,
+  .operations-page .pharmacy-stats button:hover {
+    background: #f2f8f4;
+  }
+  .operations-page .desk-filters span,
+  .operations-page .pharmacy-stats span {
+    color: #5b7165;
+    font-size: 12px;
+  }
+  .operations-page .desk-filters strong,
+  .operations-page .pharmacy-stats strong {
+    font: 500 30px/1.2 var(--font-heading);
+    letter-spacing: -1px;
+    color: #153d41;
+  }
+  .operations-page .desk-intro {
+    background: #f0f5f2;
+    padding: 16px 20px;
+    border: 1px solid var(--ops-line);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    gap: 14px;
+  }
+  .operations-page .desk-intro-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+  }
+  .operations-page .desk-intro h2 {
+    font-size: 13px;
+    margin: 0 0 5px;
+  }
+  .operations-page .desk-intro p {
+    font-size: 12px;
+  }
+  .operations-page .desk-intro .row-actions {
+    flex-direction: row;
+    gap: 10px;
+  }
+  .operations-page .desk-intro .button {
+    background: white;
+    font-size: 11px;
+    padding: 10px 13px;
+  }
+  .operations-page .desk-row {
+    grid-template-columns: 88px minmax(175px, 1.2fr) minmax(160px, 1fr) 185px;
+    gap: 22px;
+    padding: 24px;
+    border-bottom-color: #eaf0ec;
+  }
+  .operations-page .desk-ticket {
+    background: #f0f6f2;
+    border: 1px solid #e3ede6;
+    padding: 14px 8px;
+    border-radius: 10px;
+    text-align: center;
+    gap: 6px;
+  }
+  .operations-page .desk-ticket > strong {
+    font-size: 23px;
+    letter-spacing: -0.7px;
+    font-weight: 500;
+  }
+  .operations-page .desk-ticket small {
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .operations-page .desk-person {
+    gap: 7px;
+  }
+  .operations-page .desk-person > strong {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .operations-page .desk-person .desk-preference {
+    font-size: 11px;
+  }
+  .operations-page .desk-stage .badge {
+    font-size: 10px;
+    line-height: 1.5;
+  }
+  .operations-page .desk-actions .button {
+    min-height: 40px;
+    border-radius: 8px;
+  }
+  .operations-page .desk-actions .row-actions {
+    padding-top: 3px;
+  }
+  .operations-page .desk-actions .text-button {
+    min-height: 30px;
+    line-height: 1.4;
+  }
+  .operations-page .check-section {
+    padding-bottom: 24px;
+    margin-bottom: 8px;
+  }
+  .operations-page .check-section h3 {
+    font-size: 15px;
+  }
+  .operations-page .check-person {
+    background: #f3f7f4;
+    border: 1px solid var(--ops-line);
+  }
+  .operations-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .operations-metrics article {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: white;
+    border: 1px solid var(--ops-line);
+    padding: 22px 24px;
+    border-radius: 13px;
+  }
+  .operations-metrics span {
+    font-size: 12px;
+    color: #5b7165;
+  }
+  .operations-metrics strong {
+    font: 500 27px/1.2 var(--font-heading);
+    letter-spacing: -0.8px;
+  }
+  .operations-metrics small {
+    font-size: 11px;
+    color: #698071;
+  }
+  .operations-page .consulting-active {
+    border-color: #7eaf99;
+  }
+  .operations-page .consulting-active .panel-heading {
+    background: #f0f7f2;
+  }
+  .operations-page .consulting-list {
+    padding: 20px;
+    display: grid;
+    gap: 16px;
+    background: #fafcfb;
+  }
+  .operations-page .consulting-list > article {
+    border: 1px solid var(--ops-line);
+    border-radius: 12px;
+    background: white;
+    padding: 22px;
+  }
+  .operations-page .consulting-person {
+    position: relative;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-right: 180px;
+  }
+  .operations-page .consulting-person strong {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .operations-page .consulting-person > span {
+    font-size: 12px;
+  }
+  .operations-page .consulting-person a {
+    position: absolute;
+    right: 0;
+    top: 4px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+  }
+  .operations-page .doctor-call {
+    display: grid;
+    grid-template-columns: minmax(155px, 1fr) minmax(170px, 0.8fr);
+    gap: 16px;
+    padding: 18px;
+    background: #f5f8f6;
+    border: 1px solid #e6ede8;
+    margin-bottom: 0;
+    border-radius: 10px;
+  }
+  .operations-page .doctor-call > div:first-child {
+    min-width: 0;
+  }
+  .operations-page .doctor-call .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.7px;
+  }
+  .operations-page .doctor-call p {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .operations-page .doctor-call .field {
+    min-width: 0;
+    align-self: start;
+  }
+  .operations-page .doctor-call .field label {
+    font-size: 11px;
+  }
+  .operations-page .doctor-call .button {
+    white-space: normal;
+    justify-content: center;
+  }
+  .operations-page .consulting-active .panel-body > .button {
+    margin-top: 18px;
+  }
+  .operations-page .clinical-grid > div > .doctor-call {
+    margin-bottom: 24px;
+  }
+  .operations-page .patient-hero {
+    background: white;
+    border: 1px solid var(--ops-line);
+    padding: 24px;
+    border-radius: 14px;
+    margin: 8px 0 24px;
+    gap: 20px;
+  }
+  .operations-page .patient-hero h1 {
+    font-size: 26px;
+    letter-spacing: -0.7px;
+    margin: 8px 0;
+  }
+  .operations-page .patient-hero .eyebrow {
+    font-size: 10px;
+  }
+  .operations-page .patient-hero > .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    font-size: 19px;
+  }
+  .operations-page .patient-hero p {
+    font-size: 12px;
+  }
+  .operations-page .clinical-grid {
+    grid-template-columns: minmax(0, 1fr) 270px;
+    gap: 24px;
+  }
+  .operations-page .clinical-grid > aside .panel-heading {
+    padding: 19px 20px;
+  }
+  .operations-page .clinical-grid > aside .panel-body {
+    padding: 20px;
+  }
+  .operations-page .clinical-grid > aside .panel-heading h2 {
+    font-size: 14px;
+  }
+  .operations-page .clinical-grid > aside p {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .operations-page .soap-fields {
+    padding: 24px;
+    gap: 20px;
+  }
+  .operations-page .soap-fields .field label {
+    font-size: 14px;
+  }
+  .operations-page .soap-fields textarea {
+    background: #fafcfb;
+    border-color: #d8e4dc;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .operations-page .clinical-document-heading strong {
+    font-size: 16px;
+  }
+  .operations-page .clinical-document-heading small {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .operations-page .document-kind-icon {
+    border-radius: 11px;
+  }
+  .operations-page .clinical-document-list > article {
+    border-color: var(--ops-line);
+    padding: 22px 24px;
+  }
+  .operations-shortcuts {
+    display: flex;
+    gap: 24px;
+    border-bottom: 1px solid var(--ops-line);
+    margin: -4px 0 26px;
+  }
+  .operations-shortcuts button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: #779587;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 14px 0;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .operations-shortcuts button span {
+    font-size: 13px;
+    font-weight: 500;
+    color: #286855;
+  }
+  .operations-shortcuts button:hover {
+    border-bottom-color: #126d65;
+  }
+  .operations-section {
+    scroll-margin-top: 24px;
+  }
+  .operations-section:focus {
+    outline: 2px solid #76a791;
+    outline-offset: 6px;
+    border-radius: 12px;
+  }
+  .operations-section-heading {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin: 36px 0 22px;
+    padding-top: 28px;
+    border-top: 1px solid var(--ops-line);
+  }
+  .operations-section-heading > span {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid #d7e3db;
+    border-radius: 10px;
+    color: #4d8670;
+    font-size: 12px;
+  }
+  .operations-section-heading h2 {
+    font-size: 19px;
+    margin: 0 0 5px;
+  }
+  .operations-section-heading p {
+    font-size: 12px;
+    margin: 0;
+    color: #6c8174;
+  }
+  .operations-page .inventory-summary {
+    margin: 0 0 20px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .operations-page .inventory-summary > div {
+    border: 1px solid var(--ops-line);
+    background: white;
+    padding: 18px 22px;
+    border-radius: 12px;
+    font-size: 12px;
+    gap: 16px;
+  }
+  .operations-page .inventory-summary strong {
+    font-size: 24px;
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  .operations-page .inventory-summary svg {
+    color: #397967;
+  }
+  .operations-page .inventory-summary > div:last-child svg {
+    color: #9a6c30;
+  }
+  .operations-page .pharmacy-prescriptions {
+    padding: 0 20px;
+    background: #fafcfb;
+  }
+  .operations-page .pharmacy-prescriptions > article {
+    margin: 18px 0;
+    padding: 22px;
+    border: 1px solid var(--ops-line);
+    border-radius: 12px;
+    background: white;
+  }
+  .operations-page .pharmacy-prescriptions .clinical-document-heading {
+    align-items: flex-start;
+  }
+  .operations-page .pharmacy-prescriptions .clinical-document-heading .badge {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+  .operations-page .prescription-balances {
+    margin: 20px 0;
+  }
+  .operations-page .prescription-balances > div {
+    background: #f7faf8;
+    border: 1px solid #e9efeb;
+    padding: 18px;
+    border-radius: 9px;
+  }
+  .operations-page .prescription-balances dl {
+    gap: 22px;
+  }
+  .operations-page .prescription-balances dd {
+    font-size: 21px;
+    font-weight: 500;
+  }
+  .operations-page .prescription-balances dl > div:last-child dd {
+    color: #126d65;
+  }
+  .operations-page .pharmacy-prescriptions .row-actions {
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .operations-page .delivery-item {
+    background: #f7faf8;
+    border-color: var(--ops-line);
+  }
+  .operations-page .delivery-lot-line {
+    border-top-color: var(--ops-line);
+  }
+  .operations-page .delivery-balance {
+    background: white;
+    border: 1px solid var(--ops-line);
+    padding: 12px;
+    border-radius: 8px;
+  }
+  @media (min-width: 1600px) {
+    .operations-page .doctor-call {
+      grid-template-columns: minmax(150px, 1fr) 170px auto auto;
+    }
+  }
+  @media (max-width: 1300px) {
+    .operations-page .desk-row {
+      grid-template-columns: 80px minmax(170px, 1fr) 185px;
+      gap: 16px;
+    }
+    .operations-page .desk-stage {
+      grid-column: 2;
+    }
+    .operations-page .desk-actions {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+    }
+    .operations-page .desk-intro {
+      flex-wrap: wrap;
+    }
+    .operations-page .clinical-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .operations-page .clinical-grid > aside {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+    .operations-page .desk-filters button {
+      padding: 18px 16px;
+    }
+  }
+  @media (max-width: 700px) {
+    .operations-page .page-heading {
+      gap: 20px;
+    }
+    .operations-page .page-heading h1 {
+      font-size: 26px;
+    }
+    .operations-page .page-description {
+      font-size: 12px;
+    }
+    .operations-page .page-actions,
+    .operations-page .page-actions > .row-actions {
+      width: 100%;
+    }
+    .operations-page .page-actions .button {
+      flex: 1;
+      justify-content: center;
+    }
+    .operations-page .panel-heading {
+      padding: 20px 18px;
+    }
+    .operations-page .table-toolbar {
+      padding: 16px 18px;
+      align-items: stretch;
+    }
+    .operations-page .table-toolbar > .field {
+      max-width: none;
+      width: 100%;
+    }
+    .operations-page .desk-filters,
+    .operations-page .pharmacy-stats {
+      gap: 10px;
+    }
+    .operations-page .desk-filters button,
+    .operations-page .pharmacy-stats button {
+      padding: 18px 16px;
+    }
+    .operations-page .desk-intro {
+      padding: 16px;
+    }
+    .operations-page .desk-intro .row-actions {
+      flex-direction: row;
+      width: 100%;
+    }
+    .operations-page .desk-intro .button {
+      flex: 1;
+      white-space: normal;
+    }
+    .operations-page .desk-row {
+      grid-template-columns: 1fr;
+      padding: 20px 18px;
+      gap: 16px;
+    }
+    .operations-page .desk-ticket {
+      flex-direction: row;
+      justify-content: space-between;
+      padding: 10px 14px;
+    }
+    .operations-page .desk-ticket small {
+      font-size: 11px;
+    }
+    .operations-page .desk-actions,
+    .operations-page .desk-stage {
+      grid-column: auto;
+      grid-row: auto;
+    }
+    .operations-page .desk-actions {
+      gap: 10px;
+    }
+    .operations-page .desk-actions .button,
+    .operations-page .desk-actions .text-button {
+      min-height: 44px;
+    }
+    .operations-metrics {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .operations-metrics article {
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 7px;
+    }
+    .operations-metrics strong {
+      font-size: 22px;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+    .operations-metrics small {
+      grid-column: 1;
+    }
+    .operations-page .consulting-list {
+      padding: 12px;
+      gap: 12px;
+    }
+    .operations-page .consulting-list > article {
+      padding: 18px 14px;
+    }
+    .operations-page .consulting-person {
+      padding-right: 0;
+    }
+    .operations-page .consulting-person a {
+      position: static;
+      min-height: 40px;
+    }
+    .operations-page .doctor-call {
+      grid-template-columns: 1fr;
+      padding: 16px;
+    }
+    .operations-page .doctor-call .button {
+      min-height: 46px;
+    }
+    .operations-page .clinical-grid > aside {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .operations-page .patient-hero {
+      padding: 20px 18px;
+      gap: 14px;
+    }
+    .operations-page .patient-hero h1 {
+      font-size: 22px;
+    }
+    .operations-page .patient-hero .eyebrow {
+      font-size: 9px;
+    }
+    .operations-page .patient-hero > .avatar {
+      width: 44px;
+      height: 44px;
+    }
+    .operations-page .soap-fields {
+      padding: 20px 18px;
+    }
+    .operations-shortcuts {
+      gap: 20px;
+    }
+    .operations-shortcuts button {
+      align-items: flex-start;
+      font-size: 10px;
+    }
+    .operations-shortcuts button span {
+      font-size: 12px;
+      line-height: 1.6;
+      text-align: left;
+    }
+    .operations-page .pharmacy-prescriptions {
+      padding: 0 12px;
+    }
+    .operations-page .pharmacy-prescriptions > article {
+      padding: 18px 14px;
+    }
+    .operations-page .inventory-summary {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .operations-page .inventory-summary > div {
+      padding: 16px 20px;
+    }
+    .operations-page .prescription-balances > div {
+      padding: 14px;
+    }
+    .operations-page .clinical-document-heading strong {
+      font-size: 15px;
+    }
+  }
+}

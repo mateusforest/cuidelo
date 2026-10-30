@@ -138,18 +138,37 @@ export function ConsultingRoom() {
     return p?.socialName || p?.name;
   };
   return (
-    <>
+    <div className="operations-page consulting-workspace">
       <PageHeader
         eyebrow="EQUIPE ASSISTENCIAL"
         title="Meu consultório"
         description="Chame a senha sem sair da sua estação. Registre o início quando a pessoa entrar no consultório."
       />
       <UnitRequired>
+        <div className="operations-metrics" aria-label="Resumo do consultório">
+          <article>
+            <span>Para acompanhar</span>
+            <strong>{waiting.length}</strong>
+            <small>Na fila desta unidade</small>
+          </article>
+          <article>
+            <span>Meu atendimento</span>
+            <strong>{active ? 'Em consulta' : 'Disponível'}</strong>
+            <small>
+              {active ? 'Tempo de consulta em registro' : 'Inicie quando a pessoa entrar'}
+            </small>
+          </article>
+          <article>
+            <span>Em observação</span>
+            <strong>{waiting.filter((e) => e.status === 'observation').length}</strong>
+            <small>Entre as pessoas para acompanhar</small>
+          </article>
+        </div>
         {active &&
           (() => {
             const e = data.encounters.find((e) => e.id === active.encounterId)!;
             return (
-              <Panel title={`Em atendimento · ${person(e)}`}>
+              <Panel className="consulting-active" title={`Em atendimento · ${person(e)}`}>
                 <div className="panel-body">
                   <DoctorCall encounter={e} />
                   <Link className="button primary" to={`/atendimento/${e.id}`}>
@@ -193,7 +212,7 @@ export function ConsultingRoom() {
           entrou · iniciar” e termina na conclusão ou no encaminhamento à observação.
         </Notice>
       </UnitRequired>
-    </>
+    </div>
   );
 }
 export function Performance() {

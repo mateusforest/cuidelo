@@ -2,7 +2,7 @@
 
 O escopo público completo está em [plano-completo.md](plano-completo.md). Esta lista ordena dependências de construção, sem autorizar uma implantação incompleta. A primeira operação em UBS, UPA, pronto atendimento e hospital depende do aceite dos módulos e integrações exigidos pela rede contratada.
 
-## Marco atual: demonstração 0.9
+## Marco atual: demonstração 0.10
 
 Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, escuta, sinais vitais, correções, SOAP com complementos, painel de senhas, observação, leitos, estoque, encaminhamentos e vacinação com caderneta, lotes, aprazamentos e visão gerencial. Receitas, pedidos de exames e encaminhamentos possuem rascunho, emissão de teste e impressão; exames recebem resultados e revisão médica, e a regulação registra contrarreferência manual. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
 
@@ -49,4 +49,6 @@ A versão 0.5 acrescenta sessões vinculadas, totem, autoria e tempos, além de 
 
 A versão 0.7 conecta ordens do consultório ao acompanhamento de exames e regulação. A versão 0.8 acrescenta dispensação parcial ou total por receita, pessoa e lote, comprovantes e saldo pendente. Os próximos incrementos incluem devoluções, correções vinculadas, perdas/quarentena e reconciliação com administração de medicamentos; assinatura, validação farmacêutica e regras clínicas continuam dependências explícitas.
 
-A versão 0.9 reorganiza a entrada por acessos demonstrativos e a estrutura visual, mantendo os nove perfis e o contexto de prefeitura e unidade. O endereço principal apresenta a entrada antes da primeira seleção; a preferência local não é uma barreira de autorização. Autenticação real continua pendente. O refinamento visual não altera a classificação dos 44 percursos parciais.
+A versão 0.9 reorganizou a entrada por acessos demonstrativos e a estrutura visual, mantendo os nove perfis e o contexto de prefeitura e unidade. O endereço principal apresenta a entrada antes da primeira seleção; a preferência local não é uma barreira de autorização. Autenticação real continua pendente. O refinamento visual não altera a classificação dos 44 percursos parciais.
+
+A versão 0.10 estende a organização visual às estações de recepção, consultório, registro clínico e farmácia. O totem usa quatro etapas com conferência final; o retorno preserva as escolhas, o cancelamento e a inatividade limpam os dados, e só a confirmação emite a senha. Os comandos e contratos de persistência existentes permanecem responsáveis pelas regras de domínio.

@@ -118,7 +118,7 @@ function EncounterEditor({ id }: { id?: string }) {
     }
   };
   return (
-    <>
+    <div className="operations-page encounter-workspace">
       <Link className="back-link" to="/recepcao">
         <ArrowLeft size={16} />
         Recepção e atendimento
@@ -372,6 +372,6 @@ function EncounterEditor({ id }: { id?: string }) {
           )}
         </aside>
       </div>
-    </>
+    </div>
   );
 }

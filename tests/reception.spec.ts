@@ -1,3 +1,4 @@
+import { reviewTicket } from './kiosk-flow';
 import { test, expect, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -24,10 +25,8 @@ test('senha anônima → guichê → conferência → triagem → consultório, 
   await selectSession(page, { role: 'reception', unitId: 'aurora-centro' });
   const kiosk = await context.newPage();
   await kiosk.goto('/totem?rede=aurora&unidade=aurora-centro');
-  await kiosk.getByRole('radio', { name: 'Atendimento preferencial', exact: true }).check();
   await kiosk.getByRole('button', { name: /Preciso da recepção/ }).click();
-  await kiosk.getByRole('radio', { name: 'Consulta ou retorno', exact: true }).check();
-  await kiosk.getByLabel('Motivo da preferência', { exact: true }).selectOption('pregnant');
+  await reviewTicket(kiosk, { service: 'Consulta ou retorno', preference: 'pregnant' });
   await kiosk.getByRole('button', { name: 'Emitir minha senha' }).click();
   const ticket = (await kiosk.locator('.ticket-receipt strong').textContent())!;
   const row = page.getByTestId(`desk-${ticket}`);
@@ -89,6 +88,7 @@ test('ausência, retorno e cadastro sem CPF preservam a senha e permitem encamin
 }) => {
   await page.goto('/totem?rede=aurora&unidade=aurora-centro');
   await page.getByRole('button', { name: /Preciso da recepção/ }).click();
+  await reviewTicket(page);
   await page.getByRole('button', { name: 'Emitir minha senha' }).click();
   const ticket = (await page.locator('.ticket-receipt strong').textContent())!;
   await selectSession(page, { role: 'reception', unitId: 'aurora-centro' });
@@ -141,6 +141,7 @@ test('recepção do HTML funciona offline no celular, confere CPF e abre a TV do
   await page.getByRole('button', { name: /Usar meu CPF/ }).click();
   await page.getByText('Dados fictícios para testar', { exact: true }).click();
   await page.getByRole('button', { name: 'Preencher exemplo fictício' }).click();
+  await reviewTicket(page, { identified: true });
   await page.getByRole('button', { name: 'Emitir minha senha' }).click();
   const ticket = (await page.locator('.ticket-receipt strong').textContent())!;
   await selectSession(page, { role: 'reception', unitId: 'aurora-centro' });

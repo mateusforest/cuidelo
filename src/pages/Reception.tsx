@@ -71,7 +71,7 @@ export function Reception() {
     }
   };
   return (
-    <>
+    <div className="operations-page reception-workspace">
       <PageHeader
         eyebrow={urgent ? 'URGÊNCIA E EMERGÊNCIA' : 'PORTA DE ENTRADA'}
         title={urgent ? 'Acolhimento e atendimento' : 'Recepção e atendimento'}
@@ -291,6 +291,6 @@ export function Reception() {
           </ActionForm>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

@@ -149,14 +149,26 @@ export function ReceptionDesk() {
   };
   return (
     <>
+      <div className="desk-filters">
+        {categories.map(([key, label]) => (
+          <button
+            key={key}
+            className={filter === key ? 'selected' : ''}
+            aria-pressed={filter === key}
+            onClick={() => setFilter(key)}
+          >
+            <span>{label}</span>
+            <strong>{rows.filter((r) => key === 'all' || category(r) === key).length}</strong>
+          </button>
+        ))}
+      </div>
       <section className="desk-intro">
         <span className="desk-intro-icon">
-          <UserCheck size={29} />
+          <UserCheck size={22} />
         </span>
         <div>
-          <span className="eyebrow">DA CHEGADA À TRIAGEM</span>
-          <h2>Cada senha, no próximo lugar certo.</h2>
-          <p>Receba, confira e encaminhe. A fila se atualiza neste navegador.</p>
+          <h2>Totem e painel da unidade</h2>
+          <p>Teste a chegada e a chamada em outras abas deste navegador.</p>
         </div>
         <div className="row-actions">
           <a
@@ -169,7 +181,7 @@ export function ReceptionDesk() {
             Abrir totem conectado
           </a>
           <a
-            className="button primary"
+            className="button secondary"
             target="_blank"
             rel="noreferrer"
             href={externalRoute(displayRoute(context.organizationId, context.unitId))}
@@ -179,24 +191,6 @@ export function ReceptionDesk() {
           </a>
         </div>
       </section>
-      <div className="desk-steps">
-        <span>1 · Chamar ao guichê</span>
-        <span>2 · Conferir pessoa e preferência</span>
-        <span>3 · Encaminhar à triagem ou serviço</span>
-        <span>4 · Chamar na TV</span>
-      </div>
-      <div className="desk-filters">
-        {categories.map(([key, label]) => (
-          <button
-            key={key}
-            className={filter === key ? 'selected' : ''}
-            onClick={() => setFilter(key)}
-          >
-            <span>{label}</span>
-            <strong>{rows.filter((r) => key === 'all' || category(r) === key).length}</strong>
-          </button>
-        ))}
-      </div>
       <Panel
         title="Fila da recepção"
         subtitle="Ordem de chegada. A equipe define a sequência de chamada e confere a preferência administrativa."

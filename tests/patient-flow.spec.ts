@@ -1,3 +1,4 @@
+import { reviewTicket } from './kiosk-flow';
 import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -38,6 +39,7 @@ test('totem → identificação → chamada da estação → TV → consulta →
   const kiosk = await context.newPage();
   await kiosk.goto('/totem?rede=aurora&unidade=aurora-centro');
   await kiosk.getByRole('button', { name: /Preciso da recepção/ }).click();
+  await reviewTicket(kiosk);
   await kiosk.getByRole('button', { name: 'Emitir minha senha' }).click();
   const ticket = (await kiosk.locator('.ticket-receipt strong').textContent())!;
   expect(await kiosk.locator('.ticket-receipt').textContent()).not.toContain('DEMO-00');
@@ -168,6 +170,7 @@ test('totem independente funciona offline e se ajusta ao celular', async ({ brow
   await expect(page.getByRole('heading', { name: 'Como podemos cuidar de você?' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: /Preciso da recepção/ }).click();
+  await reviewTicket(page);
   await page.getByRole('button', { name: 'Emitir minha senha' }).click();
   await expect(page.locator('.ticket-receipt strong')).toHaveText(/^A-/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

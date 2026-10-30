@@ -6,9 +6,12 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.9.0**, de 30/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.10.0**, de 30/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
+
+- Recepção, consultório, registro clínico e farmácia com visual unificado, filas organizadas, resumos por etapa e atalhos para receitas e estoque.
+- Totem em quatro etapas: identificação → serviço → preferência → conferência. Voltar mantém as escolhas; cancelar limpa a sessão. A senha só é emitida na confirmação final.
 
 - Nova tela de entrada em `/acesso` e `/login`, com nove perfis predefinidos, seleção de prefeitura e unidade, e dois profissionais de demonstração para a equipe médica. Não solicita senha nem simula autenticação real.
 - Visual renovado com menu lateral, contexto da unidade e da sessão, painel de indicadores e adaptação para celular. Na primeira abertura do endereço principal, a entrada demonstrativa é exibida antes da visão de trabalho; depois, a escolha é lembrada no navegador.

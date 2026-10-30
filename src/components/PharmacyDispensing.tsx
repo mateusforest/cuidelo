@@ -56,6 +56,7 @@ export function PharmacyDispensing({
             key={status}
             onClick={() => setFilter(status)}
             className={filter === status ? 'selected' : ''}
+            aria-pressed={filter === status}
           >
             <span>{pharmacyStatus[status]}</span>
             <strong>{rows.filter((r) => r.status === status).length}</strong>

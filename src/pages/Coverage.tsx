@@ -50,14 +50,14 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.9"
-        subtitle="Entrada por perfis e uma organização visual renovada para a rede."
+        title="Avanços da versão 0.10"
+        subtitle="Recepção, consultório e farmácia renovados. Totem guiado em quatro etapas."
       >
         <div className="panel-body">
           <p>
-            A nova entrada reúne nove perfis demonstrativos, prefeitura, unidade e profissional. O
-            menu, os indicadores e o contexto de trabalho foram reorganizados, com adaptação para
-            celular. A seleção continua sendo demonstrativa, sem autenticação real.
+            Recepção, consultório e farmácia passam a usar a mesma hierarquia visual, com filas,
+            ações e informações mais organizadas. O totem separa identificação, serviço, preferência
+            e conferência, com retorno às etapas e emissão somente ao confirmar.
           </p>
           <p>
             Farmácia recebe receitas emitidas na unidade, confere a identificação de quem recebe e
