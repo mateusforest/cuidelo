@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarPlus, ClipboardList, Package, Plus, Syringe } from 'lucide-react';
+import { CalendarPlus, ClipboardList, Package, Plus, PhoneCall } from 'lucide-react';
 import { useApp } from '../app/context';
 import type { Immunization, VaccineRecall } from '../domain/model';
-import { dateKey, shortDate, ageAt } from '../domain/dates';
+import { contactLabels } from '../domain/continuity';
+import { normalizedName, formatCpf } from '../domain/identification';
+import { dateKey, shortDate, ageAt, clockTime } from '../domain/dates';
 import {
   Avatar,
   Badge,
@@ -34,6 +36,7 @@ type Form =
       existing?: VaccineRecall;
       action?: 'reschedule' | 'cancel';
     }
+  | { kind: 'contact'; recall: VaccineRecall }
   | { kind: 'void'; record: Immunization };
 export function Vaccination() {
   const { data, context, repository, notify } = useApp();
@@ -42,13 +45,14 @@ export function Vaccination() {
     [search, setSearch] = useState(''),
     [tab, setTab] = useState('card'),
     [returnFilter, setReturnFilter] = useState('pending'),
+    [returnSearch, setReturnSearch] = useState(''),
     [form, setForm] = useState<Form | null>(null);
   const p = data.patients.find((p) => p.id === patientId),
     today = dateKey();
   const people = data.patients.filter((p) =>
-    `${p.name} ${p.socialName} ${p.record}`
-      .toLocaleLowerCase('pt-BR')
-      .includes(search.toLocaleLowerCase('pt-BR')),
+    normalizedName(
+      `${p.name} ${p.socialName} ${p.record} ${p.cpf ?? ''} ${formatCpf(p.cpf ?? '')}`,
+    ).includes(normalizedName(search)),
   );
   const records = data.immunizations.filter((i) => i.patientId === patientId),
     voidIds = new Set(data.vaccineVoids.map((v) => v.applicationId));
@@ -57,12 +61,20 @@ export function Vaccination() {
     .filter(
       (r) =>
         returnFilter === 'all' ||
-        (r.status === 'scheduled' && (returnFilter !== 'overdue' || r.date < today)),
+        (r.status === 'scheduled' &&
+          (returnFilter !== 'overdue' || r.date < today) &&
+          (returnFilter !== 'today' || r.date === today)),
     )
+    .filter((r) => {
+      const person = data.patients.find((p) => p.id === r.patientId);
+      return normalizedName(
+        `${person?.name} ${person?.socialName} ${r.immunobiological} ${r.dose}`,
+      ).includes(normalizedName(returnSearch));
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
   const unitNames = Object.fromEntries(data.units.map((u) => [u.id, u.name]));
   return (
-    <>
+    <div className="operations-page vaccination-workspace">
       <PageHeader
         eyebrow="IMUNIZAÇÃO E ACOMPANHAMENTO"
         title="Sala de vacinação"
@@ -75,15 +87,9 @@ export function Vaccination() {
         }
       />
       <UnitRequired>
-        <div className="vaccine-banner">
-          <span className="vaccine-banner-icon">
-            <Syringe size={30} />
-          </span>
-          <div>
-            <h2>Cuidado registrado, próxima etapa acompanhada.</h2>
-            <p>Aplicações, comprovantes e aprazamentos no mesmo percurso.</p>
-          </div>
-          <div className="vaccine-banner-metric">
+        <div className="continuity-metrics" aria-label="Resumo da vacinação da unidade">
+          <article>
+            <span>Aplicações hoje</span>
             <strong>
               {
                 data.immunizations.filter(
@@ -95,15 +101,56 @@ export function Vaccination() {
                 ).length
               }
             </strong>
-            <span>aplicações hoje</span>
-          </div>
+            <small>Registradas nesta unidade</small>
+          </article>
+          {(
+            [
+              [
+                'pending',
+                'Retornos pendentes',
+                returns.filter((r) => r.status === 'scheduled').length,
+              ],
+              [
+                'today',
+                'Previstos hoje',
+                returns.filter((r) => r.status === 'scheduled' && r.date === today).length,
+              ],
+              [
+                'overdue',
+                'Em atraso',
+                returns.filter((r) => r.status === 'scheduled' && r.date < today).length,
+              ],
+            ] as const
+          ).map(([key, label, count]) => (
+            <button
+              key={key}
+              aria-pressed={tab === 'returns' && returnFilter === key}
+              onClick={() => {
+                setTab('returns');
+                setReturnFilter(key);
+                setReturnSearch('');
+              }}
+            >
+              <span>{label}</span>
+              <strong>{count}</strong>
+              <small>Ver aprazamentos</small>
+            </button>
+          ))}
         </div>
         <div className="vaccine-tabs" aria-label="Seções de vacinação">
-          <button className={tab === 'card' ? 'active' : ''} onClick={() => setTab('card')}>
+          <button
+            aria-pressed={tab === 'card'}
+            className={tab === 'card' ? 'active' : ''}
+            onClick={() => setTab('card')}
+          >
             <ClipboardList size={17} />
             Caderneta da pessoa
           </button>
-          <button className={tab === 'returns' ? 'active' : ''} onClick={() => setTab('returns')}>
+          <button
+            aria-pressed={tab === 'returns'}
+            className={tab === 'returns' ? 'active' : ''}
+            onClick={() => setTab('returns')}
+          >
             <CalendarPlus size={17} />
             Aprazamentos da unidade{' '}
             <span>{returns.filter((r) => r.status === 'scheduled').length}</span>
@@ -113,13 +160,18 @@ export function Vaccination() {
           <div className="vaccination-grid">
             <Panel className="vaccine-person-picker" title="Encontrar pessoa">
               <div className="panel-body">
-                <SearchField value={search} onChange={setSearch} placeholder="Nome ou cadastro" />
+                <SearchField
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Nome, CPF ou cadastro"
+                />
               </div>
               <div className="vaccine-people">
                 {people.map((person) => (
                   <button
                     key={person.id}
                     className={patientId === person.id ? 'selected' : ''}
+                    aria-pressed={patientId === person.id}
                     onClick={() => setPatientId(person.id)}
                   >
                     <Avatar small name={person.socialName || person.name} />
@@ -220,9 +272,15 @@ export function Vaccination() {
             subtitle="Datas informadas pela equipe. Nenhuma mensagem é enviada automaticamente."
           >
             <div className="table-toolbar">
+              <SearchField
+                value={returnSearch}
+                onChange={setReturnSearch}
+                placeholder="Buscar pessoa ou vacina nos retornos"
+              />
               <Field label="Exibir aprazamentos">
                 <select value={returnFilter} onChange={(e) => setReturnFilter(e.target.value)}>
                   <option value="pending">Pendentes</option>
+                  <option value="today">Previstos hoje</option>
                   <option value="overdue">Em atraso</option>
                   <option value="all">Todos, incluindo concluídos</option>
                 </select>
@@ -274,6 +332,12 @@ export function Vaccination() {
                           {r.status === 'scheduled' && (
                             <div className="row-actions">
                               <Button
+                                variant="secondary"
+                                onClick={() => setForm({ kind: 'contact', recall: r })}
+                              >
+                                <PhoneCall size={15} /> Registrar contato
+                              </Button>
+                              <Button
                                 onClick={() =>
                                   setForm({
                                     kind: 'record',
@@ -313,6 +377,20 @@ export function Vaccination() {
                               </Button>
                             </div>
                           )}
+                          {!!r.contacts?.length && (
+                            <details className="vaccine-contact-history">
+                              <summary>Contatos registrados ({r.contacts.length})</summary>
+                              {[...r.contacts].reverse().map((c) => (
+                                <article key={c.id}>
+                                  <strong>{contactLabels[c.outcome]}</strong>
+                                  <p>{c.note}</p>
+                                  <small>
+                                    {shortDate(c.at)} às {clockTime(c.at)} · {c.author}
+                                  </small>
+                                </article>
+                              ))}
+                            </details>
+                          )}
                           <details className="vaccine-return-history">
                             <summary>Histórico do aprazamento</summary>
                             {r.events.map((e, index) => (
@@ -349,6 +427,51 @@ export function Vaccination() {
       </UnitRequired>
       {form?.kind === 'record' && <VaccinationRecordForm {...form} onClose={() => setForm(null)} />}
       {form?.kind === 'recall' && <VaccineRecallForm {...form} onClose={() => setForm(null)} />}
+      {form?.kind === 'contact' && (
+        <VaccineForm
+          title="Registrar contato do retorno"
+          description="Anote uma tentativa já realizada pela equipe. Nenhuma ligação ou mensagem é enviada pelo sistema."
+          submitLabel="Salvar contato"
+          onClose={() => setForm(null)}
+          onSubmit={async (f) => {
+            await repository.execute(context, {
+              type: 'vaccine.recall.contact',
+              id: form.recall.id,
+              outcome: valueOf(f, 'outcome') as 'reached' | 'unanswered' | 'unavailable',
+              note: valueOf(f, 'note'),
+              expectedContacts: form.recall.contacts?.length ?? 0,
+              expectedEvents: form.recall.events.length,
+            });
+            notify('Contato registrado. A data e a situação do retorno foram mantidas.');
+          }}
+        >
+          <div className="followup-summary">
+            <strong>{data.patients.find((p) => p.id === form.recall.patientId)?.name}</strong>
+            <span>
+              {form.recall.immunobiological} · {form.recall.dose} · previsto para{' '}
+              {shortDate(form.recall.date)}
+            </span>
+          </div>
+          <Field label="Resultado do contato">
+            <select name="outcome">
+              {Object.entries(contactLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Registro do contato">
+            <textarea
+              name="note"
+              required
+              maxLength={1000}
+              rows={4}
+              placeholder="Descreva a tentativa ou as orientações repassadas. Use dados fictícios."
+            />
+          </Field>
+        </VaccineForm>
+      )}
       {form?.kind === 'void' && (
         <VaccineForm
           title="Anular registro vacinal"
@@ -373,6 +496,6 @@ export function Vaccination() {
           </Field>
         </VaccineForm>
       )}
-    </>
+    </div>
   );
 }

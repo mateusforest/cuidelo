@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.11. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.12. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -111,7 +111,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/consultorio",
-      "note": "SOAP e complementos; receitas, exames e encaminhamentos com rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado. Exames têm acompanhamento e revisão médica. Receitas seguem para a farmácia, com entregas consultáveis no histórico da prefeitura. Faltam CIAP/CID, receituários especiais, validações clínicas, assinatura e integrações."
+      "note": "SOAP e complementos; receitas, exames e encaminhamentos com rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado. Exames têm acompanhamento, reagendamento justificado, destaque de datas ultrapassadas e revisão médica. Receitas seguem para a farmácia, com entregas consultáveis no histórico da prefeitura. Faltam CIAP/CID, receituários especiais, validações clínicas, assinatura e integrações."
     },
     {
       "id": "vacina",
@@ -123,7 +123,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/vacinacao",
-      "note": "Há caderneta, aplicação com baixa de dose por lote, transcrição, anulação preservada, aprazamentos, perdas e quarentena. Faltam calendário validado, registro tardio e correções com reconciliação, rede de frio completa e integração oficial."
+      "note": "Há caderneta, aplicação com baixa de dose por lote, transcrição, anulação preservada, aprazamentos, perdas e quarentena. Retornos têm filtros de hoje/atraso e registros manuais de contato com autoria e horário, sem envio automático. Faltam calendário validado, registro tardio e correções com reconciliação, rede de frio completa e integração oficial."
     },
     {
       "id": "prenatal",
@@ -243,7 +243,7 @@
       "group": "Gestão municipal",
       "status": "parcial",
       "route": "/regulacao",
-      "note": "Recebe encaminhamentos emitidos no consultório; agendamento local, cancelamento sincronizado e contrarreferência manual preservada no histórico da pessoa. Faltam vagas externas, autorização, devolução, contrarreferência recebida automaticamente e integração oficial."
+      "note": "Recebe encaminhamentos emitidos no consultório; agendamento local e reagendamento justificado com valores anteriores/autoria, filtro de datas ultrapassadas, cancelamento sincronizado e contrarreferência manual preservada no histórico da pessoa. Faltam vagas externas, autorização, devolução, contrarreferência recebida automaticamente e integração oficial."
     },
     {
       "id": "envio",

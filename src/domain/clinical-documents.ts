@@ -346,6 +346,14 @@ export function applyDocumentCommand(
         date >= dateKey(now) && validTime(time) && !!location,
         'Informe data a partir de hoje, horário e local do agendamento.',
       );
+      if (state === 'scheduled') {
+        ensure(!!note.trim(), 'Informe o motivo do reagendamento do exame.');
+        const previous = events.filter((e) => e.kind === 'scheduled').at(-1)!;
+        ensure(
+          previous.date !== date || previous.time !== time || previous.location !== location,
+          'Altere a data, o horário ou o local do exame.',
+        );
+      }
     } else {
       ensure(date <= dateKey(now), 'Não é possível registrar realização ou resultado no futuro.');
       if (cmd.kind === 'performed')
@@ -712,7 +720,9 @@ export function validateClinicalDocuments(db: Database) {
           r.history.every(
             (h) =>
               date(h.at) &&
-              ['requested', 'scheduled', 'cancelled', 'completed'].includes(h.action) &&
+              ['requested', 'scheduled', 'rescheduled', 'cancelled', 'completed'].includes(
+                h.action,
+              ) &&
               typeof h.note === 'string' &&
               identities.some(
                 (i) =>

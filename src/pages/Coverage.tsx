@@ -50,19 +50,20 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.11"
-        subtitle="Agenda, cadastro de pacientes e triagem com organização visual unificada."
+        title="Avanços da versão 0.12"
+        subtitle="Vacinação, exames e regulação com organização visual unificada."
       >
         <div className="panel-body">
           <p>
-            A agenda permite remarcar atendimentos pendentes com motivo e histórico de horários,
-            mantendo os bloqueios de sobreposição. O cadastro permite atualizar identificação e
-            contato com autoria e valores anteriores, sem reescrever documentos já emitidos.
+            A vacinação organiza retornos pendentes, previstos para hoje e em atraso. Cada tentativa
+            de contato pode ser registrada com resultado, observação, autoria e horário, mantendo a
+            data e a situação do retorno. Não há envio automático de mensagens.
           </p>
           <p>
-            A triagem separa pessoas aguardando escuta, em escuta e com registro concluído, com
-            filtros de busca e data. Os tempos de espera, início e duração ficam visíveis na fila e
-            no atendimento. Chamadas na TV, aferições e correções preservadas continuam disponíveis.
+            Exames e encaminhamentos permitem reagendamento com motivo e histórico preservado. Os
+            filtros destacam datas previstas ultrapassadas para conferência pela equipe, sem
+            presumir falta ou atendimento realizado. A regulação mostra os dados anteriores e os
+            novos horários, sem alterar o encaminhamento clínico emitido.
           </p>
           <p>
             Os 44 módulos continuam parciais porque suas pendências completas ainda incluem

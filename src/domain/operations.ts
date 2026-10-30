@@ -1,3 +1,4 @@
+import { rescheduleReferral } from './continuity';
 import {
   updateRegistration,
   rescheduleAppointment,
@@ -124,6 +125,11 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'referral.reschedule': {
+      entityId = rescheduleReferral(db, c, command, now);
+      action = 'Encaminhamento reagendado com histórico preservado';
+      break;
+    }
     case 'patient.update': {
       entityId = updateRegistration(db, c, command, now);
       action = 'Cadastro atualizado com histórico preservado';
@@ -202,6 +208,7 @@ export function applyCommand(
     case 'vaccine.stock':
     case 'vaccine.record':
     case 'vaccine.void':
+    case 'vaccine.recall.contact':
     case 'vaccine.recall.create':
     case 'vaccine.recall.update': {
       ({ entityId, action } = applyVaccinationCommand(db, c, command, now, newId));
@@ -669,6 +676,7 @@ export function applyCommand(
         actorId: c.sessionId,
         action: 'scheduled',
         note: 'Agendamento local registrado',
+        appointment: { date: command.date, time: command.time, destination: r.destination },
       });
       entityId = r.id;
       action = 'Agendamento de encaminhamento registrado';

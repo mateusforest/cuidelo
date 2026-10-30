@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { Plus, CalendarDays, X } from 'lucide-react';
 import { useApp } from '../app/context';
 import type { Referral } from '../domain/model';
-import { addDays, dateKey, shortDate } from '../domain/dates';
+import { normalizedName } from '../domain/identification';
+import { demoIdentities } from '../domain/access';
+import { addDays, dateKey, shortDate, clockTime } from '../domain/dates';
 import {
   ActionForm,
   Badge,
@@ -22,6 +24,7 @@ import {
 export function Referrals() {
   const { data, context, repository, notify } = useApp();
   const [search, setSearch] = useState(''),
+    [filter, setFilter] = useState('all'),
     [create, setCreate] = useState(false),
     [schedule, setSchedule] = useState<Referral | null>(null),
     [cancel, setCancel] = useState<Referral | null>(null);
@@ -29,19 +32,27 @@ export function Referrals() {
   const [detail, setDetail] = useState<Referral | null>(null),
     [complete, setComplete] = useState<Referral | null>(null);
   const canResponse = context.role === 'clinical' || context.role === 'regulation';
-  const list = data.referrals
-    .filter(
-      (r) =>
-        r.unitId === context.unitId &&
-        (!params.get('encaminhamento') || r.id === params.get('encaminhamento')),
-    )
-    .filter((r) =>
-      `${r.specialty} ${data.patients.find((p) => p.id === r.patientId)?.name}`
-        .toLocaleLowerCase('pt-BR')
-        .includes(search.toLocaleLowerCase('pt-BR')),
-    );
+  const scoped = data.referrals.filter(
+    (r) =>
+      r.unitId === context.unitId &&
+      (!params.get('encaminhamento') || r.id === params.get('encaminhamento')),
+  );
+  const overdue = (r: Referral) =>
+    r.status === 'scheduled' && !!r.appointmentDate && r.appointmentDate < dateKey();
+  const list = scoped
+    .filter((r) => {
+      const person = data.patients.find((p) => p.id === r.patientId);
+      return (
+        (filter === 'all' || (filter === 'overdue' ? overdue(r) : r.status === filter)) &&
+        normalizedName(
+          `${r.specialty} ${person?.name} ${person?.socialName} ${r.destination}`,
+        ).includes(normalizedName(search))
+      );
+    })
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const identities = demoIdentities(repository.directory());
   return (
-    <>
+    <div className="operations-page regulation-workspace">
       <PageHeader
         eyebrow="CONTINUIDADE ENTRE SERVIÇOS"
         title="Regulação"
@@ -54,25 +65,49 @@ export function Referrals() {
         }
       />
       <UnitRequired>
-        <Notice>
-          Os agendamentos desta demonstração são registros locais. Eles não reservam vagas nem
-          enviam solicitações a sistemas externos.
-        </Notice>
-        <Panel>
+        <div className="continuity-metrics" aria-label="Situações da regulação">
+          {(
+            [
+              ['requested', 'Aguardando vaga'],
+              ['scheduled', 'Agendados'],
+              ['overdue', 'Data prevista ultrapassada'],
+              ['completed', 'Com retorno registrado'],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              aria-pressed={filter === key}
+              onClick={() => setFilter(filter === key ? 'all' : key)}
+            >
+              <span>{label}</span>
+              <strong>
+                {scoped.filter((r) => (key === 'overdue' ? overdue(r) : r.status === key)).length}
+              </strong>
+              <small>Ver encaminhamentos</small>
+            </button>
+          ))}
+        </div>
+        <Panel
+          title="Encaminhamentos da unidade"
+          subtitle="Solicitações, agenda e retorno do serviço no mesmo acompanhamento."
+        >
           <div className="table-toolbar">
             <SearchField
               value={search}
               onChange={setSearch}
               placeholder="Buscar pessoa ou especialidade"
             />
-            <span className="result-count">
-              {
-                data.referrals.filter(
-                  (r) => r.unitId === context.unitId && r.status === 'requested',
-                ).length
-              }{' '}
-              solicitações pendentes
-            </span>
+            <Field label="Situação do encaminhamento">
+              <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+                <option value="all">Todas as situações</option>
+                <option value="requested">Solicitados</option>
+                <option value="scheduled">Agendados</option>
+                <option value="overdue">Data prevista ultrapassada</option>
+                <option value="completed">Com retorno registrado</option>
+                <option value="cancelled">Cancelados</option>
+              </select>
+            </Field>
+            <span className="result-count">{list.length} encaminhamentos </span>
           </div>
           {params.get('encaminhamento') && (
             <div className="panel-body">
@@ -109,6 +144,9 @@ export function Referrals() {
                     </td>
                     <td>
                       {r.destination}
+                      {overdue(r) && (
+                        <small className="followup-alert">Conferir atendimento / retorno</small>
+                      )}
                       {r.appointmentDate && (
                         <small className="cell-secondary">
                           {shortDate(r.appointmentDate)} às {r.appointmentTime}
@@ -143,10 +181,10 @@ export function Referrals() {
                         {r.status === 'scheduled' && canResponse && (
                           <Button onClick={() => setComplete(r)}>Registrar retorno</Button>
                         )}
-                        {r.status === 'requested' && (
+                        {(r.status === 'requested' || r.status === 'scheduled') && (
                           <Button variant="secondary" onClick={() => setSchedule(r)}>
                             <CalendarDays size={15} />
-                            Agendar
+                            {r.status === 'scheduled' ? 'Reagendar' : 'Agendar'}
                           </Button>
                         )}
                         {r.status !== 'cancelled' && r.status !== 'completed' && (
@@ -172,6 +210,11 @@ export function Referrals() {
             />
           )}
         </Panel>
+        <Notice>
+          Agendamentos locais, sem reserva de vagas ou envio a serviços externos. Data prevista
+          ultrapassada indica necessidade de conferência; não registra falta ou atendimento
+          automaticamente.
+        </Notice>
       </UnitRequired>
       {detail && (
         <Modal
@@ -222,11 +265,30 @@ export function Referrals() {
                         {
                           requested: 'Solicitado',
                           scheduled: 'Agendamento registrado',
+                          rescheduled: 'Reagendamento registrado',
                           completed: 'Retorno registrado',
                           cancelled: 'Cancelado',
                         }[h.action]
                       }
+                      {h.previousAppointment && (
+                        <p>
+                          Antes: {shortDate(h.previousAppointment.date)} às{' '}
+                          {h.previousAppointment.time} · {h.previousAppointment.destination}
+                        </p>
+                      )}
+                      {h.appointment && (
+                        <p>
+                          {h.previousAppointment ? 'Depois' : 'Agendado'}:{' '}
+                          {shortDate(h.appointment.date)} às {h.appointment.time} ·{' '}
+                          {h.appointment.destination}
+                        </p>
+                      )}
                       {h.note && <p>{h.note}</p>}
+                      <small>
+                        {clockTime(h.at)} ·{' '}
+                        {identities.find((i) => i.sessionId === h.actorId)?.name ??
+                          'Profissional da unidade'}
+                      </small>
                     </li>
                   ))}
                 </ol>
@@ -329,24 +391,47 @@ export function Referrals() {
       )}
       {schedule && (
         <Modal
-          title="Registrar agendamento"
+          title={
+            schedule.status === 'scheduled' ? 'Reagendar encaminhamento' : 'Registrar agendamento'
+          }
           description="Registre uma vaga de demonstração, sem reserva em serviços externos."
           onClose={() => setSchedule(null)}
         >
           <ActionForm
             onClose={() => setSchedule(null)}
-            submitLabel="Registrar agendamento"
+            submitLabel={
+              schedule.status === 'scheduled' ? 'Salvar reagendamento' : 'Registrar agendamento'
+            }
             onSubmit={async (f) => {
-              await repository.execute(context, {
-                type: 'referral.schedule',
+              const slot = {
                 id: schedule.id,
                 date: valueOf(f, 'date'),
                 time: valueOf(f, 'time'),
                 destination: valueOf(f, 'destination'),
-              });
+              };
+              await repository.execute(
+                context,
+                schedule.status === 'scheduled'
+                  ? {
+                      type: 'referral.reschedule',
+                      ...slot,
+                      reason: valueOf(f, 'reason'),
+                      expectedHistoryCount: schedule.history?.length ?? 0,
+                    }
+                  : { type: 'referral.schedule', ...slot },
+              );
               notify('Agendamento registrado no encaminhamento.');
             }}
           >
+            {schedule.status === 'scheduled' && (
+              <div className="followup-summary">
+                <strong>Agendamento anterior</strong>
+                <span>
+                  {shortDate(schedule.appointmentDate!)} às {schedule.appointmentTime} ·{' '}
+                  {schedule.destination}
+                </span>
+              </div>
+            )}
             <div className="form-grid">
               <Field label="Data">
                 <input
@@ -354,11 +439,20 @@ export function Referrals() {
                   name="date"
                   required
                   min={dateKey()}
-                  defaultValue={addDays(dateKey(), 1)}
+                  defaultValue={
+                    schedule.status === 'scheduled' && schedule.appointmentDate! >= dateKey()
+                      ? schedule.appointmentDate
+                      : addDays(dateKey(), 1)
+                  }
                 />
               </Field>
               <Field label="Horário">
-                <input type="time" name="time" required defaultValue="09:00" />
+                <input
+                  type="time"
+                  name="time"
+                  required
+                  defaultValue={schedule.appointmentTime ?? '09:00'}
+                />
               </Field>
             </div>
             <Field label="Destino confirmado">
@@ -369,6 +463,11 @@ export function Referrals() {
                 required
               />
             </Field>
+            {schedule.status === 'scheduled' && (
+              <Field label="Motivo do reagendamento">
+                <textarea name="reason" required maxLength={1000} rows={3} />
+              </Field>
+            )}
           </ActionForm>
         </Modal>
       )}
@@ -392,6 +491,6 @@ export function Referrals() {
           </ActionForm>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

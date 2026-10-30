@@ -200,6 +200,19 @@ export interface StockMovement extends Scoped {
   reason: string;
   at: string;
 }
+export interface ReferralSchedule {
+  date: string;
+  time: string;
+  destination: string;
+}
+export interface RecallContact {
+  id: string;
+  at: string;
+  actorId: string;
+  author: string;
+  outcome: 'reached' | 'unanswered' | 'unavailable';
+  note: string;
+}
 export interface Referral extends Scoped {
   encounterId?: string;
   sourceDocumentId?: string;
@@ -207,7 +220,9 @@ export interface Referral extends Scoped {
   history?: {
     at: string;
     actorId: string;
-    action: 'requested' | 'scheduled' | 'cancelled' | 'completed';
+    action: 'requested' | 'scheduled' | 'rescheduled' | 'cancelled' | 'completed';
+    appointment?: ReferralSchedule;
+    previousAppointment?: ReferralSchedule;
     note: string;
   }[];
   response?: { date: string; summary: string; at: string; actorId: string };
@@ -285,6 +300,7 @@ export interface VaccineVoid extends Scoped {
   author: string;
 }
 export interface VaccineRecall extends Scoped {
+  contacts?: RecallContact[];
   unitId: string;
   patientId: string;
   immunobiological: string;
@@ -295,6 +311,14 @@ export interface VaccineRecall extends Scoped {
   events: { action: string; date: string; reason: string; recordedAt: string; author: string }[];
 }
 export type VaccinationCommand =
+  | {
+      type: 'vaccine.recall.contact';
+      id: string;
+      outcome: RecallContact['outcome'];
+      note: string;
+      expectedContacts: number;
+      expectedEvents: number;
+    }
   | {
       type: 'vaccine.lot.create';
       immunobiological: string;
@@ -515,6 +539,15 @@ export type Command =
       specialty: string;
       destination: string;
       reason: string;
+    }
+  | {
+      type: 'referral.reschedule';
+      id: string;
+      date: string;
+      time: string;
+      destination: string;
+      reason: string;
+      expectedHistoryCount: number;
     }
   | { type: 'referral.schedule'; id: string; date: string; time: string; destination: string }
   | { type: 'referral.cancel'; id: string; reason: string };

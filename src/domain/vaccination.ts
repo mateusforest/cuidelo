@@ -1,3 +1,4 @@
+import { recordRecallContact } from './continuity';
 import {
   can,
   roleNames,
@@ -87,6 +88,12 @@ export function applyVaccinationCommand(
     });
   };
   switch (cmd.type) {
+    case 'vaccine.recall.contact': {
+      return {
+        entityId: recordRecallContact(db, c, cmd, now, newId),
+        action: 'Contato de retorno vacinal registrado',
+      };
+    }
     case 'vaccine.lot.create': {
       const immunobiological = required(cmd.immunobiological, 'Imunobiológico'),
         manufacturer = required(cmd.manufacturer, 'Fabricante'),

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical, CalendarDays } from 'lucide-react';
 import { useApp } from '../app/context';
 import { examState, type ClinicalDocument, type ExamEvent } from '../domain/clinical-documents';
 import { dateKey, shortDate, clockTime } from '../domain/dates';
+import { normalizedName } from '../domain/identification';
+import { lastExamSchedule, examDateOverdue } from '../domain/continuity';
 import { demoIdentities } from '../domain/access';
 import {
   ActionForm,
@@ -56,16 +58,25 @@ export function ExamFollowUp() {
       ? doc.content.items.map((item) => ({ doc, item, state: examState(doc, item.id) }))
       : [],
   );
-  const visible = entries.filter(
-    (e) =>
-      (filter === 'all' || e.state === filter) &&
-      `${e.doc.identity?.name} ${e.doc.identity?.socialName} ${e.doc.number} ${e.item.name}`
-        .toLocaleLowerCase('pt-BR')
-        .includes(search.toLocaleLowerCase('pt-BR')),
-  );
+  const visible = entries.filter((e) => {
+    const matches =
+      filter === 'all' ||
+      (filter === 'cancelled'
+        ? e.doc.status === 'cancelled'
+        : e.doc.status === 'issued' &&
+          (filter === 'overdue'
+            ? examDateOverdue(e.doc, e.item.id, dateKey())
+            : e.state === filter));
+    return (
+      matches &&
+      normalizedName(
+        `${e.doc.identity?.name} ${e.doc.identity?.socialName} ${e.doc.number} ${e.item.name}`,
+      ).includes(normalizedName(search))
+    );
+  });
   const identities = demoIdentities(repository.directory());
   return (
-    <>
+    <div className="operations-page exams-workspace">
       <PageHeader
         eyebrow="CONTINUIDADE DO CONSULTÓRIO"
         title="Exames e resultados"
@@ -76,36 +87,40 @@ export function ExamFollowUp() {
           </Link>
         }
       />
-      <Notice>
-        Registros locais preenchidos pela equipe. Agendamento não reserva vaga externa; resultados
-        são transcritos manualmente, sem integração com laboratório, imagem ou laudo assinado.
-      </Notice>
-      <div className="flow-stats">
-        {[
+      <div className="continuity-metrics" aria-label="Etapas dos exames">
+        {(
           [
-            'Solicitados',
-            entries.filter((e) => e.state === 'requested' && e.doc.status === 'issued').length,
-          ],
-          [
-            'Agendados',
-            entries.filter((e) => e.state === 'scheduled' && e.doc.status === 'issued').length,
-          ],
-          [
-            'Aguardando revisão',
-            entries.filter((e) => e.state === 'result' && e.doc.status === 'issued').length,
-          ],
-          [
-            'Revisados',
-            entries.filter((e) => e.state === 'reviewed' && e.doc.status === 'issued').length,
-          ],
-        ].map(([label, value]) => (
-          <article key={String(label)}>
-            <small>{label}</small>
-            <strong>{value}</strong>
-          </article>
+            ['requested', 'Aguardando agendamento'],
+            ['scheduled', 'Agendados'],
+            ['result', 'Aguardando revisão'],
+            ['overdue', 'Data prevista ultrapassada'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            aria-pressed={filter === key}
+            onClick={() => setFilter(filter === key ? 'all' : key)}
+          >
+            <span>{label}</span>
+            <strong>
+              {
+                entries.filter(
+                  (e) =>
+                    e.doc.status === 'issued' &&
+                    (key === 'overdue'
+                      ? examDateOverdue(e.doc, e.item.id, dateKey())
+                      : e.state === key),
+                ).length
+              }
+            </strong>
+            <small>Ver exames</small>
+          </button>
         ))}
       </div>
-      <Panel title="Pedidos da unidade">
+      <Panel
+        title="Pedidos da unidade"
+        subtitle="Acompanhe a próxima etapa de cada exame, do agendamento à revisão."
+      >
         <div className="table-toolbar">
           <SearchField
             value={search}
@@ -115,6 +130,8 @@ export function ExamFollowUp() {
           <Field label="Etapa do exame">
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">Todas as etapas</option>
+              <option value="overdue">Data prevista ultrapassada</option>
+              <option value="cancelled">Pedidos cancelados</option>
               {Object.entries(statusLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -150,6 +167,24 @@ export function ExamFollowUp() {
                   {doc.status === 'cancelled' ? 'Pedido cancelado' : statusLabels[state]}
                 </Badge>
               </div>
+              {lastExamSchedule(doc, item.id) && (
+                <div className="followup-summary">
+                  <CalendarDays size={18} />
+                  <div>
+                    <strong>Último agendamento registrado</strong>
+                    <span>
+                      {shortDate(lastExamSchedule(doc, item.id)!.date)} às{' '}
+                      {lastExamSchedule(doc, item.id)!.time} ·{' '}
+                      {lastExamSchedule(doc, item.id)!.location}
+                    </span>
+                  </div>
+                  {examDateOverdue(doc, item.id, dateKey()) && (
+                    <small className="followup-alert">
+                      Data prevista ultrapassada · conferir situação
+                    </small>
+                  )}
+                </div>
+              )}
               {doc.content.kind === 'exams' && (
                 <p className="exam-indication">
                   <strong>Indicação:</strong> {doc.content.indication} ·{' '}
@@ -239,9 +274,18 @@ export function ExamFollowUp() {
           />
         )}
       </Panel>
+      <Notice>
+        Registros locais preenchidos pela equipe. Agendamento não reserva vaga externa; resultados
+        são transcritos manualmente, sem integração com laboratório, imagem ou laudo assinado. Data
+        ultrapassada não confirma ausência ou realização.
+      </Notice>
       {action && (
         <Modal
-          title={actionLabels[action.kind]}
+          title={
+            action.kind === 'scheduled' && examState(action.doc, action.itemId) === 'scheduled'
+              ? 'Reagendar exame'
+              : actionLabels[action.kind]
+          }
           description={`${action.doc.identity?.socialName || action.doc.identity?.name} · ${action.name}`}
           onClose={() => setAction(null)}
         >
@@ -263,6 +307,16 @@ export function ExamFollowUp() {
               notify('Etapa registrada; histórico anterior preservado.');
             }}
           >
+            {action.kind === 'scheduled' && lastExamSchedule(action.doc, action.itemId) && (
+              <div className="followup-summary">
+                <strong>Agendamento anterior</strong>
+                <span>
+                  {shortDate(lastExamSchedule(action.doc, action.itemId)!.date)} às{' '}
+                  {lastExamSchedule(action.doc, action.itemId)!.time} ·{' '}
+                  {lastExamSchedule(action.doc, action.itemId)!.location}
+                </span>
+              </div>
+            )}
             <Field
               label={
                 action.kind === 'scheduled'
@@ -276,7 +330,12 @@ export function ExamFollowUp() {
                 name="date"
                 type="date"
                 required
-                defaultValue={dateKey()}
+                defaultValue={
+                  action.kind === 'scheduled' &&
+                  (lastExamSchedule(action.doc, action.itemId)?.date ?? '') >= dateKey()
+                    ? lastExamSchedule(action.doc, action.itemId)!.date
+                    : dateKey()
+                }
                 min={
                   action.kind === 'scheduled' ? dateKey() : dateKey(new Date(action.doc.issuedAt!))
                 }
@@ -286,10 +345,20 @@ export function ExamFollowUp() {
             {action.kind === 'scheduled' && (
               <>
                 <Field label="Horário do exame">
-                  <input name="time" type="time" required />
+                  <input
+                    name="time"
+                    type="time"
+                    required
+                    defaultValue={lastExamSchedule(action.doc, action.itemId)?.time}
+                  />
                 </Field>
                 <Field label="Local do exame">
-                  <input name="location" required maxLength={200} />
+                  <input
+                    name="location"
+                    required
+                    maxLength={200}
+                    defaultValue={lastExamSchedule(action.doc, action.itemId)?.location}
+                  />
                 </Field>
               </>
             )}
@@ -299,12 +368,20 @@ export function ExamFollowUp() {
                   ? 'Resumo transcrito do resultado'
                   : action.kind === 'reviewed'
                     ? 'Revisão e plano de acompanhamento'
-                    : 'Observação'
+                    : action.kind === 'scheduled' &&
+                        examState(action.doc, action.itemId) === 'scheduled'
+                      ? 'Motivo do reagendamento'
+                      : 'Observação'
               }
             >
               <textarea
                 name="note"
-                required={action.kind === 'result' || action.kind === 'reviewed'}
+                required={
+                  action.kind === 'result' ||
+                  action.kind === 'reviewed' ||
+                  (action.kind === 'scheduled' &&
+                    examState(action.doc, action.itemId) === 'scheduled')
+                }
                 rows={5}
                 maxLength={5000}
               />
@@ -318,6 +395,6 @@ export function ExamFollowUp() {
           </ActionForm>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

@@ -1,0 +1,459 @@
+/* Acompanhamento: vacinação, exames e regulação. */
+@media screen {
+  .continuity-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  .continuity-metrics > button,
+  .continuity-metrics > article {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 12px;
+    background: white;
+    border: 1px solid #e2eae5;
+    border-radius: 13px;
+    padding: 23px 22px;
+    box-shadow: 0 2px 8px #153d4103;
+    color: var(--text);
+    min-width: 0;
+  }
+  .continuity-metrics > button:hover {
+    background: #f5faf6;
+  }
+  .continuity-metrics > button[aria-pressed='true'] {
+    border-color: #589787;
+    box-shadow: inset 0 3px 0 #126d65;
+  }
+  .continuity-metrics span {
+    font-size: 12px;
+    color: #5b7165;
+    line-height: 1.5;
+  }
+  .continuity-metrics strong {
+    font-size: 31px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -1px;
+  }
+  .continuity-metrics small {
+    font-size: 10px;
+    color: #71877a;
+  }
+  .followup-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    padding: 16px 18px;
+    background: #f3f8f4;
+    border: 1px solid #e0eae3;
+    border-radius: 10px;
+    margin: 16px 0;
+    color: #335d50;
+    min-width: 0;
+  }
+  .followup-summary > div {
+    flex: 1;
+    min-width: 140px;
+  }
+  .followup-summary strong {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .followup-summary span {
+    display: block;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .followup-summary > div > span {
+    margin-top: 6px;
+  }
+  .followup-alert {
+    display: block;
+    color: #8b620b;
+    font-size: 11px;
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+  .followup-summary .followup-alert {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 7px;
+    background: #fbf3df;
+  }
+  .vaccination-workspace .vaccine-tabs {
+    border: 1px solid #dfe9e2;
+    border-radius: 11px;
+    background: #eaf1ec;
+    padding: 5px;
+    gap: 5px;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .vaccination-workspace .vaccine-tabs button {
+    border: 0;
+    padding: 12px 17px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .vaccination-workspace .vaccine-tabs button.active {
+    background: white;
+    box-shadow: 0 2px 6px #143b3e08;
+  }
+  .vaccination-workspace .vaccination-grid {
+    grid-template-columns: 265px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .vaccination-workspace .vaccine-person-picker .panel-heading {
+    padding: 22px 20px 18px;
+  }
+  .vaccination-workspace .vaccine-person-picker .panel-heading h2 {
+    font-size: 14px;
+  }
+  .vaccination-workspace .vaccine-person-picker .panel-body {
+    padding: 0 16px 18px;
+  }
+  .vaccination-workspace .vaccine-people {
+    max-height: 490px;
+    padding: 0 10px 12px;
+  }
+  .vaccination-workspace .vaccine-people button {
+    padding: 15px 12px;
+    border: 1px solid transparent;
+    margin: 2px 0;
+    gap: 12px;
+  }
+  .vaccination-workspace .vaccine-people button.selected {
+    background: #f0f7f2;
+    border-color: #d6e6dc;
+  }
+  .vaccination-workspace .vaccine-people button .avatar {
+    border-radius: 9px;
+  }
+  .vaccination-workspace .vaccine-people strong {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .vaccination-workspace .vaccine-patient {
+    border-color: #e2eae5;
+    border-radius: 14px;
+    padding: 26px;
+  }
+  .vaccination-workspace .vaccine-patient-heading {
+    gap: 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .vaccination-workspace .vaccine-patient-heading > div {
+    flex: 1;
+    min-width: 150px;
+  }
+  .vaccination-workspace .vaccine-patient-heading > .avatar {
+    flex-shrink: 0;
+    border-radius: 13px;
+  }
+  .vaccination-workspace .vaccine-patient-heading h2 {
+    font-size: 23px;
+    letter-spacing: -0.6px;
+    line-height: 1.3;
+    margin-top: 7px;
+  }
+  .vaccination-workspace .vaccine-patient-heading .eyebrow {
+    font-size: 9px;
+    line-height: 1.5;
+  }
+  .vaccination-workspace .vaccine-patient-heading > .badge {
+    font-size: 10px;
+  }
+  .vaccination-workspace .vaccine-patient .row-actions {
+    padding-top: 20px;
+    border-top: 1px solid #e5ede7;
+    gap: 9px;
+  }
+  .vaccination-workspace .vaccine-patient .button {
+    font-size: 12px;
+    padding: 10px 13px;
+  }
+  .vaccination-workspace .vaccine-record {
+    padding: 24px;
+    border-color: #e2eae5;
+  }
+  .vaccination-workspace .vaccine-record h3 {
+    font-size: 16px;
+  }
+  .vaccination-workspace .vaccine-record .badge {
+    font-size: 10px;
+  }
+  .vaccination-workspace .vaccine-record dl {
+    font-size: 12px;
+  }
+  .vaccine-contact-history,
+  .vaccination-workspace .vaccine-return-history {
+    font-size: 12px;
+    color: #496b5a;
+    line-height: 1.7;
+    max-width: 480px;
+    margin-top: 12px;
+  }
+  .vaccine-contact-history summary,
+  .vaccination-workspace .vaccine-return-history summary {
+    cursor: pointer;
+    padding: 6px 0;
+  }
+  .vaccine-contact-history article {
+    margin-top: 10px;
+    background: #f5f9f6;
+    border: 1px solid #e2eae5;
+    border-radius: 9px;
+    padding: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .vaccine-contact-history p {
+    margin: 8px 0;
+  }
+  .vaccine-contact-history small {
+    font-size: 10px;
+    color: #6a8072;
+  }
+  .vaccination-workspace td,
+  .regulation-workspace td {
+    font-size: 12px;
+    padding: 22px 20px;
+    vertical-align: top;
+  }
+  .vaccination-workspace th,
+  .regulation-workspace th {
+    font-size: 10px;
+    letter-spacing: 0.7px;
+    background: #f8faf9;
+  }
+  .vaccination-workspace td .button,
+  .regulation-workspace td .button {
+    font-size: 11px;
+    min-height: 38px;
+    padding: 9px 12px;
+  }
+  .vaccination-workspace td .row-actions,
+  .regulation-workspace td .row-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .vaccination-workspace td:last-child {
+    max-width: 470px;
+  }
+  .regulation-workspace td:first-child {
+    min-width: 185px;
+    max-width: 260px;
+  }
+  .regulation-workspace td:nth-child(2) {
+    min-width: 190px;
+    max-width: 235px;
+    overflow-wrap: anywhere;
+  }
+  .regulation-workspace td:nth-child(3) {
+    white-space: nowrap;
+  }
+  .regulation-workspace td:last-child {
+    min-width: 190px;
+    max-width: 260px;
+  }
+  .regulation-workspace .badge {
+    font-size: 10px;
+    white-space: normal;
+    line-height: 1.5;
+  }
+  .regulation-workspace .document-history li {
+    padding: 16px;
+    border: 1px solid #e1eae3;
+    border-radius: 9px;
+    margin-bottom: 12px;
+    background: #f8fbf9;
+    font-size: 13px;
+  }
+  .regulation-workspace .document-history li p {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .regulation-workspace .document-history li small {
+    font-size: 11px;
+    color: #688171;
+  }
+  .exams-workspace .exam-followup-list {
+    background: #fafcfb;
+    padding: 4px 20px 12px;
+  }
+  .exams-workspace .exam-followup-list > article {
+    margin: 16px 0;
+    padding: 24px;
+    border: 1px solid #e2eae5;
+    border-radius: 12px;
+    background: white;
+  }
+  .exams-workspace .clinical-document-heading {
+    gap: 14px;
+  }
+  .exams-workspace .clinical-document-heading strong {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .exams-workspace .clinical-document-heading small {
+    font-size: 11px;
+    line-height: 1.7;
+    margin-top: 5px;
+  }
+  .exams-workspace .document-kind-icon {
+    border-radius: 11px;
+    background: #f0f6f2;
+    color: #397760;
+  }
+  .exams-workspace .clinical-document-heading .badge {
+    font-size: 10px;
+  }
+  .exams-workspace .exam-indication {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #60776a;
+  }
+  .exams-workspace .exam-followup-list .row-actions {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e5ede7;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+  .exams-workspace .exam-followup-list .button {
+    font-size: 12px;
+    padding: 10px 14px;
+  }
+  .exams-workspace .document-history {
+    background: #f7faf8;
+    border: 1px solid #e2eae5;
+    border-radius: 10px;
+    margin: 20px 0 0;
+    padding: 15px 18px;
+    font-size: 12px;
+  }
+  .exams-workspace .document-history summary {
+    cursor: pointer;
+  }
+  .exams-workspace .document-history li {
+    font-size: 12px;
+    line-height: 1.7;
+    border-bottom: 1px solid #e1ebe4;
+    padding: 14px 0;
+  }
+  .exams-workspace .document-history li:last-child {
+    border: 0;
+    padding-bottom: 0;
+  }
+  @media (max-width: 1150px) {
+    .vaccination-workspace .vaccination-grid {
+      grid-template-columns: 225px minmax(0, 1fr);
+      gap: 18px;
+    }
+    .continuity-metrics > button,
+    .continuity-metrics > article {
+      padding: 19px 17px;
+    }
+  }
+  @media (max-width: 800px) {
+    .continuity-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .vaccination-workspace .vaccination-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vaccination-workspace .vaccine-people {
+      max-height: 210px;
+    }
+  }
+  @media (max-width: 600px) {
+    .continuity-metrics > button,
+    .continuity-metrics > article {
+      padding: 18px 16px;
+      gap: 10px;
+    }
+    .continuity-metrics span {
+      font-size: 11px;
+    }
+    .continuity-metrics strong {
+      font-size: 27px;
+    }
+    .continuity-metrics small {
+      font-size: 9px;
+    }
+    .vaccination-workspace .vaccine-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+    .vaccination-workspace .vaccine-tabs button {
+      justify-content: center;
+      white-space: normal;
+      font-size: 12px;
+      padding: 12px;
+    }
+    .vaccination-workspace .vaccine-patient {
+      padding: 20px 18px;
+    }
+    .vaccination-workspace .vaccine-patient-heading {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .vaccination-workspace .vaccine-patient-heading > .badge {
+      grid-column: 2;
+      justify-self: start;
+    }
+    .vaccination-workspace .vaccine-patient-heading > div {
+      min-width: 0;
+    }
+    .vaccination-workspace .vaccine-patient-heading h2 {
+      font-size: 21px;
+    }
+    .vaccination-workspace .vaccine-patient-heading > .avatar {
+      width: 42px;
+      height: 42px;
+    }
+    .vaccination-workspace .vaccine-patient .row-actions .button {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+    .exams-workspace .exam-followup-list {
+      padding: 1px 12px;
+    }
+    .exams-workspace .exam-followup-list > article {
+      padding: 20px 16px;
+    }
+    .exams-workspace .clinical-document-heading {
+      flex-wrap: wrap;
+    }
+    .exams-workspace .clinical-document-heading > .badge {
+      margin-left: 0;
+    }
+    .exams-workspace .clinical-document-heading strong {
+      font-size: 15px;
+    }
+    .exams-workspace .exam-followup-list .row-actions .button {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+    .followup-summary {
+      padding: 15px;
+      gap: 10px;
+    }
+    .followup-summary > div {
+      min-width: 0;
+    }
+    .exams-workspace .document-history {
+      padding: 14px;
+    }
+  }
+}

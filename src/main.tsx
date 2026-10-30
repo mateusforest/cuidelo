@@ -31,6 +31,7 @@ import './styles/refinement.css';
 import './styles/access.css';
 import './styles/operations.css';
 import './styles/care-workspaces.css';
+import './styles/continuity-workspaces.css';
 import { Access, WorkspaceHome } from './pages/Access';
 import { Devices, Kiosk } from './pages/Kiosk';
 import { ConsultingRoom, Performance } from './pages/PatientFlow';

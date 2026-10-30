@@ -6,7 +6,7 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.11.0**, de 30/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.12.0**, de 30/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
 
@@ -27,10 +27,10 @@ Já é possível testar:
 - Farmácia recebe receitas do consultório: entrega total ou parcial, pessoa ou representante, vários lotes por item, saldo restante, baixa vinculada e comprovante para impressão. O histórico fica disponível à equipe assistencial da prefeitura.
 - Estoque por lote, cadastro de medicamentos e identificação de lotes anteriores, entradas e saídas, alertas de vencimento e bloqueios de saldo insuficiente, incompatibilidade de apresentação e excesso prescrito.
 - Receitas com vários medicamentos, pedidos de exames e encaminhamentos vinculados à consulta: rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado.
-- Acompanhamento por exame, agendamento local, realização, resultado transcrito e revisão médica.
-- Encaminhamento do consultório para a regulação, agendamento, cancelamento sincronizado e contrarreferência manual. Histórico de documentos e retornos compartilhado na mesma prefeitura.
+- Acompanhamento por exame, agendamento e reagendamento justificado, filtro de datas ultrapassadas, realização, resultado transcrito e revisão médica.
+- Encaminhamento do consultório para a regulação, agendamento, reagendamento justificado com valores anteriores e autoria, cancelamento sincronizado e contrarreferência manual. Histórico de documentos e retornos compartilhado na mesma prefeitura.
 - Resumo da rede, exportação agregada, diretório de unidades e histórico local de operações.
-- Vacinação com caderneta, aplicação e baixa de dose, transcrição, anulação, aprazamentos e histórico.
+- Vacinação com caderneta, aplicação e baixa de dose, transcrição, anulação, aprazamentos e histórico. Retornos filtrados por hoje/atraso, com registro manual de tentativas de contato e autoria, sem mensagens automáticas.
 - Lotes de imunobiológicos, recebimentos, perdas, quarentena e liberação justificada.
 - Produção vacinal agregada por unidade e acompanhamento de retornos para a gestão.
 - Mapa de módulos e integrações ainda necessários para a primeira versão pública.
@@ -110,6 +110,7 @@ No Windows os testes de navegador usam Microsoft Edge instalado. Nos demais sist
 - [Identidade e aplicação da marca](docs/identidade.md)
 - [Comparação das 46 telas do Pulso](docs/comparacao-pulso.md)
 - [HTML independente e painel da TV](docs/html-e-painel-tv.md)
+- [Vacinação, exames e regulação: roteiro da versão 0.12](docs/vacinacao-exames-regulacao.md)
 - [Agenda, cadastro e triagem: roteiro da versão 0.11](docs/agenda-cadastro-triagem.md)
 - [Escuta, aferições e complementos](docs/escuta-e-registros.md)
 - [Farmácia: entregas por receita, estoque e roteiro de teste](docs/farmacia-dispensacao.md)

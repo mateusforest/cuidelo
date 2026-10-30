@@ -323,7 +323,7 @@ export function Access() {
         </div>
         <footer className="access-entry-footer">
           <span>Cuidelo © {new Date().getFullYear()}</span>
-          <span>Desenvolvimento · 0.11</span>
+          <span>Desenvolvimento · 0.12</span>
         </footer>
       </section>
     </main>

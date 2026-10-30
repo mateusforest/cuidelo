@@ -1,3 +1,4 @@
+import { validateContinuity } from '../domain/continuity';
 import { validateAdministrativeHistory } from '../domain/administrative-records';
 import { validatePharmacy } from '../domain/pharmacy';
 import type { Command, Context, Database } from '../domain/model';
@@ -435,6 +436,7 @@ function parseDatabase(value: string): Database {
   validateClinicalDocuments(typed);
   validatePharmacy(typed);
   validateAdministrativeHistory(typed);
+  validateContinuity(typed);
   return typed;
 }
 

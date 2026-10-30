@@ -2,7 +2,7 @@
 
 O escopo público completo está em [plano-completo.md](plano-completo.md). Esta lista ordena dependências de construção, sem autorizar uma implantação incompleta. A primeira operação em UBS, UPA, pronto atendimento e hospital depende do aceite dos módulos e integrações exigidos pela rede contratada.
 
-## Marco atual: demonstração 0.11
+## Marco atual: demonstração 0.12
 
 Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, escuta, sinais vitais, correções, SOAP com complementos, painel de senhas, observação, leitos, estoque, encaminhamentos e vacinação com caderneta, lotes, aprazamentos e visão gerencial. Receitas, pedidos de exames e encaminhamentos possuem rascunho, emissão de teste e impressão; exames recebem resultados e revisão médica, e a regulação registra contrarreferência manual. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
 
@@ -54,3 +54,5 @@ A versão 0.9 reorganizou a entrada por acessos demonstrativos e a estrutura vis
 A versão 0.10 estende a organização visual às estações de recepção, consultório, registro clínico e farmácia. O totem usa quatro etapas com conferência final; o retorno preserva as escolhas, o cancelamento e a inatividade limpam os dados, e só a confirmação emite a senha. Os comandos e contratos de persistência existentes permanecem responsáveis pelas regras de domínio.
 
 A versão 0.11 unifica a apresentação da agenda, do cadastro de pacientes e da triagem. Acrescenta remarcação e atualização cadastral com motivo, autoria, valores anteriores e proteção contra alterações simultâneas. A fila distingue espera, escuta em andamento e registros concluídos; mostra tempos sem atribuir prioridade clínica automaticamente. O [roteiro de teste](agenda-cadastro-triagem.md) descreve os percursos e limites. Os 44 módulos continuam parciais.
+
+A versão 0.12 unifica a apresentação de vacinação, exames e regulação. Registra contatos manuais para retornos pendentes e reagendamentos justificados, preservando autoria, horários e documentos clínicos emitidos. Filtros destacam datas ultrapassadas sem presumir realização ou ausência. Os novos comandos verificam contexto, permissão e alterações simultâneas. O [roteiro de teste](vacinacao-exames-regulacao.md) descreve os percursos e limites; os 44 módulos continuam parciais.
