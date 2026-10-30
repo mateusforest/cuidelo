@@ -143,6 +143,8 @@ test('pedido com dois exames, bloqueio de rascunho ao concluir, resultados pela 
     .getByLabel('Resumo transcrito do resultado', { exact: true })
     .fill('Resultado fictício transcrito para demonstração.');
   await page.getByRole('button', { name: 'Salvar acompanhamento' }).click();
+  await expect(first.locator('.badge')).toHaveText('Resultado registrado');
+  await expect(page.getByRole('button', { name: 'Salvar acompanhamento' })).toHaveCount(0);
   await expect(first.getByRole('button', { name: 'Revisar resultado' })).toHaveCount(0);
   await selectSession(page, { role: 'clinical' });
   await first.getByRole('button', { name: 'Revisar resultado' }).click();
