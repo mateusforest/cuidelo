@@ -36,6 +36,16 @@ Já é possível testar:
 - Carteira comercial, contratos, recebimentos anotados, implantação, suporte e equipe da Cuidelo, separados dos dados assistenciais.
 - Correspondência navegável para as 46 telas do Pulso, mantendo as lacunas de cada percurso explícitas.
 
+## Demonstração na Vercel
+
+Publicação de teste em 30/10/2026: [Cuidelo](https://cuidelo.vercel.app/acesso), [totem da UBS Centro](https://cuidelo.vercel.app/totem?rede=aurora&unidade=aurora-centro) e [painel da TV da UBS Centro](https://cuidelo.vercel.app/painel?rede=aurora&unidade=aurora-centro).
+
+O endereço hospeda a mesma demonstração com dados fictícios. As alterações continuam salvas somente no navegador de cada visitante; abrir o endereço em outro computador não compartilha filas, estoque ou prontuários. Use abas do mesmo navegador para testar a comunicação entre recepção, consultório, totem e TV. Os dados dos arquivos HTML locais não são transferidos automaticamente para o endereço online.
+
+`vercel.json` configura a compilação Vite, a pasta `dist`, a abertura direta das rotas e o cabeçalho `noindex, nofollow`. Esse cabeçalho orienta buscadores; não é controle de acesso. `.vercelignore` exclui arquivos locais, credenciais e entregas da publicação pela CLI. Os avisos de demonstração permanecem visíveis. A publicação não habilita atendimento real, autenticação ou persistência protegida.
+
+A primeira publicação foi enviada pela Vercel CLI para o projeto `cuidelo`, na equipe `mateus-maraschin-forests-projects`. A tentativa de conexão automática com o repositório privado foi recusada pelo provedor; novos pushes no GitHub ainda não publicam automaticamente. Depois de `pnpm test` e `pnpm build`, uma conta autorizada pode atualizar o projeto com `vercel deploy --prod --scope mateus-maraschin-forests-projects`.
+
 ## Abrir como um único HTML
 
 ```sh

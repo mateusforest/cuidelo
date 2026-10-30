@@ -1,0 +1,11 @@
+node_modules
+dist-standalone
+entregas
+test-results
+playwright-report
+coverage
+.env
+.env.*
+*.log
+.sites-runtime
+.openai

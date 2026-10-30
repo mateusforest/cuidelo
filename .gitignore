@@ -11,3 +11,4 @@ test-results/
 *.log
 .sites-runtime/
 .openai/
+.vercel/
