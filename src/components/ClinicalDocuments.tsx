@@ -1,3 +1,5 @@
+import { DispensationHistory } from './DispensationHistory';
+import { prescriptionProgress } from '../domain/pharmacy';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardList, FilePlus2, FlaskConical, Pill, Printer } from 'lucide-react';
@@ -275,6 +277,19 @@ export function EncounterDocuments({
                 {documentStatus(doc.status)}
               </Badge>
             </div>
+            {doc.content.kind === 'prescription' && doc.issuedAt && (
+              <p className="document-caption">
+                Farmácia:{' '}
+                {data.dispensations.some((d) => d.documentId === doc.id)
+                  ? prescriptionProgress(doc, data.dispensations).items.every(
+                      (i) => i.remaining === 0,
+                    )
+                    ? 'entrega concluída'
+                    : 'entrega parcial registrada'
+                  : 'nenhuma entrega registrada'}
+                {doc.status === 'cancelled' ? ' · novas entregas bloqueadas' : ''}
+              </p>
+            )}
             <div className="row-actions document-row-actions">
               <Button variant="secondary" onClick={() => setReviewId(doc.id)}>
                 {doc.status === 'draft' ? 'Revisar documento' : 'Ver documento'}
@@ -800,6 +815,12 @@ export function PatientDocumentHistory({ patientId }: { patientId: string }) {
             <Link className="button secondary" to={`/documentos/${doc.id}`} target="_blank">
               Ver documento preservado
             </Link>
+            {doc.content.kind === 'prescription' && (
+              <details className="document-history">
+                <summary>Entregas da farmácia</summary>
+                <DispensationHistory document={doc} />
+              </details>
+            )}
             {doc.examEvents.length > 0 && (
               <details className="document-history">
                 <summary>Resultados e acompanhamento dos exames</summary>

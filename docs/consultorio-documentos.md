@@ -1,6 +1,6 @@
 # Consultório — receitas, exames e encaminhamentos
 
-Cuidelo 0.7.0 · 29/10/2026 · exclusivamente para testes com dados fictícios.
+Cuidelo 0.8.0 · 29/10/2026 · exclusivamente para testes com dados fictícios.
 
 ## O que testar no HTML
 
@@ -16,7 +16,7 @@ Cuidelo 0.7.0 · 29/10/2026 · exclusivamente para testes com dados fictícios.
 - De 1 a 20 medicamentos, com nome, concentração, apresentação, dose, via, frequência, duração, quantidade, unidade e orientação individual. Orientações gerais são opcionais.
 - Não há dose sugerida, cálculo terapêutico, catálogo validado ou avaliação automática de alergias e interações. A revisão exibe as informações de alergias do cadastro, sem interpretar ausência de registro como ausência de alergia.
 - É possível editar rascunhos, copiar um documento para um novo rascunho e cancelar com justificativa. Emissão preserva conteúdo, identificação, número e autoria; cancelamento não apaga o original.
-- A receita ainda não dispara dispensação na farmácia. Receituários especiais e assinatura profissional continuam pendentes.
+- A receita emitida aparece na farmácia da mesma unidade para entrega total ou parcial por lote. Entregas e comprovantes entram no histórico da pessoa; cancelar a receita bloqueia novas entregas e preserva as anteriores. Receituários especiais e assinatura profissional continuam pendentes.
 
 ## Exames e resultados
 
@@ -39,7 +39,7 @@ Cuidelo 0.7.0 · 29/10/2026 · exclusivamente para testes com dados fictícios.
 - A equipe assistencial lê documentos emitidos, resultados e retornos de todas as unidades da mesma prefeitura em **Pessoas e prontuários**. Operações continuam restritas à unidade de origem; outras prefeituras não recebem esses dados nas telas.
 - Administração local recebe situação operacional e agenda dos encaminhamentos originados no consultório, sem justificativas clínicas ou contrarreferências. Recepção e prefeitura não recebem documentos clínicos.
 - Os documentos usam números sequenciais de demonstração por prefeitura e tipo. Rascunhos não têm numeração de emissão nem impressão.
-- Edições concorrentes são recusadas para revisão. Atualizar um documento não apaga o texto SOAP ainda não salvo. O armazenamento anterior é migrado para o formato 8, preservando os registros existentes.
+- Edições concorrentes são recusadas para revisão. Atualizar um documento não apaga o texto SOAP ainda não salvo. O armazenamento anterior é migrado para o formato 9, preservando os registros existentes.
 
 ## Limites desta entrega
 

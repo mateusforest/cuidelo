@@ -1,3 +1,4 @@
+import { PharmacyReceipt } from './pages/PharmacyReceipt';
 import { ClinicalDocumentPrint } from './pages/ClinicalDocumentPrint';
 import { ExamFollowUp } from './pages/ExamFollowUp';
 import { StrictMode, type ReactNode } from 'react';
@@ -65,6 +66,7 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
   { path: '/painel', element: <QueueDisplay /> },
   { path: '/totem', element: <Kiosk /> },
   { path: '/acesso', element: <Access /> },
+  { path: '/dispensacoes/:id', element: protect('dispensation.read', <PharmacyReceipt />) },
   { path: '/documentos/:id', element: protect('clinical', <ClinicalDocumentPrint />) },
   {
     path: '/',

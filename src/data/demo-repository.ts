@@ -1,3 +1,4 @@
+import { validatePharmacy } from '../domain/pharmacy';
 import type { Command, Context, Database } from '../domain/model';
 import {
   applyCommand,
@@ -22,6 +23,7 @@ import { validateClinicalDocuments } from '../domain/clinical-documents';
 export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const collections = [
+  'dispensations',
   'clinicalDocuments',
   'workRecords',
   'careSegments',
@@ -104,9 +106,13 @@ function parseDatabase(value: string): Database {
     db.schemaVersion = 8;
     db.clinicalDocuments = [];
   }
+  if (isRecord(db) && db.schemaVersion === 8) {
+    db.schemaVersion = 9;
+    db.dispensations = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 8 ||
+    db.schemaVersion !== 9 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -426,6 +432,7 @@ function parseDatabase(value: string): Database {
   validateVaccinationDatabase(typed);
   validateReceptionDatabase(typed);
   validateClinicalDocuments(typed);
+  validatePharmacy(typed);
   return typed;
 }
 

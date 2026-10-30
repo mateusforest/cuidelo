@@ -1,0 +1,262 @@
+.pharmacy-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+.pharmacy-stats button {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.pharmacy-stats button.selected {
+  border-color: var(--brand-primary);
+  background: var(--surface-subtle);
+}
+.pharmacy-stats span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.pharmacy-stats strong {
+  font-size: 28px;
+  color: var(--brand-ink);
+}
+.pharmacy-prescriptions > article {
+  border-top: 1px solid var(--border);
+  padding: 24px;
+}
+.prescription-balances {
+  margin: 20px 0;
+}
+.prescription-balances > div {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.prescription-balances > div > div:first-child {
+  flex: 1;
+  min-width: 180px;
+}
+.prescription-balances small {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.prescription-balances strong {
+  font-size: 14px;
+}
+.prescription-balances dl {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+}
+.prescription-balances dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.prescription-balances dd {
+  font-size: 20px;
+  color: var(--brand-ink);
+  margin: 0;
+  font-weight: 600;
+}
+.pharmacy-stock-help {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--amber-text);
+}
+.pharmacy-note {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.pharmacy-receipt-link {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--green-surface);
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.pharmacy-receipt-link span {
+  flex: 1;
+  min-width: 180px;
+}
+.delivery-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  background: #fafcfb;
+}
+.delivery-item h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+.delivery-item > p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.delivery-balance {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin: 15px 0;
+}
+.delivery-lot-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  align-items: end;
+  gap: 14px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+.delivery-lot-line > .text-button {
+  grid-column: 1/-1;
+  justify-self: end;
+  font-size: 12px;
+}
+.delivery-form .notice {
+  margin-bottom: 14px;
+}
+.dispensation-history > article {
+  border-top: 1px solid var(--border);
+  padding: 20px 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.dispensation-history p {
+  white-space: pre-wrap;
+}
+.dispensation-history ul {
+  padding-left: 20px;
+}
+.dispensation-history li {
+  margin: 8px 0;
+}
+.receipt-item {
+  break-inside: avoid;
+  border-bottom: 1px solid var(--border);
+  padding: 15px 0;
+}
+.pharmacy-receipt .document-sheet-title {
+  align-items: flex-start;
+}
+.pharmacy-receipt .document-sheet-title h1 {
+  font-size: 25px;
+}
+.pharmacy-receipt > p {
+  margin: 16px 0;
+  line-height: 1.6;
+}
+.stock-identity-help {
+  margin-top: 10px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.stock-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 700px) {
+  .pharmacy-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .pharmacy-stats button {
+    padding: 16px;
+  }
+  .pharmacy-prescriptions > article {
+    padding: 20px 16px;
+  }
+  .prescription-balances > div {
+    padding: 15px;
+  }
+  .prescription-balances dl {
+    gap: 24px;
+  }
+  .delivery-item {
+    padding: 15px;
+  }
+  .delivery-lot-line {
+    grid-template-columns: 1fr;
+  }
+  .delivery-lot-line > .text-button {
+    grid-column: auto;
+  }
+  .pharmacy-prescriptions .row-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pharmacy-receipt .document-sheet-title h1 {
+    font-size: 23px;
+  }
+  .pharmacy-stock-help .text-button {
+    min-height: 42px;
+  }
+  .dispensation-history .clinical-document-heading {
+    align-items: flex-start;
+  }
+}
+@media print {
+  .pharmacy-receipt .document-print-warning {
+    padding: 7px;
+    margin-bottom: 16px;
+  }
+  .pharmacy-receipt .document-sheet-header {
+    padding-bottom: 14px;
+  }
+  .pharmacy-receipt .document-sheet-header img {
+    width: 120px;
+  }
+  .pharmacy-receipt .document-sheet-title {
+    margin: 20px 0;
+  }
+  .pharmacy-receipt .document-patient {
+    padding: 14px;
+    gap: 5px;
+  }
+  .pharmacy-receipt .document-body {
+    font-size: 12px;
+    margin: 16px 0;
+  }
+  .pharmacy-receipt .document-body section {
+    margin: 15px 0;
+  }
+  .pharmacy-receipt .document-body dl {
+    gap: 8px 20px;
+  }
+  .pharmacy-receipt .receipt-item {
+    padding: 8px 0;
+  }
+  .pharmacy-receipt .document-sheet-footer {
+    margin-top: 18px;
+    padding-top: 12px;
+    font-size: 11px;
+  }
+  .pharmacy-receipt .document-sheet-footer::after {
+    margin-top: 12px;
+  }
+}

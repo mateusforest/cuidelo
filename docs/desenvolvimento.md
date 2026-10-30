@@ -2,7 +2,7 @@
 
 O escopo público completo está em [plano-completo.md](plano-completo.md). Esta lista ordena dependências de construção, sem autorizar uma implantação incompleta. A primeira operação em UBS, UPA, pronto atendimento e hospital depende do aceite dos módulos e integrações exigidos pela rede contratada.
 
-## Marco atual: base local 0.7
+## Marco atual: base local 0.8
 
 Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, escuta, sinais vitais, correções, SOAP com complementos, painel de senhas, observação, leitos, estoque, encaminhamentos e vacinação com caderneta, lotes, aprazamentos e visão gerencial. Receitas, pedidos de exames e encaminhamentos possuem rascunho, emissão de teste e impressão; exames recebem resultados e revisão médica, e a regulação registra contrarreferência manual. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
 
@@ -47,4 +47,4 @@ Uma frente pode conduzir fluxos, interface e validação com unidades; outra pod
 
 A versão 0.5 acrescenta sessões vinculadas, totem, autoria e tempos, além de bases locais de pré-natal, território, comunicação, qualidade e operação comercial. Os próximos incrementos devem completar os percursos parciais, incluindo processos hospitalares especializados, ordens clínicas, vacinação e integrações. Em paralelo, preparar os contratos de acesso e persistência. A conexão do backend permanece para a etapa acordada com os fundadores, antes de qualquer uso com dados reais.
 
-A versão 0.7 conecta ordens do consultório ao acompanhamento de exames e regulação. O próximo incremento assistencial deve ligar receita à dispensação parcial por lote e pessoa, com conciliação; assinatura, validação farmacêutica e regras clínicas continuam dependências explícitas.
+A versão 0.7 conecta ordens do consultório ao acompanhamento de exames e regulação. A versão 0.8 acrescenta dispensação parcial ou total por receita, pessoa e lote, comprovantes e saldo pendente. Os próximos incrementos incluem devoluções, correções vinculadas, perdas/quarentena e reconciliação com administração de medicamentos; assinatura, validação farmacêutica e regras clínicas continuam dependências explícitas.

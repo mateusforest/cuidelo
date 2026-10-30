@@ -151,7 +151,7 @@ const shortcuts: { path: string; title: string; detail: string; permission: Perm
   {
     path: '/farmacia',
     title: 'Farmácia',
-    detail: 'Consultar lotes e registrar movimentações.',
+    detail: 'Conferir receitas, registrar entregas e controlar lotes.',
     permission: 'stock',
   },
   {

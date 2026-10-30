@@ -6,7 +6,7 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.7.0**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.8.0**, de 29/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 Já é possível testar:
 
@@ -18,7 +18,8 @@ Já é possível testar:
 - Escuta inicial, sinais vitais, novas aferições e correções justificadas, vinculadas ao atendimento e ao histórico.
 - Complementos de notas concluídas, preservando o texto original.
 - Observação na urgência, admissão em leito, bloqueio de ocupação duplicada, saída e higienização.
-- Estoque por lote, entradas e saídas, alertas de vencimento e bloqueio de saldo negativo.
+- Farmácia recebe receitas do consultório: entrega total ou parcial, pessoa ou representante, vários lotes por item, saldo restante, baixa vinculada e comprovante para impressão. O histórico fica disponível à equipe assistencial da prefeitura.
+- Estoque por lote, cadastro de medicamentos e identificação de lotes anteriores, entradas e saídas, alertas de vencimento e bloqueios de saldo insuficiente, incompatibilidade de apresentação e excesso prescrito.
 - Receitas com vários medicamentos, pedidos de exames e encaminhamentos vinculados à consulta: rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado.
 - Acompanhamento por exame, agendamento local, realização, resultado transcrito e revisão médica.
 - Encaminhamento do consultório para a regulação, agendamento, cancelamento sincronizado e contrarreferência manual. Histórico de documentos e retornos compartilhado na mesma prefeitura.
@@ -94,6 +95,7 @@ No Windows os testes de navegador usam Microsoft Edge instalado. Nos demais sist
 - [Comparação das 46 telas do Pulso](docs/comparacao-pulso.md)
 - [HTML independente e painel da TV](docs/html-e-painel-tv.md)
 - [Escuta, aferições e complementos](docs/escuta-e-registros.md)
+- [Farmácia: entregas por receita, estoque e roteiro de teste](docs/farmacia-dispensacao.md)
 - [Consultório: receitas, exames, encaminhamentos e roteiro de teste](docs/consultorio-documentos.md)
 - [Vacinação: percursos e pendências](docs/vacinacao.md)
 - [Perfis, totem, tempos e novos acompanhamentos](docs/perfis-totem-tempos.md)

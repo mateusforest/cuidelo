@@ -50,23 +50,23 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.7"
-        subtitle="Consultório, exames, regulação e histórico da pessoa estão mais conectados."
+        title="Avanços da versão 0.8"
+        subtitle="Receitas do consultório agora chegam à farmácia e às entregas por lote."
       >
         <div className="panel-body">
           <p>
-            Receitas com vários itens, pedidos de exames e encaminhamentos com rascunho, revisão,
-            emissão de demonstração e impressão. Exames recebem acompanhamento por item e revisão
-            médica; encaminhamentos chegam à regulação e recebem contrarreferência. Documentos e
-            retornos compõem o histórico da pessoa na prefeitura.
+            Farmácia recebe receitas emitidas na unidade, confere a identificação de quem recebe e
+            registra entrega total ou parcial. Cada baixa fica vinculada ao item e ao lote; os
+            saldos pendentes, comprovantes e entregas aparecem no histórico da pessoa. Lotes
+            vencidos, excesso prescrito e saldo insuficiente são bloqueados.
           </p>
           <p>
             Os 44 módulos continuam parciais porque suas pendências completas ainda incluem
             integração, protocolos, autenticação e outras funções. A descrição de cada módulo abaixo
             mostra o avanço e o que falta.
           </p>
-          <Link className="row-link" to="/consultorio">
-            Testar o consultório
+          <Link className="row-link" to="/farmacia">
+            Testar a farmácia
           </Link>
         </div>
       </Panel>

@@ -1,3 +1,4 @@
+import { applyPharmacyCommand, pharmacyPrescription } from './pharmacy';
 import {
   can,
   roleNames,
@@ -118,6 +119,12 @@ export function applyCommand(
     return e.id;
   };
   switch (command.type) {
+    case 'stock.register':
+    case 'stock.identify':
+    case 'pharmacy.dispense': {
+      ({ entityId, action } = applyPharmacyCommand(db, c, command, now, newId));
+      break;
+    }
     case 'document.save':
     case 'document.issue':
     case 'document.cancel':
@@ -782,6 +789,20 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
       : [],
     appointments: has('schedule') ? unit(db.appointments) : [],
     encounters: has('queue') ? unit(db.encounters) : [],
+    pharmacyPrescriptions:
+      c.role === 'pharmacy'
+        ? unit(db.clinicalDocuments)
+            .filter(
+              (d) =>
+                d.content.kind === 'prescription' && ['issued', 'cancelled'].includes(d.status),
+            )
+            .map(pharmacyPrescription)
+        : [],
+    dispensations: has('clinical')
+      ? org(db.dispensations)
+      : c.role === 'pharmacy'
+        ? unit(db.dispensations)
+        : [],
     clinicalDocuments: has('clinical')
       ? org(db.clinicalDocuments).filter(
           (d) =>
@@ -801,7 +822,19 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     beds: has('beds') || has('manage') ? unit(db.beds) : [],
     admissions: has('beds') ? unit(db.admissions) : [],
     lots: has('stock') ? unit(db.lots) : [],
-    movements: has('stock') ? unit(db.movements) : [],
+    movements: has('stock')
+      ? unit(db.movements).map((m) =>
+          c.role === 'admin' && m.dispensationId
+            ? {
+                ...m,
+                dispensationId: undefined,
+                documentId: undefined,
+                itemId: undefined,
+                reason: 'Entrega vinculada a receita',
+              }
+            : m,
+        )
+      : [],
     referrals: has('clinical')
       ? org(db.referrals)
       : has('regulation')

@@ -64,7 +64,8 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 8,
+    schemaVersion: 9,
+    dispensations: [],
     clinicalDocuments: [],
     workRecords: [],
     careSegments: [],
@@ -206,6 +207,9 @@ export function createSeed(now = new Date()): Database {
           presentation: String(item[1]),
           lot: String(item[2]),
           quantity: Number(item[3]),
+          ...([0, 3].includes(index)
+            ? { medication: { strength: '500 mg', form: 'comprimido', quantityUnit: 'comprimido' } }
+            : {}),
           minimum: Number(item[4]),
           expiresAt: addDays(today, Number(item[5])),
         }),

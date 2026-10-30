@@ -1,4 +1,4 @@
-# Perfis, totem e acompanhamento — Cuidelo 0.7.0
+# Perfis, totem e acompanhamento — Cuidelo 0.8.0
 
 Esta entrega é um ambiente local de desenvolvimento com dados fictícios. O escopo de lançamento continua incluindo UBS, UPA, pronto atendimento e hospitais. As telas não substituem a implementação e a validação dos percursos clínicos, das integrações e da proteção em servidor.
 
@@ -96,3 +96,9 @@ Para testar o percurso completo, abra Cuidelo.html, escolha a sessão Recepção
 O médico responsável pelo atendimento cria, revisa e emite documentos de demonstração; apenas o autor cancela documentos emitidos. A enfermagem consulta documentos e registra acompanhamento de exames, com revisão final exclusiva do perfil médico nesta versão. A regulação recebe os encaminhamentos e registra agendamento, cancelamento e contrarreferência manual. A administração local acompanha situação e agenda, sem acessar conteúdo clínico originado no consultório.
 
 Documentos emitidos, resultados e contrarreferências ficam disponíveis à equipe assistencial da mesma prefeitura, inclusive de outras unidades. Escritas continuam restritas à unidade de origem. Rascunhos ficam na unidade, não são impressos e precisam ser emitidos ou descartados antes de concluir a consulta. Ver [roteiro do consultório](consultorio-documentos.md).
+
+## Farmácia e entregas em 0.8
+
+O perfil Farmácia recebe apenas receitas emitidas da própria unidade e os dados necessários à conferência e entrega, sem acesso ao SOAP, exames ou encaminhamentos. Registra entrega total/parcial por lote, com identidade de quem recebe, confirmações, histórico e comprovante. A equipe médica e a enfermagem consultam as entregas no histórico compartilhado da prefeitura, sem registrar a baixa. Administração local mantém acesso ao estoque; recebe movimentos operacionais sem a vinculação clínica das entregas.
+
+Cancelamento da receita bloqueia novas entregas e preserva as anteriores, sem estorno automático. Veja o [roteiro da farmácia](farmacia-dispensacao.md).

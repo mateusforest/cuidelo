@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.7. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.8. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -111,7 +111,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/consultorio",
-      "note": "SOAP e complementos; receitas, exames e encaminhamentos com rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado. Exames têm acompanhamento por item, resultado manual e revisão médica. Histórico compartilhado na prefeitura. Faltam CIAP/CID, receituários especiais, validações clínicas, assinatura e integrações."
+      "note": "SOAP e complementos; receitas, exames e encaminhamentos com rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado. Exames têm acompanhamento e revisão médica. Receitas seguem para a farmácia, com entregas consultáveis no histórico da prefeitura. Faltam CIAP/CID, receituários especiais, validações clínicas, assinatura e integrações."
     },
     {
       "id": "vacina",
@@ -147,7 +147,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/farmacia",
-      "note": "Há estoque por lote, entradas, saídas e vencimentos. Faltam dispensação por receita e pessoa, entrega parcial e integração e-SUS AF."
+      "note": "Recebe receitas emitidas no consultório da unidade; conferência da pessoa ou representante, entrega total/parcial com saldo por item, múltiplos lotes, baixa vinculada, comprovante e histórico. Cadastro e identificação de lotes; bloqueios de vencimento, incompatibilidade e excesso. Faltam devoluções e estornos vinculados, perdas/quarentena, validação farmacêutica completa, controlados e integração e-SUS AF."
     },
     {
       "id": "agenda",

@@ -1,3 +1,6 @@
+import { PharmacyDispensing } from '../components/PharmacyDispensing';
+import { StockMedicationForm } from '../components/StockMedicationForm';
+import type { MedicationLine } from '../domain/clinical-documents';
 import { useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, Package, AlertTriangle } from 'lucide-react';
 import { useApp } from '../app/context';
@@ -23,6 +26,9 @@ export function Pharmacy() {
   const [search, setSearch] = useState(''),
     [attention, setAttention] = useState(false),
     [movement, setMovement] = useState<{ lot: StockLot; kind: 'entry' | 'exit' } | null>(null);
+  const [stockForm, setStockForm] = useState<{ lot?: StockLot; item?: MedicationLine } | null>(
+    null,
+  );
   const today = dateKey(),
     alert = (l: StockLot) => l.quantity < l.minimum || l.expiresAt <= addDays(today, 30);
   const lots = data.lots.filter(
@@ -37,9 +43,13 @@ export function Pharmacy() {
       <PageHeader
         eyebrow="SUPRIMENTOS E RASTREABILIDADE"
         title="Farmácia e estoque"
-        description="Controle os lotes, a validade e as movimentações de cada unidade."
+        description="Receitas, entregas e movimentações por lote, vinculadas à sua unidade."
+        action={<Button onClick={() => setStockForm({})}>Novo lote de medicamento</Button>}
       />
       <UnitRequired>
+        {context.role === 'pharmacy' && (
+          <PharmacyDispensing onRegisterLot={(item) => setStockForm({ item })} />
+        )}
         <div className="inventory-summary">
           <div>
             <Package size={22} />
@@ -54,7 +64,10 @@ export function Pharmacy() {
             </span>
           </div>
         </div>
-        <Panel>
+        <Panel
+          title="Estoque por lote"
+          subtitle="Para entregar uma receita à pessoa, use a conferência acima. Saídas avulsas não quitam receitas."
+        >
           <div className="table-toolbar">
             <SearchField value={search} onChange={setSearch} placeholder="Buscar produto ou lote" />
             <label className="check-label">
@@ -84,7 +97,27 @@ export function Pharmacy() {
                     <tr key={l.id}>
                       <td>
                         <strong>{l.product}</strong>
-                        <small className="cell-secondary">{l.presentation}</small>
+                        <small className="cell-secondary">
+                          {l.medication
+                            ? `${l.medication.strength} · ${l.medication.form}`
+                            : l.presentation}
+                        </small>
+                        {l.medication ? (
+                          <small className="cell-secondary">
+                            Unidade de entrega: {l.medication.quantityUnit}
+                          </small>
+                        ) : (
+                          <div className="stock-identity-help">
+                            Apresentação ainda não identificada para receita.
+                            <br />
+                            <button
+                              className="text-button"
+                              onClick={() => setStockForm({ lot: l })}
+                            >
+                              Identificar lote {l.lot}
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td className="record-number">{l.lot}</td>
                       <td>
@@ -141,8 +174,9 @@ export function Pharmacy() {
           )}
         </Panel>
         <Notice>
-          Lotes vencidos permanecem visíveis para segregação. O fluxo de perdas e a dispensação
-          vinculada à prescrição fazem parte das próximas entregas.
+          Lotes vencidos permanecem visíveis para segregação e não podem ser entregues. Entregas
+          confirmadas preservam os movimentos; devoluções, perdas e estornos vinculados ainda
+          precisam de fluxo próprio.
         </Notice>
         <Panel title="Últimas movimentações">
           {data.movements.length ? (
@@ -177,6 +211,7 @@ export function Pharmacy() {
           )}
         </Panel>
       </UnitRequired>
+      {stockForm && <StockMedicationForm {...stockForm} onClose={() => setStockForm(null)} />}
       {movement && (
         <Modal
           title={`${movement.kind === 'entry' ? 'Entrada' : 'Saída'} de estoque`}

@@ -16,6 +16,7 @@ export type Permission =
   | 'clinical'
   | 'beds'
   | 'stock'
+  | 'dispensation.read'
   | 'vaccination'
   | 'vaccine.stock'
   | 'regulation'
@@ -161,6 +162,7 @@ export interface Admission extends Scoped {
   dischargeReason?: string;
 }
 export interface StockLot extends Scoped {
+  medication?: import('./pharmacy').MedicationStock;
   unitId: string;
   product: string;
   presentation: string;
@@ -170,6 +172,9 @@ export interface StockLot extends Scoped {
   minimum: number;
 }
 export interface StockMovement extends Scoped {
+  dispensationId?: string;
+  documentId?: string;
+  itemId?: string;
   unitId: string;
   lotId: string;
   quantity: number;
@@ -333,8 +338,9 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
+  dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 8;
+  schemaVersion: 9;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -361,6 +367,8 @@ export interface Database {
   addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  pharmacyPrescriptions: import('./pharmacy').PharmacyPrescription[];
+  dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
   calls: QueueCall[];
   workRecords: WorkRecord[];
@@ -416,6 +424,7 @@ export interface Summary {
   units: UnitSummary[];
 }
 export type Command =
+  | import('./pharmacy').PharmacyCommand
   | import('./clinical-documents').ClinicalDocumentCommand
   | { type: 'referral.complete'; id: string; date: string; summary: string }
   | import('./reception').ReceptionCommand
@@ -500,6 +509,7 @@ export const permissions: Record<Role, readonly Permission[]> = {
   acs: ['patients.read', 'territory'],
   reception: ['patients.read', 'patients.write', 'schedule', 'queue'],
   clinical: [
+    'dispensation.read',
     'performance',
     'patients.read',
     'schedule',
@@ -511,6 +521,7 @@ export const permissions: Record<Role, readonly Permission[]> = {
     'vaccine.stock',
   ],
   nursing: [
+    'dispensation.read',
     'performance',
     'patients.read',
     'schedule',
@@ -520,7 +531,7 @@ export const permissions: Record<Role, readonly Permission[]> = {
     'vaccination',
     'vaccine.stock',
   ],
-  pharmacy: ['stock', 'vaccine.stock'],
+  pharmacy: ['stock', 'vaccine.stock', 'dispensation.read'],
   regulation: ['patients.read', 'regulation', 'schedule'],
   admin: [
     'territory',
