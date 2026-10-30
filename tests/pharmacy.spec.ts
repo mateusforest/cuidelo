@@ -95,6 +95,11 @@ async function partial(page: Page, lotId: string, q = 2) {
   await confirm(page);
 }
 
+async function deliverySaved(page: Page) {
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.pharmacy-receipt-link')).toBeVisible();
+}
+
 test('consultório → farmácia → entrega parcial → conclusão por dois lotes → comprovante e histórico', async ({
   page,
   context,
@@ -106,6 +111,7 @@ test('consultório → farmácia → entrega parcial → conclusão por dois lot
     b = await register(page, 'ALFA-02', 7);
   await partial(page, a);
   await page.getByRole('button', { name: 'Confirmar entrega parcial', exact: true }).click();
+  await deliverySaved(page);
   await expect(
     page.getByTestId(`prescription-${docId}`).getByText('Entrega parcial', { exact: true }),
   ).toBeVisible();
@@ -128,6 +134,7 @@ test('consultório → farmácia → entrega parcial → conclusão por dois lot
   await page.getByLabel('Entregar · item 1 · linha 2', { exact: true }).fill('3');
   await confirm(page);
   await page.getByRole('button', { name: 'Confirmar entrega e concluir', exact: true }).click();
+  await deliverySaved(page);
   await page.getByLabel('Situação da entrega', { exact: true }).selectOption('complete');
   await expect(
     page.getByTestId(`prescription-${docId}`).getByText('Entregue por completo', { exact: true }),
@@ -178,6 +185,7 @@ test('excesso é recusado e cancelamento médico após entrega bloqueia o restan
     .getByLabel('Motivo do saldo pendente', { exact: true })
     .fill('Entrega parcial de teste');
   await page.getByRole('button', { name: 'Confirmar entrega parcial' }).click();
+  await deliverySaved(page);
   await selectSession(page, { role: 'clinical' });
   await page.goto('/atendimento/aurora-centro-e0');
   await expect(page.locator('.clinical-document-list')).toContainText('entrega parcial registrada');
@@ -186,6 +194,7 @@ test('excesso é recusado e cancelamento médico após entrega bloqueia o restan
     .getByLabel('Justificativa', { exact: true })
     .fill('Cancelamento fictício após entrega');
   await page.getByRole('button', { name: 'Confirmar cancelamento' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await selectSession(page, { role: 'pharmacy' });
   await page.goto('/farmacia');
   await page.getByLabel('Situação da entrega', { exact: true }).selectOption('cancelled');
@@ -216,6 +225,7 @@ test('duas conferências simultâneas não duplicam a baixa e a segunda precisa 
   await second.goto('/farmacia');
   await partial(second, lot);
   await page.getByRole('button', { name: 'Confirmar entrega parcial' }).click();
+  await deliverySaved(page);
   await expect(
     second.getByText('Os dados foram atualizados desde a abertura.', { exact: false }),
   ).toBeVisible();
@@ -247,6 +257,7 @@ test('HTML offline no celular recebe receita, cadastra lote, entrega e abre comp
   await confirm(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Confirmar entrega e concluir' }).click();
+  await deliverySaved(page);
   const id = await page.evaluate(
     () =>
       JSON.parse(localStorage.getItem('cuidelo.demo.database.v1')!).dispensations[0].id as string,
