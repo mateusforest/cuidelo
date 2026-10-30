@@ -1,10 +1,10 @@
 # Comparação do Pulso com o Cuidelo
 
-29/10/2026 · Cuidelo 0.8.0 · 46 telas catalogadas.
+30/10/2026 · Cuidelo 0.9.0 · 46 telas catalogadas.
 
-**1 tela demonstrável, 44 percursos parciais e 1 tela adaptada.** A versão 0.8 avança farmácia, estoque por lote, consultório e histórico da pessoa. Os módulos permanecem parciais pelas pendências clínicas, operacionais e de integração descritas abaixo.
+**1 tela demonstrável, 44 percursos parciais e 1 tela adaptada.** A versão 0.8 avançou farmácia, estoque por lote, consultório e histórico da pessoa. A versão 0.9 renova a tela de acesso demonstrativo e a estrutura visual, sem alterar a contagem de cobertura. Os módulos permanecem parciais pelas pendências clínicas, operacionais e de integração descritas abaixo.
 
-Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.8. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.
+Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.9. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.
 
 | Tela                   | Área              | Situação     | Rota                          | O que existe e o que falta                                                                                                                                                                                                                                                                                                                                                                                                |
 | ---------------------- | ----------------- | ------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

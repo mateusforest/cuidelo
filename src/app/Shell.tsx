@@ -29,6 +29,8 @@ import {
 import { can, roleNames, type Permission } from '../domain/model';
 import { useApp } from './context';
 import { Button, Modal, Notice } from '../components/ui';
+import { Access } from '../pages/Access';
+import { identityFor } from '../domain/access';
 
 const navigation = [
   {
@@ -105,14 +107,18 @@ const navigation = [
   },
 ];
 export function Shell() {
-  const { context, changeContext, data, repository, toast, dirty, setDirty } = useApp();
+  const { context, changeContext, data, repository, toast, dirty, setDirty, demoEntered } =
+    useApp();
   const location = useLocation(),
     navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false),
     [help, setHelp] = useState(false),
     [search, setSearch] = useState('');
   const blocker = useBlocker(dirty);
-  useEffect(() => setMobileOpen(false), [location.pathname]);
+  useEffect(() => {
+    setMobileOpen(false);
+    window.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname, demoEntered]);
   useEffect(() => {
     const fn = (e: BeforeUnloadEvent) => {
       if (dirty) {
@@ -135,6 +141,8 @@ export function Shell() {
             ? 'Atendimento'
             : 'Pessoas e prontuários');
   const org = data.organizations.find((o) => o.id === context.organizationId);
+  const identity = identityFor(repository.directory(), context);
+  if (location.pathname === '/' && !demoEntered) return <Access />;
   const navContent = (
     <>
       <a
@@ -146,7 +154,7 @@ export function Shell() {
         }}
         aria-label="Cuidelo, início"
       >
-        <img src="/brand/marca.svg" alt="Cuidelo" />
+        <img src="/brand/marca-negativa.svg" alt="Cuidelo" />
         <span>SAÚDE CONECTADA</span>
       </a>
       <div className="sidebar-divider" />
@@ -185,7 +193,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.8</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.9</span>
       </div>
     </>
   );
@@ -286,9 +294,17 @@ export function Shell() {
             )}
           </div>
           <div className="session-summary">
-            <Stethoscope size={19} />
-            <span>{roleNames[context.role]}</span>
-            <NavLink to="/acesso">Trocar sessão de demonstração</NavLink>
+            <span className="session-avatar">
+              <Stethoscope size={18} />
+            </span>
+            <div className="session-person">
+              <strong>{roleNames[context.role]}</strong>
+              <small>{identity.name}</small>
+            </div>
+            <NavLink className="session-switch" to="/acesso" title="Trocar sessão de demonstração">
+              <ArrowRightLeft size={16} />
+              <span>Trocar sessão de demonstração</span>
+            </NavLink>
           </div>
         </div>
         <div className="demo-strip">

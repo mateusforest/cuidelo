@@ -43,10 +43,18 @@ test('HTML abre diretamente, sem rede, com navegação, fontes, marca e guia inc
   });
   await context.setOffline(true);
   await page.goto(pathToFileURL(path.resolve('dist-standalone/Cuidelo.html')).href);
-  await expect(page.getByRole('heading', { name: 'Visão da rede', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Bem-vindo ao Cuidelo.', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Ir para os acessos', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#demo-access-form')).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Entrar na demonstração', exact: true }),
+  ).toBeVisible();
   expect(
     await page
-      .locator('.brand-lockup img')
+      .locator('.access-brand')
       .evaluate((e: HTMLImageElement) => e.complete && e.naturalWidth > 0),
   ).toBe(true);
   await selectSession(page, { unitId: 'aurora-centro' });

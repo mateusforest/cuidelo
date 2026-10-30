@@ -1,10 +1,10 @@
-# Perfis, totem e acompanhamento — Cuidelo 0.8.0
+# Perfis, totem e acompanhamento — Cuidelo 0.9.0
 
 Esta entrega é um ambiente local de desenvolvimento com dados fictícios. O escopo de lançamento continua incluindo UBS, UPA, pronto atendimento e hospitais. As telas não substituem a implementação e a validação dos percursos clínicos, das integrações e da proteção em servidor.
 
 ## Acessos de demonstração
 
-Em **Trocar sessão de demonstração**, escolha prefeitura, unidade e vínculo fictício. A sessão do profissional permanece vinculada à sua unidade. Somente a prefeitura filtra unidades da própria rede; para explorar outra prefeitura é necessário abrir outra sessão no laboratório de acesso.
+Na nova entrada, escolha o perfil, confira prefeitura e unidade e use **Entrar na demonstração**. A equipe médica possui um seletor com dois profissionais fictícios. O botão **Trocar sessão de demonstração** reabre a entrada e mantém a escolha atual como ponto de partida. Não há senha ou autenticação real nesta versão. A sessão do profissional permanece vinculada à sua unidade. Somente a prefeitura filtra unidades da própria rede; para explorar outra prefeitura é necessário abrir outra sessão no laboratório de acesso.
 
 | Perfil                   | Área de trabalho                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------- |

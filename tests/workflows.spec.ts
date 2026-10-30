@@ -5,7 +5,9 @@ test('cadastro → agenda → chegada → registro finalizado e persistido', asy
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Visão da rede', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Bem-vindo ao Cuidelo.', exact: true }),
+  ).toBeVisible();
   await selectSession(page, { unitId: 'aurora-centro' });
   await page.getByRole('link', { name: 'Pessoas e prontuários', exact: true }).click();
   await page.getByRole('button', { name: 'Cadastrar pessoa', exact: true }).click();
@@ -134,9 +136,9 @@ test('estoque persiste o movimento e bloqueia uso de lote vencido', async ({ pag
 test('navegação móvel e formulários cabem na tela', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await selectSession(page, { unitId: 'aurora-centro' });
+  await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible();
   await page.getByRole('button', { name: 'Abrir menu' }).click();
   await page.getByRole('link', { name: 'Pessoas e prontuários', exact: true }).click();
   await page.getByRole('button', { name: 'Cadastrar pessoa', exact: true }).click();

@@ -50,10 +50,15 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.8"
-        subtitle="Receitas do consultório agora chegam à farmácia e às entregas por lote."
+        title="Avanços da versão 0.9"
+        subtitle="Entrada por perfis e uma organização visual renovada para a rede."
       >
         <div className="panel-body">
+          <p>
+            A nova entrada reúne nove perfis demonstrativos, prefeitura, unidade e profissional. O
+            menu, os indicadores e o contexto de trabalho foram reorganizados, com adaptação para
+            celular. A seleção continua sendo demonstrativa, sem autenticação real.
+          </p>
           <p>
             Farmácia recebe receitas emitidas na unidade, confere a identificação de quem recebe e
             registra entrega total ou parcial. Cada baixa fica vinculada ao item e ao lote; os
@@ -65,8 +70,8 @@ export function Coverage() {
             integração, protocolos, autenticação e outras funções. A descrição de cada módulo abaixo
             mostra o avanço e o que falta.
           </p>
-          <Link className="row-link" to="/farmacia">
-            Testar a farmácia
+          <Link className="row-link" to="/acesso">
+            Conhecer os acessos
           </Link>
         </div>
       </Panel>

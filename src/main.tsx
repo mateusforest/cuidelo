@@ -27,6 +27,8 @@ import { isPortable } from './app/links';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/patient-flow.css';
+import './styles/refinement.css';
+import './styles/access.css';
 import { Access, WorkspaceHome } from './pages/Access';
 import { Devices, Kiosk } from './pages/Kiosk';
 import { ConsultingRoom, Performance } from './pages/PatientFlow';
@@ -66,6 +68,7 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
   { path: '/painel', element: <QueueDisplay /> },
   { path: '/totem', element: <Kiosk /> },
   { path: '/acesso', element: <Access /> },
+  { path: '/login', element: <Access /> },
   { path: '/dispensacoes/:id', element: protect('dispensation.read', <PharmacyReceipt />) },
   { path: '/documentos/:id', element: protect('clinical', <ClinicalDocumentPrint />) },
   {

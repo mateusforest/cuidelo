@@ -127,8 +127,21 @@ export function Dashboard() {
           ) : undefined
         }
       />
+      <div className="metric-grid">
+        {stats.map(({ label, value, description, icon: Icon }) => (
+          <div className="metric-card" key={label}>
+            <div className="metric-top">
+              <span>{label}</span>
+              <Icon size={19} />
+            </div>
+            <strong>{value}</strong>
+            <p>{description}</p>
+          </div>
+        ))}
+      </div>
       {can(context.role, 'manage') && (
         <Panel
+          className="dashboard-flow"
           title="Fluxo das senhas de hoje"
           subtitle="Recepção inclui senhas ainda sem identificação. Contagem local por etapa, sem expor dados pessoais."
         >
@@ -148,49 +161,6 @@ export function Dashboard() {
           </div>
         </Panel>
       )}
-      <div className="review-banner">
-        <Monitor size={27} />
-        <div>
-          <strong>A sala de espera também faz parte do cuidado.</strong>
-          <p>Conheça o painel de senhas e confira a cobertura do protótipo original.</p>
-        </div>
-        <Link
-          className="button primary"
-          to={displayRoute(context.organizationId, (currentUnit ?? data.units[0]).id, true)}
-        >
-          Ver tela da TV
-          <ArrowUpRight size={16} />
-        </Link>
-        <Link className="button secondary" to="/comparacao">
-          Comparar com Pulso
-        </Link>
-      </div>
-      <div className="overview-banner">
-        <div className="banner-icon">
-          <img src="/brand/simbolo.svg" alt="" />
-        </div>
-        <div>
-          <span className="eyebrow">CUIDAR É CONECTAR</span>
-          <h2>Toda a rede, mais perto das pessoas.</h2>
-          <p>Acompanhe suas unidades e dê continuidade a cada atendimento.</p>
-        </div>
-        <span className="banner-network">
-          {data.units.length}
-          <small>unidades nesta rede</small>
-        </span>
-      </div>
-      <div className="metric-grid">
-        {stats.map(({ label, value, description, icon: Icon }) => (
-          <div className="metric-card" key={label}>
-            <div className="metric-top">
-              <span>{label}</span>
-              <Icon size={19} />
-            </div>
-            <strong>{value}</strong>
-            <p>{description}</p>
-          </div>
-        ))}
-      </div>
       <div className="dashboard-grid">
         <Panel
           title="Unidades em foco"
@@ -282,6 +252,20 @@ export function Dashboard() {
             <TextLink to="/integracoes">Ver conexões previstas</TextLink>
           </div>
         </div>
+      </div>
+      <div className="dashboard-tools">
+        <Monitor size={23} />
+        <div>
+          <strong>Experiência na unidade</strong>
+          <p>Explore o painel da sala de espera e os percursos disponíveis.</p>
+        </div>
+        <Link
+          className="button secondary"
+          to={displayRoute(context.organizationId, (currentUnit ?? data.units[0]).id, true)}
+        >
+          Ver tela da TV <ArrowUpRight size={15} />
+        </Link>
+        <TextLink to="/comparacao">Comparar com Pulso</TextLink>
       </div>
       <Panel title="Continue por aqui" subtitle="Acesso aos fluxos disponíveis para este perfil.">
         <div className="quick-actions">

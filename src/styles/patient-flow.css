@@ -18,43 +18,6 @@
   font-size: 12px;
   max-width: 130px;
 }
-.access-page {
-  max-width: 1200px;
-  margin: auto;
-  padding: 32px;
-}
-.access-page > header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.access-page > header img {
-  width: 160px;
-}
-.access-intro {
-  max-width: 700px;
-  margin: 64px 0 24px;
-}
-.access-intro h1 {
-  font-size: clamp(32px, 4vw, 48px);
-  letter-spacing: -1.5px;
-  line-height: 1.12;
-  margin: 16px 0;
-}
-.access-intro p {
-  font-size: 18px;
-  color: #586e70;
-}
-.access-filters {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin: 24px 0;
-}
-.access-filters > .field {
-  flex: 1;
-  min-width: 200px;
-}
 .identity-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

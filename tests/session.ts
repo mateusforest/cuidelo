@@ -24,6 +24,7 @@ export async function selectSession(
   const url = (route: string) =>
     portable ? previous.href.split('#')[0] + '#' + route : previous.origin + route;
   await page.goto(url('/acesso'));
+  await page.locator(`[data-role="${role}"]`).click();
   if (role !== 'business') {
     await page
       .getByLabel('Prefeitura de demonstração', { exact: true })
@@ -36,6 +37,9 @@ export async function selectSession(
       : role === 'manager'
         ? `${organizationId}:manager`
         : `${unitId}:${role}${patch.second ? ':2' : ''}`;
+  if (role === 'clinical') {
+    await page.getByLabel('Profissional de demonstração', { exact: true }).selectOption(sessionId);
+  }
   await page.locator(`[data-session="${sessionId}"]`).click();
   await expect
     .poll(() =>

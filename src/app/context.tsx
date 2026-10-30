@@ -18,6 +18,7 @@ interface AppValue {
   context: Context;
   changeContext: (patch: Partial<Context>) => void;
   chooseSession: (sessionId: string) => void;
+  demoEntered: boolean;
   data: Snapshot;
   summary: Summary;
   repository: CareRepository;
@@ -29,6 +30,7 @@ interface AppValue {
 }
 const AppContext = createContext<AppValue | null>(null);
 const preferenceKey = 'cuidelo.demo.context.v1';
+const entryKey = 'cuidelo.demo.entry.v1';
 export function AppProvider({ children }: { children: ReactNode }) {
   const [repository] = useState(browserRepository);
   const [context, setContext] = useState<Context>(() => {
@@ -54,6 +56,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       /* Preferências inválidas voltam ao contexto inicial. */
     }
     return initial;
+  });
+  // Preferência de navegação da demonstração; não representa autenticação.
+  const [demoEntered, setDemoEntered] = useState(() => {
+    try {
+      return localStorage.getItem(entryKey) === context.sessionId;
+    } catch {
+      return false;
+    }
   });
   const revision = useSyncExternalStore(repository.subscribe, repository.getRevision);
   useEffect(() => {
@@ -112,6 +122,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!identity) return;
     setDirty(false);
     setContext(identity);
+    setDemoEntered(true);
+    try {
+      localStorage.setItem(entryKey, identity.sessionId);
+    } catch {
+      /* A escolha continua válida nesta aba sem armazenamento. */
+    }
   };
   return (
     <AppContext
@@ -119,6 +135,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         context,
         changeContext,
         chooseSession,
+        demoEntered,
         data,
         summary,
         repository,
