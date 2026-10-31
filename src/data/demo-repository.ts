@@ -1,3 +1,4 @@
+import { reportBinding } from '../domain/report-code.mjs';
 import { assessmentCoding } from '../domain/consultation';
 import { subjectFor } from './citizen-care';
 import { citizenView } from '../domain/citizen';
@@ -578,6 +579,7 @@ export class DemoRepository implements CareRepository {
   async citizenView(context: Context, patientId: string) {
     const view = citizenView(this.sync(), context, patientId, this.now());
     try {
+      view.reportBinding = await reportBinding(context.organizationId, patientId);
       view.careScope = {
         organization: context.organizationId,
         subject: await subjectFor(context.organizationId, patientId),

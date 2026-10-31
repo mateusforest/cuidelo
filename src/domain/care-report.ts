@@ -137,6 +137,8 @@ export function careReport(d: Diary, view: CitizenView, from: string, to: string
     entries: entries.length,
     taken: doses.filter((e) => effectiveTaken(e)).length,
     skipped: doses.filter((e) => !effectiveTaken(e)).length,
+    postponed: (d.postponements ?? []).filter((s) => inside(localDay(new Date(s.recordedAt))))
+      .length,
     pickups: steps.filter((s) => s.kind === 'pickup').length,
     renewals: steps.filter((s) => s.kind === 'renewal').length,
   };

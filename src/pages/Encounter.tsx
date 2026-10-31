@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
 import { useApp } from '../app/context';
+import { ConsultReport } from '../components/ReportSharing';
 import { EncounterDocuments } from '../components/ClinicalDocuments';
 import { QueueAssessmentPanel } from '../components/QueueAssessment';
 import { AssessmentCodes, RecordedCodes } from '../components/AssessmentCodes';
@@ -223,6 +224,12 @@ function EncounterEditor({ id }: { id?: string }) {
               )
             }
           />
+          {context.role === 'clinical' && (
+            <ConsultReport
+              key={JSON.stringify([context, encounter.id, patient.id])}
+              encounterId={encounter.id}
+            />
+          )}
           <EncounterDocuments
             encounter={encounter}
             onDirtyChange={setDocumentDirty}

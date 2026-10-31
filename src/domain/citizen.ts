@@ -30,6 +30,7 @@ export interface CitizenDocument {
   content: CitizenContent;
 }
 export interface CitizenView {
+  reportBinding?: string;
   careScope?: { organization: string; subject: string };
   version: 1;
   person: string;

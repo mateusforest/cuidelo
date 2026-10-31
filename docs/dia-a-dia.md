@@ -1,4 +1,4 @@
-# Dia a dia no Cuidelo Cidadão · versão 0.20
+# Dia a dia no Cuidelo Cidadão · versão 0.21
 
 Abra [o app do cidadão](https://cuidelo.vercel.app/cidadao), escolha Ana Clara e toque em **Dia a dia**. Use dados fictícios.
 
@@ -32,7 +32,17 @@ Alterar ou encerrar um lembrete, registrar retirada ou renovação com nova data
 
 Cada pessoa tem seu próprio diário no navegador deste aparelho. Os exemplos de Ana e João têm espaços separados. Na cópia compartilhada pela equipe, uma referência aleatória por pessoa e prefeitura na estação de origem permite recuperar o mesmo diário ao receber um novo link da mesma estação, no mesmo aparelho e navegador. Um link antigo sem essa referência mantém a leitura de agenda e documentos. O titular deve receber um link atualizado para usar o diário.
 
-O diário não é transmitido ao consultório ou à prefeitura. Apagar os dados do site ou trocar de navegador pode retirar o acesso aos registros locais. O acompanhamento demonstra registros feitos pela pessoa e lembretes informativos. A operação clínica requer identidade verificada, armazenamento protegido, autorização e validação assistencial.
+O diário completo fica no aparelho. A pessoa pode autorizar uma cópia do relatório para o consultório.
+
+## Compartilhar com o médico
+
+Em **Dia a dia → Relatório**, selecione as datas e confira o conteúdo. Toque em **Compartilhar relatório → Autorizar e gerar código**. Copie o código ou use **Enviar código** se o celular oferecer essa opção. Uma cópia vale por 30 minutos. Mudanças posteriores no diário não alteram essa cópia. É possível encerrar o código e gerar outra.
+
+No perfil **Equipe médica**, abra o atendimento da mesma pessoa, localize **Relatório do cidadão → Abrir relatório com código**, cole o código e toque em **Consultar relatório**. Para testar com Ana Clara no app demonstrativo, use o atendimento de Ana Clara Martins na UBS Centro da Rede Aurora. O médico vê o período, os totais e a linha do tempo de crises, doses, adiamentos, retiradas e renovações. A leitura não modifica o SOAP.
+
+A cópia é cifrada e o serviço temporário verifica o código, o vínculo e o prazo. Fechar o relatório retira o código da sessão médica. **Encerrar compartilhamento** no app bloqueia novas leituras, e a tela aberta confere o acesso a cada cinco segundos enquanto estiver ativa. O compartilhamento precisa de internet no endereço publicado. Versões antigas do link da unidade sem o vínculo estável podem ser conferidas na estação que emitiu o link.
+
+Apagar os dados do site ou trocar de navegador pode retirar o acesso aos registros locais. O acompanhamento demonstra registros feitos pela pessoa e lembretes informativos. A operação clínica requer identidade verificada, armazenamento protegido, autorização e validação assistencial.
 
 Para verificar a implementação dos alarmes de calendário e das notificações do navegador, consulte o [padrão iCalendar](https://www.rfc-editor.org/rfc/rfc5545) e a [documentação de notificações do navegador](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration/showNotification).
 

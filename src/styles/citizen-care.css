@@ -197,3 +197,24 @@
   align-items: end;
   margin-top: 1rem;
 }
+
+.report-offer > .field,
+.consultation-report .care-report {
+  margin-block: 1rem;
+}
+.report-offer input[readonly] {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+.consultation-report .care-report h3 {
+  margin-top: 1rem;
+}
+.consultation-report > .button {
+  margin-block: 0.25rem;
+}
+@media print {
+  .report-offer {
+    display: none !important;
+  }
+}

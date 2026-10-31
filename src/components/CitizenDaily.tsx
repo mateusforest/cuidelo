@@ -857,7 +857,7 @@ export function CitizenDaily({
       <span className="cit-kicker">Acompanhamento pessoal</span>
       <h1>Meu dia a dia</h1>
       <p className="care-explain">
-        Use dados fictícios. Seu diário fica neste aparelho e não é enviado à equipe de saúde.
+        Use dados fictícios. Seu diário fica neste aparelho. Na aba Relatório, você pode escolher o período e compartilhar uma cópia com o médico.
       </p>
       <nav className="care-tabs" aria-label="Áreas do acompanhamento">
         {Object.entries(tabs).map(([k, v]) => (
@@ -879,7 +879,7 @@ export function CitizenDaily({
           {extra || !Object.hasOwn(tabs, tab) ? (
             <p>Seção indisponível.</p>
           ) : tab === 'relatorio' ? (
-            <CareReport diary={diary} view={view} />
+            <CareReport diary={diary} view={view} scope={scope} />
           ) : tab === 'diario' ? (
             <Journal d={diary} now={now} run={run} busy={busy} />
           ) : tab === 'medicacao' ? (

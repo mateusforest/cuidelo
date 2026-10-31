@@ -1,12 +1,34 @@
 import { createHash, randomBytes } from 'node:crypto';
 
+import { reportReader, reportCode } from '../src/domain/report-code.mjs';
+
 const hash = (v) => createHash('sha256').update(v).digest('hex');
 const readKey = (writer) => hash('cuidelo-cidadao-v1:' + writer);
 const lifetime = 30 * 60;
 const failure = (status, message) => ({ status, body: { error: message } });
 
-// O servidor recebe apenas a cópia cifrada. A chave de abertura permanece no fragmento do link.
+// Os canais de documentos e relatórios mantêm cópias cifradas em espaços distintos.
 export async function citizenShare(op, token, body, cache, address, now = Date.now()) {
+  const report = typeof op === 'string' && op.startsWith('report.');
+  if (report) {
+    op = op.slice(7);
+    if (!['create', 'read', 'stop'].includes(op) || !/^[a-f0-9]{64}$/.test(token))
+      return failure(404, 'Acesso ao relatório indisponível.');
+    if (
+      op === 'create' &&
+      (typeof body.binding !== 'string' || !/^[a-f0-9]{64}$/.test(body.binding))
+    )
+      return failure(400, 'Vínculo inválido.');
+    if (
+      op === 'read' &&
+      (!Array.isArray(body.bindings) ||
+        ![1, 2].includes(body.bindings.length) ||
+        body.bindings.some((v) => typeof v !== 'string' || !/^[a-f0-9]{64}$/.test(v)))
+    )
+      return failure(400, 'Vínculo inválido.');
+  }
+  const prefix = report ? 'report:' : 'view:';
+  const readerFor = report ? async (w) => reportReader(await reportCode(w)) : readKey;
   if (op === 'create' || op === 'update') {
     if (
       typeof body.payload !== 'string' ||
@@ -21,22 +43,35 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
       count = Number(await cache.get(bucket)) || 0;
     if (count >= 30) return failure(429, 'Limite de links por hora atingido.');
     await cache.set(bucket, count + 1, { ttl: 3600 });
-    const writer = randomBytes(32).toString('hex'),
-      reader = readKey(writer),
+    const writer = report ? token : randomBytes(32).toString('hex'),
+      reader = await readerFor(writer),
       expires = now + lifetime * 1000;
+    const key = prefix + hash(reader);
+    if (report) {
+      if (await cache.get('revoked:' + key)) return failure(410, 'Compartilhamento encerrado.');
+      const prior = await cache.get(key);
+      if (prior)
+        return prior.payload === body.payload &&
+          prior.binding === body.binding &&
+          prior.expires > now
+          ? { status: 200, body: { expires: prior.expires } }
+          : failure(409, 'Este compartilhamento já foi criado.');
+    }
     await cache.set(
-      'view:' + hash(reader),
-      { payload: body.payload, expires, revision: 0 },
+      key,
+      { payload: body.payload, expires, revision: 0, ...(report ? { binding: body.binding } : {}) },
       { ttl: lifetime },
     );
-    return { status: 201, body: { writer, reader, expires } };
+    return { status: 201, body: report ? { expires } : { writer, reader, expires } };
   }
   if (!['read', 'stop', 'update'].includes(op) || !/^([a-f0-9]{64})$/.test(token))
     return failure(404, 'Link indisponível.');
-  const key = 'view:' + hash(op === 'read' ? token : readKey(token)),
+  const key = prefix + hash(op === 'read' ? token : await readerFor(token)),
     item = await cache.get(key);
   if (!item?.payload || item.expires <= now || (await cache.get('revoked:' + key)))
     return failure(410, 'Este link expirou ou foi encerrado.');
+  if (report && op === 'read' && !body.bindings.includes(item.binding))
+    return failure(403, 'Este código não corresponde ao paciente deste atendimento.');
   if (op === 'stop') {
     await cache.set('revoked:' + key, true, {
       ttl: Math.max(1, Math.ceil((item.expires - now) / 1000)),
@@ -94,7 +129,12 @@ export async function citizenRelay(req, res, cache) {
       !b ||
       typeof b !== 'object' ||
       !Object.hasOwn(b, 'op') ||
-      Object.keys(b).length !== (b.op === 'create' ? 2 : b.op === 'update' ? 3 : 1) ||
+      Object.keys(b).length !==
+        (['create', 'report.read'].includes(b.op)
+          ? 2
+          : ['update', 'report.create'].includes(b.op)
+            ? 3
+            : 1) ||
       JSON.stringify(b).length > 161000
     )
       throw Error();

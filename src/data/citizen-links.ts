@@ -34,7 +34,7 @@ export class CitizenLinkError extends Error {
     super(message);
   }
 }
-async function request(body: object, token = '') {
+export async function citizenRequest(body: object, token = '') {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 10000);
   try {
@@ -52,11 +52,17 @@ async function request(body: object, token = '') {
     });
     if (!res.ok)
       throw new CitizenLinkError(
-        res.status === 410 || res.status === 404
-          ? 'Este link expirou ou foi encerrado. Solicite um novo link à equipe.'
-          : res.status === 429
-            ? 'Limite de links atingido. Tente mais tarde.'
-            : 'O serviço está indisponível. Tente novamente.',
+        'op' in body &&
+          String(body.op).startsWith('report.') &&
+          [404, 410, 403].includes(res.status)
+          ? res.status === 403
+            ? 'O código não corresponde ao paciente deste atendimento.'
+            : 'O código expirou, foi encerrado ou está incorreto.'
+          : res.status === 410 || res.status === 404
+            ? 'Este link expirou ou foi encerrado. Solicite um novo link à equipe.'
+            : res.status === 429
+              ? 'Limite de links atingido. Tente mais tarde.'
+              : 'O serviço está indisponível. Tente novamente.',
         [404, 410].includes(res.status),
       );
     return await res.json();
@@ -67,7 +73,7 @@ async function request(body: object, token = '') {
     clearTimeout(t);
   }
 }
-async function encryptView(view: CitizenView, bytes: Uint8Array<ArrayBuffer>) {
+export async function encryptCitizenPayload(view: unknown, bytes: Uint8Array<ArrayBuffer>) {
   const raw = new TextEncoder().encode(JSON.stringify(view));
   if (raw.byteLength > 119000) throw Error('Esta cópia excede o limite da demonstração.');
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -78,17 +84,31 @@ async function encryptView(view: CitizenView, bytes: Uint8Array<ArrayBuffer>) {
   packet.set(cipher, iv.length);
   return encode(packet);
 }
+export async function decryptCitizenPayload(
+  payload: string,
+  keyBytes: Uint8Array<ArrayBuffer>,
+): Promise<unknown> {
+  if (typeof payload !== 'string' || payload.length > 160000) throw Error('Cópia inválida.');
+  const bytes = decode(payload),
+    key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: bytes.slice(0, 12) },
+    key,
+    bytes.slice(12),
+  );
+  return JSON.parse(new TextDecoder().decode(plain));
+}
 export async function publishCitizenLink(view: CitizenView): Promise<SharedCitizenLink> {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const payload = await encryptView(view, bytes);
-  const { writer, reader, expires } = await request({ op: 'create', payload });
+  const payload = await encryptCitizenPayload(view, bytes);
+  const { writer, reader, expires } = await citizenRequest({ op: 'create', payload });
   if (
     !/^[a-f0-9]{64}$/.test(reader) ||
     !/^[a-f0-9]{64}$/.test(writer) ||
     !Number.isSafeInteger(expires)
   )
     throw Error('Não foi possível criar o link.');
-  const confirmation = await request({ op: 'read' }, reader);
+  const confirmation = await citizenRequest({ op: 'read' }, reader);
   if (confirmation.payload !== payload || confirmation.expires !== expires)
     throw Error('Não foi possível confirmar a cópia.');
   const secret = encode(bytes);
@@ -101,12 +121,12 @@ export async function publishCitizenLink(view: CitizenView): Promise<SharedCitiz
     url: origin + '/cidadao#v1.' + reader + '.' + secret,
   };
 }
-export const stopCitizenLink = (writer: string) => request({ op: 'stop' }, writer);
+export const stopCitizenLink = (writer: string) => citizenRequest({ op: 'stop' }, writer);
 const string = (s: unknown) => typeof s === 'string' && s.length > 0 && s.length < 2000;
 export async function openCitizenLink(
   link: CitizenLink,
 ): Promise<{ view: CitizenView; expires: number }> {
-  const { payload, expires } = await request({ op: 'read' }, link.reader);
+  const { payload, expires } = await citizenRequest({ op: 'read' }, link.reader);
   try {
     if (
       !Number.isSafeInteger(expires) ||
@@ -115,14 +135,7 @@ export async function openCitizenLink(
       payload.length > 160000
     )
       throw Error();
-    const bytes = decode(payload),
-      key = await crypto.subtle.importKey('raw', decode(link.key), 'AES-GCM', false, ['decrypt']);
-    const plain = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: bytes.slice(0, 12) },
-      key,
-      bytes.slice(12),
-    );
-    const v: CitizenView = JSON.parse(new TextDecoder().decode(plain));
+    const v = (await decryptCitizenPayload(payload, decode(link.key))) as CitizenView;
     if (
       v.version !== 1 ||
       !string(v.person) ||
@@ -211,10 +224,10 @@ export function startCitizenUpdates(repo: CareRepository, c: Context) {
         const revision = repo.getRevision();
         if (sent.get(share.writer) === revision) continue;
         const view = await repo.citizenView(c, handle.slice(prefix.length));
-        const payload = await encryptView(view, decode(share.key));
+        const payload = await encryptCitizenPayload(view, decode(share.key));
         if (disposed) return;
         try {
-          await request({ op: 'update', revision, payload }, share.writer);
+          await citizenRequest({ op: 'update', revision, payload }, share.writer);
           sent.set(share.writer, revision);
         } catch (e) {
           if (e instanceof CitizenLinkError && e.unavailable) sessionStorage.removeItem(handle);
