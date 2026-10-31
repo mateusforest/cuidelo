@@ -45,7 +45,7 @@ export async function receipt(op, token, b, cache, mailbox, ownerKey, now) {
     }
     const readAt = m.readAt ?? new Date(now).toISOString();
     const result = async () => {
-      if (op === 'ack' && !m.linkPermit) {
+      if (op === 'ack') {
         const permit = await legacyReceiptToken(
             await reportReference(await reportCode(token)),
             m.id,
@@ -56,8 +56,8 @@ export async function receipt(op, token, b, cache, mailbox, ownerKey, now) {
       }
       return { status: 200, body: { readAt } };
     };
-    if (m.readAt) return result();
     try {
+      if (m.readAt) return await result();
       await mailbox.save(
         key,
         box.messages.map((x) => (x.id === m.id ? { ...x, readAt } : x)),

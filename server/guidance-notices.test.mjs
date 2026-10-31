@@ -3,7 +3,14 @@ import { createHash } from 'node:crypto';
 import { memoryMailbox } from './report-mailbox.mjs';
 import { citizenShare } from './citizen-share.mjs';
 import { deliverGuidance, deviceKey } from './guidance-notices.mjs';
-import { replyProof, reportReader, reportCode, reportBinding } from '../src/domain/report-code.mjs';
+import {
+  replyProof,
+  reportReader,
+  reportCode,
+  reportBinding,
+  reportReference,
+  legacyReceiptToken,
+} from '../src/domain/report-code.mjs';
 it('avisa sem conteúdo clínico e confirma somente a mensagem escolhida pela pessoa, inclusive após revogação', async () => {
   const owner = '1'.repeat(64),
     device = '2'.repeat(64),
@@ -69,6 +76,8 @@ it('avisa sem conteúdo clínico e confirma somente a mensagem escolhida pela pe
   await run('report.stop', owner);
   const ack = await run('report.ack', owner, { id: body.id }, 2000000);
   expect(ack.status).toBe(200);
+  const oldChartKey = await legacyReceiptToken(await reportReference(code), body.id);
+  expect((await run('report.legacyStatus', oldChartKey, { id: body.id })).body).toEqual(ack.body);
   expect((await run('report.ack', owner, { id: body.id }, 3000000)).body).toEqual(ack.body);
   expect((await run('report.status', track.token, params)).body).toEqual(ack.body);
   const link = await run('create', '', { payload: 'z'.repeat(80), binding }),
