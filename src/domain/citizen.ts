@@ -1,3 +1,4 @@
+import { patientGuidance, type PatientGuidance } from './report-review';
 import type { Context, Database, AppointmentStatus } from './model';
 import { can } from './model';
 import { identityFor } from './access';
@@ -31,6 +32,7 @@ export interface CitizenDocument {
 }
 export interface CitizenView {
   reportBinding?: string;
+  guidance?: PatientGuidance[];
   careScope?: { organization: string; subject: string };
   version: 1;
   person: string;
@@ -106,5 +108,8 @@ export function citizenView(db: Database, c: Context, patientId: string, now: Da
     asOf: now.toISOString(),
     appointments,
     documents,
+    guidance: db.reportReviews
+      .filter(belongs)
+      .flatMap((r) => r.messages.filter((m) => m.sentAt).map((m) => patientGuidance(r, m))),
   };
 }

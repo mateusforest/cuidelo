@@ -16,3 +16,6 @@ export const reportReader = async (code) => hex(await digest('cuidelo-report-rea
 export const reportCipherKey = async (code) => digest('cuidelo-report-aes-v1:' + code);
 export const reportBinding = async (org, subject, legacy = false) =>
   hex(await digest(JSON.stringify(['cuidelo-report-binding-v1', legacy, org, subject])));
+
+export const reportReference = async (code) => hex(await digest('cuidelo-review-ref-v1:' + code));
+export const replyProof = async (code) => hex(await digest('cuidelo-guidance-write-v1:' + code));

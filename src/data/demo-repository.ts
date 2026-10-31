@@ -1,3 +1,4 @@
+import { validateReviews } from '../domain/report-review';
 import { reportBinding } from '../domain/report-code.mjs';
 import { assessmentCoding } from '../domain/consultation';
 import { subjectFor } from './citizen-care';
@@ -53,6 +54,7 @@ const collections = [
   'calls',
   'intakes',
   'addenda',
+  'reportReviews',
   'vaccineLots',
   'vaccineMovements',
   'immunizations',
@@ -128,9 +130,13 @@ function parseDatabase(value: string): Database {
   }
   if (isRecord(db) && db.schemaVersion === 11) db.schemaVersion = 12;
   if (isRecord(db) && db.schemaVersion === 12) db.schemaVersion = 13;
+  if (isRecord(db) && db.schemaVersion === 13) {
+    db.schemaVersion = 14;
+    db.reportReviews = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 13 ||
+    db.schemaVersion !== 14 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -466,6 +472,7 @@ function parseDatabase(value: string): Database {
       )
     )
       throw new Error('Invalid addendum');
+  validateReviews(typed);
   validateVaccinationDatabase(typed);
   validateReceptionDatabase(typed);
   validateClinicalDocuments(typed);

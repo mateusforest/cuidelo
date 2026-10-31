@@ -228,6 +228,9 @@ function EncounterEditor({ id }: { id?: string }) {
             <ConsultReport
               key={JSON.stringify([context, encounter.id, patient.id])}
               encounterId={encounter.id}
+              changed={(before, after) =>
+                setBaseRevision((current) => (current === before ? after : current))
+              }
             />
           )}
           <EncounterDocuments

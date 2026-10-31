@@ -1,3 +1,4 @@
+import { applyReportReview } from './report-review';
 import {
   assessQueue,
   recordService,
@@ -324,6 +325,15 @@ export function applyCommand(
         : previous.length
           ? 'Nova aferição registrada'
           : 'Escuta inicial registrada';
+      break;
+    }
+    case 'report.review':
+    case 'report.guidance':
+    case 'report.sent': {
+      const result = applyReportReview(db, c, command, at, newId);
+      if (!result.action) return result.id;
+      entityId = result.id;
+      action = result.action;
       break;
     }
     case 'note.addendum': {
@@ -963,6 +973,7 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
       : [],
     intakes: has('clinical') ? org(db.intakes) : [],
     addenda: has('clinical') ? org(db.addenda) : [],
+    reportReviews: c.role === 'clinical' ? org(db.reportReviews) : [],
     vaccineLots: has('vaccine.stock') ? unit(db.vaccineLots) : [],
     vaccineMovements: has('vaccine.stock') ? unit(db.vaccineMovements) : [],
     immunizations: has('vaccination') ? org(db.immunizations) : [],

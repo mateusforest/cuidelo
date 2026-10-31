@@ -173,6 +173,25 @@ export interface Soap {
   assessment: string;
   plan: string;
 }
+export interface GuidanceMessage {
+  id: string;
+  text: string;
+  at: string;
+  sentAt?: string;
+}
+export interface ReportReview extends Scoped {
+  unitId: string;
+  patientId: string;
+  encounterId: string;
+  actorId: string;
+  author: string;
+  unit: string;
+  reviewedAt: string;
+  from: string;
+  to: string;
+  reportRef: string;
+  messages: GuidanceMessage[];
+}
 export interface ClinicalNote extends Scoped {
   encounterId: string;
   patientId: string;
@@ -441,7 +460,7 @@ export interface Database {
   queueAssessments: QueueAssessment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 13;
+  schemaVersion: 14;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -466,6 +485,7 @@ export interface Database {
   calls: QueueCall[];
   intakes: IntakeRecord[];
   addenda: NoteAddendum[];
+  reportReviews: ReportReview[];
 }
 export interface SectorSeat {
   roomId: string;
@@ -494,6 +514,7 @@ export interface Snapshot {
   vaccineRecalls: VaccineRecall[];
   intakes: IntakeRecord[];
   addenda: NoteAddendum[];
+  reportReviews: ReportReview[];
   organizations: Organization[];
   units: Unit[];
   patients: Patient[];
@@ -568,6 +589,16 @@ export type Command =
       correctionOf?: string;
       correctionReason?: string;
     }
+  | {
+      type: 'report.review';
+      encounterId: string;
+      patientId: string;
+      reportRef: string;
+      from: string;
+      to: string;
+    }
+  | { type: 'report.guidance'; reviewId: string; messageId: string; text: string }
+  | { type: 'report.sent'; reviewId: string; messageId: string; sentAt: string }
   | { type: 'note.addendum'; noteId: string; text: string; reason: string }
   | { type: 'queue.call'; encounterId: string; roomId: string }
   | { type: 'queue.recall'; callId: string }

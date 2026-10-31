@@ -144,11 +144,67 @@ test('celular compartilha cinco tipos de registro com outro navegador, confere p
       await expect(report).toContainText(text);
     await page.reload();
     await expect(report).toContainText('Aviso adiado', { timeout: 20000 });
+    await page.getByRole('button', { name: 'Pessoa entrou · iniciar' }).click();
+    await page.getByRole('button', { name: 'Registrar revisão no prontuário' }).click();
+    const guidance = page.getByLabel('Orientação para a pessoa');
+    await guidance.fill('Levar o diário à próxima consulta de demonstração.');
+    await page.getByRole('button', { name: 'Registrar e enviar orientação' }).click();
+    await expect(
+      page.getByText('Envio confirmado para o app do cidadão.', { exact: true }),
+    ).toBeVisible({ timeout: 25000 });
+    await phone.getByRole('link', { name: 'Orientações', exact: true }).click();
+    await expect(
+      phone.getByText('Levar o diário à próxima consulta de demonstração.', { exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+    // Perde só a resposta: o servidor recebeu, mas a estação deve manter o envio pendente até conferir.
+    let dropped = false;
+    await page.route('**/api/cidadao', async (route) => {
+      if (!dropped && route.request().postDataJSON()?.op === 'report.reply') {
+        dropped = true;
+        const response = await route.fetch();
+        expect(response.ok()).toBe(true);
+        await route.abort('failed');
+      } else await route.continue();
+    });
+    await guidance.fill('Segunda orientação fictícia para o retorno.');
+    await page.getByRole('button', { name: 'Registrar e enviar orientação' }).click();
+    await expect(page.getByRole('button', { name: 'Tentar enviar novamente' })).toBeVisible({
+      timeout: 25000,
+    });
+    await phone.getByRole('link', { name: 'Relatório', exact: true }).click();
     await phone.getByRole('button', { name: 'Encerrar compartilhamento' }).click();
     await expect(field).toHaveCount(0);
     issued = false;
     await expect(report).toHaveCount(0, { timeout: 17000 });
     await expect(page.getByText(/código expirou, foi encerrado/i)).toBeVisible();
+    await page.reload();
+    await page.getByRole('button', { name: 'Tentar enviar novamente' }).click();
+    await expect(
+      page.getByText('Envio confirmado para o app do cidadão.', { exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+    await phone.goto(origin + '/cidadao/dia-a-dia/orientacoes');
+    await expect(
+      phone.getByText('Segunda orientação fictícia para o retorno.', { exact: true }),
+    ).toHaveCount(1, { timeout: 25000 });
+    await phone.getByRole('button', { name: 'Sair do app do cidadão' }).click();
+    await phone.getByRole('button', { name: /João Pedro/ }).click();
+    await phone.goto(origin + '/cidadao/dia-a-dia/orientacoes');
+    await expect(phone.getByText('Nenhuma orientação recebida.', { exact: true })).toBeVisible();
+    await expect(
+      phone.getByText('Segunda orientação fictícia para o retorno.', { exact: true }),
+    ).toHaveCount(0);
+    await page.goto(origin + '/pessoas/aurora-p1');
+    await expect(page.getByRole('heading', { name: 'Revisões do Dia a dia' })).toBeVisible();
+    await expect(
+      page.locator('.report-history').getByText('Relatório do Dia a dia revisado', { exact: true }),
+    ).toHaveCount(1);
+    await expect(
+      page
+        .locator('.report-history')
+        .getByText('Segunda orientação fictícia para o retorno.', { exact: true }),
+    ).toHaveCount(1);
+    await page.goto(encounter + 'e0');
+    await page.getByRole('button', { name: 'Abrir relatório com código' }).click();
     await page.getByLabel('Código compartilhado pela pessoa').fill(code);
     await page.getByRole('button', { name: 'Consultar relatório' }).click();
     await expect(page.getByText(/código expirou, foi encerrado/i)).toBeVisible({ timeout: 15000 });

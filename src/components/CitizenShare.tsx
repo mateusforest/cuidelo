@@ -67,10 +67,10 @@ export function CitizenShare({ patientId, name }: { patientId: string; name: str
         ) : (
           <>
             <p>
-              Compartilhe uma cópia da agenda e dos documentos emitidos de <strong>{name}</strong>.
-              Quem receber o link poderá ler a cópia por 30 minutos. Durante esse período, esta aba
-              envia as alterações enquanto a sessão assistencial estiver aberta. Use somente dados
-              fictícios.
+              Compartilhe a agenda, os documentos emitidos e as orientações já enviadas a{' '}
+              <strong>{name}</strong>. Quem receber o link poderá ler a cópia por 30 minutos.
+              Durante esse período, esta aba envia as alterações enquanto a sessão assistencial
+              estiver aberta. Use somente dados fictícios.
             </p>
             {link && (
               <>

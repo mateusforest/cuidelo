@@ -6,15 +6,19 @@ import {
   type CareScope,
   type Diary,
 } from '../domain/citizen-care';
+import type { PatientGuidance } from '../domain/report-review';
 import type { CitizenView } from '../domain/citizen';
 let database: Promise<IDBDatabase> | undefined;
 function open() {
   if (!database)
     database = new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('cuidelo.citizen.care.v1', 1);
-      req.onupgradeneeded = () => {
-        req.result.createObjectStore('journals');
-        req.result.createObjectStore('subjects');
+      const req = indexedDB.open('cuidelo.citizen.care.v1', 2);
+      req.onupgradeneeded = (event) => {
+        if (event.oldVersion < 1) {
+          req.result.createObjectStore('journals');
+          req.result.createObjectStore('subjects');
+        }
+        req.result.createObjectStore('guidance');
       };
       req.onsuccess = () => {
         const db = req.result;
@@ -33,7 +37,12 @@ function open() {
   return database;
 }
 // A leitura, a validação do comando e a gravação pertencem à mesma transação entre abas.
+export interface GuidanceInbox {
+  handles: { owner: string; expires: number; settled: boolean }[];
+  messages: PatientGuidance[];
+}
 interface Tables {
+  guidance: GuidanceInbox;
   journals: Diary;
   subjects: string;
 }
@@ -60,6 +69,37 @@ async function transaction<K extends keyof Tables, T>(
     tx.oncomplete = () => resolve(result);
     tx.onabort = () =>
       reject(cause ?? Error('O diário não foi salvo. Confira o armazenamento do navegador.'));
+  });
+}
+export const guidanceInbox = (scope: CareScope) =>
+  transaction('guidance', careKey(scope), 'readonly', (v) => v ?? { handles: [], messages: [] });
+export async function trackGuidance(scope: CareScope, owner: string, expires: number) {
+  return transaction('guidance', careKey(scope), 'readwrite', (v, save) => {
+    const box = v ?? { handles: [], messages: [] };
+    if (!box.handles.some((h) => h.owner === owner)) {
+      box.handles.push({ owner, expires, settled: false });
+      save(box);
+    }
+  });
+}
+export async function mergeGuidance(
+  scope: CareScope,
+  owner: string,
+  rows: PatientGuidance[],
+  checkedAt: number,
+) {
+  return transaction('guidance', careKey(scope), 'readwrite', (v, save) => {
+    const handle = v?.handles.find((h) => h.owner === owner);
+    if (!v || !handle) return;
+    const existing = new Set(v.messages.map((m) => m.id));
+    for (const row of rows)
+      if (!existing.has(row.id)) {
+        v.messages.push(row);
+        existing.add(row.id);
+      }
+    if (checkedAt > handle.expires + 120000) handle.settled = true;
+    v.messages.sort((a, b) => b.at.localeCompare(a.at));
+    save(v);
   });
 }
 export function subjectFor(organization: string, patient: string) {

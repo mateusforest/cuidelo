@@ -218,3 +218,25 @@
     display: none !important;
   }
 }
+
+.report-history {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.report-history p {
+  margin-block: 0.35rem;
+}
+.report-history .guidance-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.report-history article > div {
+  margin-top: 0.7rem;
+}
+.clinical-followup {
+  margin-top: 1rem;
+}
+.care-tabs {
+  flex-wrap: wrap;
+}

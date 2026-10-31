@@ -16,6 +16,8 @@ import {
 import { CitizenLinkError } from '../data/citizen-links';
 import { useApp } from '../app/context';
 import { Button, Field, Panel } from './ui';
+import { ClinicalFollowUp } from './ReportFollowUp';
+import type { RevisionChange } from '../data/report-guidance';
 import { CareReportContent } from './CareReportContent';
 
 const clock = (n: number) =>
@@ -149,7 +151,8 @@ export function OfferReport({
             <strong>
               {shortDate(report.from)} a {shortDate(report.to)}
             </strong>{' '}
-            no consultório por 30 minutos? A cópia inclui as condições, os medicamentos e a linha do
+            no consultório por 30 minutos? O médico poderá registrar a revisão no prontuário e
+            enviar orientações ao seu app. A cópia inclui as condições, os medicamentos e a linha do
             tempo que você vê abaixo. Você pode encerrar o acesso neste aparelho.
           </p>
           <div className="care-actions">
@@ -184,12 +187,23 @@ export function OfferReport({
     </section>
   );
 }
-export function ConsultReport({ encounterId }: { encounterId: string }) {
+export function ConsultReport({
+  encounterId,
+  changed,
+}: {
+  encounterId: string;
+  changed: RevisionChange;
+}) {
   const { context, repository } = useApp();
   const [code, setCode] = useState(() => tabReportCode(context, encounterId)),
     [input, setInput] = useState(''),
     [open, setOpen] = useState(!!code);
-  const [data, setData] = useState<{ report: SharedCareReport; expires: number } | null>(null),
+  const [data, setData] = useState<{
+      report: SharedCareReport;
+      expires: number;
+      ref: string;
+      canReply: boolean;
+    } | null>(null),
     [msg, setMsg] = useState('');
   useEffect(() => {
     if (!code) return;
@@ -309,6 +323,13 @@ export function ConsultReport({ encounterId }: { encounterId: string }) {
             </Button>
           </>
         )}
+        <ClinicalFollowUp
+          encounterId={encounterId}
+          code={code}
+          refId={code && data ? data.ref : undefined}
+          canReply={!!data?.canReply}
+          changed={changed}
+        />
       </div>
     </Panel>
   );

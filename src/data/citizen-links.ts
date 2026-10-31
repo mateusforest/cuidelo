@@ -1,3 +1,4 @@
+import { validGuidance } from '../domain/report-review';
 import type { CareRepository } from './repository';
 import { can, type Context } from '../domain/model';
 import type { CitizenView } from '../domain/citizen';
@@ -56,7 +57,9 @@ export async function citizenRequest(body: object, token = '') {
           String(body.op).startsWith('report.') &&
           [404, 410, 403].includes(res.status)
           ? res.status === 403
-            ? 'O código não corresponde ao paciente deste atendimento.'
+            ? body.op === 'report.reply'
+              ? 'Compartilhe um novo relatório para autorizar este envio.'
+              : 'O código não corresponde ao paciente deste atendimento.'
             : 'O código expirou, foi encerrado ou está incorreto.'
           : res.status === 410 || res.status === 404
             ? 'Este link expirou ou foi encerrado. Solicite um novo link à equipe.'
@@ -148,6 +151,11 @@ export async function openCitizenLink(
     if (
       v.careScope &&
       (!string(v.careScope.organization) || !/^share:[a-f0-9-]{36}$/.test(v.careScope.subject))
+    )
+      throw Error();
+    if (
+      v.guidance !== undefined &&
+      (!Array.isArray(v.guidance) || !v.guidance.every(validGuidance))
     )
       throw Error();
     for (const a of v.appointments)

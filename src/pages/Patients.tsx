@@ -10,6 +10,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ArrowUpRight, FileText, ShieldCheck } from 'lucide-react';
 import { useApp } from '../app/context';
 import { can } from '../domain/model';
+import { ReviewHistory } from '../components/ReportFollowUp';
 import { CitizenShare } from '../components/CitizenShare';
 import { RecordedCodes } from '../components/AssessmentCodes';
 import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
@@ -299,6 +300,16 @@ export function PatientDetails() {
               patientId={p.id}
               name={p.socialName || p.name}
             />
+          )}
+          {context.role === 'clinical' && data.reportReviews.some((r) => r.patientId === p.id) && (
+            <Panel
+              title="Revisões do Dia a dia"
+              subtitle="Revisões e orientações registradas no prontuário da rede."
+            >
+              <div className="panel-body">
+                <ReviewHistory rows={data.reportReviews.filter((r) => r.patientId === p.id)} />
+              </div>
+            </Panel>
           )}
           {can(context.role, 'clinical') && <PatientDocumentHistory patientId={p.id} />}
           {can(context.role, 'clinical') && (

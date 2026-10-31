@@ -35,6 +35,7 @@ import {
 import { openCitizenLink, type CitizenLink } from '../data/citizen-links';
 import type { DeviceNotice } from '../data/device-push';
 import { CitizenAlarm } from './CitizenAlarm';
+import { CitizenGuidance } from './ReportFollowUp';
 import { CareReport } from './CareReport';
 
 const url = '/cidadao/dia-a-dia';
@@ -848,16 +849,28 @@ export function CitizenDaily({
             Você tem {due.length} lembrete(s) para conferir
           </Link>
         )}
+        {path === '' && (
+          <Link className="cit-notice care-alert" to={url + '/orientacoes'}>
+            Ver orientações da equipe
+          </Link>
+        )}
         {children}
       </>
     );
-  const tabs = { '': 'Hoje', diario: 'Diário', medicacao: 'Medicação', relatorio: 'Relatório' };
+  const tabs = {
+    '': 'Hoje',
+    diario: 'Diário',
+    medicacao: 'Medicação',
+    relatorio: 'Relatório',
+    orientacoes: 'Orientações',
+  };
   return (
     <div className="care-workspace">
       <span className="cit-kicker">Acompanhamento pessoal</span>
       <h1>Meu dia a dia</h1>
       <p className="care-explain">
-        Use dados fictícios. Seu diário fica neste aparelho. Na aba Relatório, você pode escolher o período e compartilhar uma cópia com o médico.
+        Use dados fictícios. Seu diário fica neste aparelho. Na aba Relatório, você pode escolher o
+        período e compartilhar uma cópia com o médico.
       </p>
       <nav className="care-tabs" aria-label="Áreas do acompanhamento">
         {Object.entries(tabs).map(([k, v]) => (
@@ -880,6 +893,8 @@ export function CitizenDaily({
             <p>Seção indisponível.</p>
           ) : tab === 'relatorio' ? (
             <CareReport diary={diary} view={view} scope={scope} />
+          ) : tab === 'orientacoes' ? (
+            <CitizenGuidance scope={scope} view={view} />
           ) : tab === 'diario' ? (
             <Journal d={diary} now={now} run={run} busy={busy} />
           ) : tab === 'medicacao' ? (

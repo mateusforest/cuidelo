@@ -1,3 +1,4 @@
+import { blobMailbox } from '../server/report-mailbox.mjs';
 import { createHash } from 'node:crypto';
 import { getCache } from '@vercel/functions';
 import { citizenRelay } from '../server/citizen-share.mjs';
@@ -19,5 +20,6 @@ export default function handler(req, res) {
       namespace: 'cuidelo-demo-citizen-v1',
       keyHashFunction: (key) => createHash('sha256').update(key).digest('hex'),
     }),
+    blobMailbox,
   );
 }

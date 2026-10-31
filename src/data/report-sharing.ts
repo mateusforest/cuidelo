@@ -1,3 +1,4 @@
+import { trackGuidance } from './citizen-care';
 import type { CareRepository } from './repository';
 import type { Context } from '../domain/model';
 import { careKey, type CareScope } from '../domain/citizen-care';
@@ -14,6 +15,7 @@ import {
   reportReader,
   reportCipherKey,
   reportBinding,
+  reportReference,
 } from '../domain/report-code.mjs';
 import {
   citizenRequest,
@@ -45,17 +47,16 @@ export function tabReportCode(c: Context, encounterId: string, value?: string | 
   }
 }
 const key = (scope: CareScope) => 'cuidelo.report.grant.v1.' + careKey(scope);
-export async function activeReport(scope: CareScope): Promise<ReportGrant | null> {
+export function retainedReport(scope: CareScope): Handle | null {
   const raw = localStorage.getItem(key(scope));
   if (!raw) return null;
   const h: Handle = JSON.parse(raw);
-  if (
-    !/^[a-f0-9]{64}$/.test(h.owner) ||
-    !Number.isSafeInteger(h.expires) ||
-    h.expires <= Date.now()
-  )
-    return null;
-  return { ...h, code: await reportCode(h.owner) };
+  if (!/^[a-f0-9]{64}$/.test(h.owner) || !Number.isSafeInteger(h.expires)) return null;
+  return h;
+}
+export async function activeReport(scope: CareScope): Promise<ReportGrant | null> {
+  const h = retainedReport(scope);
+  return h && h.expires > Date.now() ? { ...h, code: await reportCode(h.owner) } : null;
 }
 export async function shareReport(scope: CareScope, view: CitizenView, report: SharedCareReport) {
   if (!navigator.locks || !crypto.subtle)
@@ -72,11 +73,20 @@ export async function shareReport(scope: CareScope, view: CitizenView, report: S
     ).join('');
     const code = await reportCode(owner);
     const payload = await encryptCitizenPayload({ binding, report }, await reportCipherKey(code));
-    const { expires } = await citizenRequest({ op: 'report.create', binding, payload }, owner);
+    const { expires } = await citizenRequest(
+      {
+        op: 'report.create',
+        binding,
+        network: await reportBinding(scope.organization, 'guidance-network'),
+        payload,
+      },
+      owner,
+    );
     if (!Number.isSafeInteger(expires) || expires <= Date.now())
       throw Error('O servidor não confirmou o prazo do compartilhamento.');
     const handle = { owner, from: report.from, to: report.to, expires };
     try {
+      await trackGuidance(scope, owner, expires);
       localStorage.setItem(key(scope), JSON.stringify(handle));
     } catch {
       await citizenRequest({ op: 'report.stop' }, owner);
@@ -89,6 +99,7 @@ export async function stopReport(scope: CareScope, grant: ReportGrant) {
   await navigator.locks.request(key(scope), async () => {
     const current = await activeReport(scope);
     if (!current || current.owner !== grant.owner) return;
+    await trackGuidance(scope, current.owner, current.expires);
     try {
       await citizenRequest({ op: 'report.stop' }, current.owner);
     } catch (e) {
@@ -111,7 +122,7 @@ export async function readReport(
   const bindings = [await reportBinding(c.organizationId, e.patientId)];
   if (person.careScope)
     bindings.push(await reportBinding(c.organizationId, person.careScope.subject, true));
-  const { payload, expires } = await citizenRequest(
+  const { payload, expires, canReply } = await citizenRequest(
     { op: 'report.read', bindings },
     await reportReader(code),
   );
@@ -123,5 +134,11 @@ export async function readReport(
   };
   if (!packet || !bindings.includes(packet.binding))
     throw Error('Esta cópia não corresponde ao paciente aberto.');
-  return { expires, report: validateReport(packet.report) };
+  return {
+    expires,
+    canReply: canReply === true,
+    binding: packet.binding,
+    ref: await reportReference(code),
+    report: validateReport(packet.report),
+  };
 }

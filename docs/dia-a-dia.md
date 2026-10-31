@@ -1,4 +1,4 @@
-# Dia a dia no Cuidelo Cidadão · versão 0.21
+# Dia a dia no Cuidelo Cidadão · versão 0.22
 
 Abra [o app do cidadão](https://cuidelo.vercel.app/cidadao), escolha Ana Clara e toque em **Dia a dia**. Use dados fictícios.
 
@@ -38,7 +38,14 @@ O diário completo fica no aparelho. A pessoa pode autorizar uma cópia do relat
 
 Em **Dia a dia → Relatório**, selecione as datas e confira o conteúdo. Toque em **Compartilhar relatório → Autorizar e gerar código**. Copie o código ou use **Enviar código** se o celular oferecer essa opção. Uma cópia vale por 30 minutos. Mudanças posteriores no diário não alteram essa cópia. É possível encerrar o código e gerar outra.
 
-No perfil **Equipe médica**, abra o atendimento da mesma pessoa, localize **Relatório do cidadão → Abrir relatório com código**, cole o código e toque em **Consultar relatório**. Para testar com Ana Clara no app demonstrativo, use o atendimento de Ana Clara Martins na UBS Centro da Rede Aurora. O médico vê o período, os totais e a linha do tempo de crises, doses, adiamentos, retiradas e renovações. A leitura não modifica o SOAP.
+No perfil **Equipe médica**, abra o atendimento da mesma pessoa, localize **Relatório do cidadão → Abrir relatório com código**, cole o código e toque em **Consultar relatório**. Para testar com Ana Clara no app demonstrativo, use o atendimento de Ana Clara Martins na UBS Centro da Rede Aurora. O médico vê o período, os totais e a linha do tempo de crises, doses, adiamentos, retiradas e renovações. O médico responsável pode registrar a revisão de forma separada do SOAP.
+
+### Registrar a revisão e responder
+
+1. Inicie o atendimento da pessoa no **Consultório**. Após conferir o relatório compartilhado, escolha **Registrar revisão no prontuário**. A revisão informa profissional, unidade, data e período da cópia.
+2. Em **Orientação para a pessoa**, escreva um texto fictício e toque em **Registrar e enviar orientação**. A estação salva primeiro o registro clínico. Se o envio não for confirmado, use **Tentar enviar novamente**. O prontuário da pessoa reúne as revisões e orientações da rede.
+3. No app, abra **Dia a dia → Orientações**. A caixa busca mensagens com internet, inclusive depois de encerrar o código de leitura. As orientações recebidas ficam neste navegador, associadas à pessoa que compartilhou. Um link válido emitido pela estação médica também inclui as orientações com envio confirmado que constam na cópia da pessoa.
+4. Um código ativo autoriza novos envios. Encerrar o código bloqueia novos envios e preserva orientações já aceitas. “Envio confirmado” indica que o serviço recebeu a orientação. A demonstração não emite comprovante de leitura pelo paciente. A caixa de retorno utiliza envelopes cifrados no armazenamento privado da Vercel, separados por compartilhamento.
 
 A cópia é cifrada e o serviço temporário verifica o código, o vínculo e o prazo. Fechar o relatório retira o código da sessão médica. **Encerrar compartilhamento** no app bloqueia novas leituras, e a tela aberta confere o acesso a cada cinco segundos enquanto estiver ativa. O compartilhamento precisa de internet no endereço publicado. Versões antigas do link da unidade sem o vínculo estável podem ser conferidas na estação que emitiu o link.
 

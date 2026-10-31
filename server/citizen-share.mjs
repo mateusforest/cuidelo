@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import { reportReader, reportCode } from '../src/domain/report-code.mjs';
+import { reportReader, reportCode, replyProof, reportBinding } from '../src/domain/report-code.mjs';
 
 const hash = (v) => createHash('sha256').update(v).digest('hex');
 const readKey = (writer) => hash('cuidelo-cidadao-v1:' + writer);
@@ -8,11 +8,11 @@ const lifetime = 30 * 60;
 const failure = (status, message) => ({ status, body: { error: message } });
 
 // Os canais de documentos e relatórios mantêm cópias cifradas em espaços distintos.
-export async function citizenShare(op, token, body, cache, address, now = Date.now()) {
+export async function citizenShare(op, token, body, cache, address, now = Date.now(), mailbox) {
   const report = typeof op === 'string' && op.startsWith('report.');
   if (report) {
     op = op.slice(7);
-    if (!['create', 'read', 'stop'].includes(op) || !/^[a-f0-9]{64}$/.test(token))
+    if (!['create', 'read', 'stop', 'reply', 'inbox'].includes(op) || !/^[a-f0-9]{64}$/.test(token))
       return failure(404, 'Acesso ao relatório indisponível.');
     if (
       op === 'create' &&
@@ -29,6 +29,13 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
   }
   const prefix = report ? 'report:' : 'view:';
   const readerFor = report ? async (w) => reportReader(await reportCode(w)) : readKey;
+  if (
+    report &&
+    op === 'create' &&
+    body.network !== undefined &&
+    (typeof body.network !== 'string' || !/^[a-f0-9]{64}$/.test(body.network))
+  )
+    return failure(400, 'Rede inválida.');
   if (op === 'create' || op === 'update') {
     if (
       typeof body.payload !== 'string' ||
@@ -59,10 +66,111 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
     }
     await cache.set(
       key,
-      { payload: body.payload, expires, revision: 0, ...(report ? { binding: body.binding } : {}) },
+      {
+        payload: body.payload,
+        expires,
+        revision: 0,
+        ...(report
+          ? {
+              binding: body.binding,
+              ...(body.network
+                ? {
+                    network: body.network,
+                    replyProof: hash(await replyProof(await reportCode(token))),
+                  }
+                : {}),
+            }
+          : {}),
+      },
       { ttl: lifetime },
     );
     return { status: 201, body: report ? { expires } : { writer, reader, expires } };
+  }
+  if (report && op === 'inbox') {
+    if (!mailbox) return failure(503, 'Caixa de orientações indisponível.');
+    const box = await mailbox.read(hash(await readerFor(token)));
+    return {
+      status: 200,
+      body: {
+        checkedAt: now,
+        messages: box.messages.map(({ id, payload, sentAt }) => ({ id, payload, sentAt })),
+      },
+    };
+  }
+  if (report && op === 'reply') {
+    if (!mailbox) return failure(503, 'Canal de orientações indisponível.');
+    if (
+      typeof body.payload !== 'string' ||
+      !/^[-_A-Za-z0-9]{40,24000}$/.test(body.payload) ||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(body.id) ||
+      ![body.binding, body.proof, body.digest].every(
+        (v) => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v),
+      )
+    )
+      return failure(400, 'Orientação inválida.');
+    const sender = body.sender;
+    if (
+      sender?.role !== 'clinical' ||
+      typeof sender.organizationId !== 'string' ||
+      !/^[a-z0-9-]{1,80}$/.test(sender.organizationId) ||
+      typeof sender.unitId !== 'string' ||
+      !sender.unitId.startsWith(sender.organizationId + '-') ||
+      !/^[a-z0-9-]{1,100}$/.test(sender.unitId) ||
+      ![sender.unitId + ':clinical', sender.unitId + ':clinical:2'].includes(sender.sessionId)
+    )
+      return failure(403, 'Sessão médica de demonstração inválida.');
+    const network = await reportBinding(sender.organizationId, 'guidance-network'),
+      station = hash(JSON.stringify([sender.organizationId, sender.unitId, sender.sessionId]));
+    if (hash(body.payload) !== body.digest) return failure(400, 'Envelope inválido.');
+    const started = Date.now(),
+      key = hash(token),
+      grantKey = prefix + key,
+      proof = hash(body.proof);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const box = await mailbox.read(key),
+        prior = box.messages.find((m) => m.id === body.id);
+      // Confirma o recebimento após perda de conexão, inclusive se o código já encerrou.
+      if (prior)
+        return prior.station === station &&
+          prior.proof === proof &&
+          prior.digest === body.digest &&
+          prior.binding === body.binding
+          ? { status: 200, body: { sentAt: prior.sentAt } }
+          : failure(409, 'A orientação já foi registrada com outro conteúdo.');
+      const item = await cache.get(grantKey);
+      if (
+        !item ||
+        item.expires <= now + Math.max(0, Date.now() - started) ||
+        (await cache.get('revoked:' + grantKey))
+      )
+        return failure(410, 'Compartilhamento encerrado ou expirado.');
+      if (item.binding !== body.binding || item.replyProof !== proof || item.network !== network)
+        return failure(403, 'Este código não autoriza esta orientação.');
+      if (box.messages.length >= 40)
+        return failure(409, 'Limite de orientações deste relatório atingido.');
+      const sentAt = new Date(now).toISOString();
+      try {
+        await mailbox.save(
+          key,
+          [
+            ...box.messages,
+            {
+              id: body.id,
+              payload: body.payload,
+              digest: body.digest,
+              binding: body.binding,
+              station,
+              proof,
+              sentAt,
+            },
+          ],
+          box.etag,
+        );
+        return { status: 201, body: { sentAt } };
+      } catch (e) {
+        if (attempt === 2) throw e;
+      }
+    }
   }
   if (!['read', 'stop', 'update'].includes(op) || !/^([a-f0-9]{64})$/.test(token))
     return failure(404, 'Link indisponível.');
@@ -89,9 +197,16 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
       );
     return { status: 200, body: { expires: item.expires } };
   }
-  return { status: 200, body: { payload: item.payload, expires: item.expires } };
+  return {
+    status: 200,
+    body: {
+      payload: item.payload,
+      expires: item.expires,
+      ...(report ? { canReply: !!item.replyProof } : {}),
+    },
+  };
 }
-export async function citizenRelay(req, res, cache) {
+export async function citizenRelay(req, res, cache, mailbox) {
   const send = (status, obj) => {
     res.statusCode = status;
     res.end(JSON.stringify(obj));
@@ -130,11 +245,15 @@ export async function citizenRelay(req, res, cache) {
       typeof b !== 'object' ||
       !Object.hasOwn(b, 'op') ||
       Object.keys(b).length !==
-        (['create', 'report.read'].includes(b.op)
-          ? 2
-          : ['update', 'report.create'].includes(b.op)
-            ? 3
-            : 1) ||
+        (b.op === 'report.reply'
+          ? 7
+          : b.op === 'report.create' && Object.hasOwn(b, 'network')
+            ? 4
+            : ['create', 'report.read'].includes(b.op)
+              ? 2
+              : ['update', 'report.create'].includes(b.op)
+                ? 3
+                : 1) ||
       JSON.stringify(b).length > 161000
     )
       throw Error();
@@ -149,6 +268,8 @@ export async function citizenRelay(req, res, cache) {
       b,
       cache,
       String(req.headers['x-vercel-forwarded-for'] ?? req.socket?.remoteAddress ?? 'local'),
+      Date.now(),
+      mailbox,
     );
     return send(result.status, result.body);
   } catch {
