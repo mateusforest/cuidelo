@@ -358,7 +358,18 @@ export function Citizen() {
   useEffect(() => {
     const previous = document.title;
     document.title = 'Cuidelo Cidadão · Minha saúde';
+    const manifest = document.createElement('link'),
+      icon = document.createElement('link');
+    if (location.protocol !== 'file:') {
+      manifest.rel = 'manifest';
+      manifest.href = '/cidadao.webmanifest';
+      icon.rel = 'apple-touch-icon';
+      icon.href = '/citizen-icons/180.png';
+      document.head.append(manifest, icon);
+    }
     return () => {
+      manifest.remove();
+      icon.remove();
       document.title = previous;
     };
   }, []);

@@ -1,3 +1,4 @@
+import { developmentPush } from './dev-care-push.mjs';
 import { citizenRelay } from './citizen-share.mjs';
 import { tvRelay } from './tv-relay.mjs';
 export function tvDevelopmentRelay() {
@@ -18,6 +19,7 @@ export function tvDevelopmentRelay() {
   return {
     name: 'cuidelo-local-tv-relay',
     configureServer(server) {
+      developmentPush(server);
       server.middlewares.use('/api/cidadao', (req, res) => citizenRelay(req, res, cache));
       server.middlewares.use('/api/tv', (req, res) => tvRelay(req, res, cache));
     },

@@ -26,7 +26,7 @@ test('diário no celular preserva sintomas, doses, datas da farmácia e relatór
   await page.getByLabel('Próxima renovação', { exact: true }).fill('2026-11-03');
   await page.getByRole('button', { name: 'Salvar lembrete' }).click();
   await expect(page.locator('.care-med')).toContainText('Vinculado à receita');
-  await page.getByText('Receber avisos com o app fechado', { exact: true }).click();
+  await page.getByText('Exportar para calendário (opcional)', { exact: true }).click();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar para o calendário' }).click();
   const ics = await download;
@@ -59,34 +59,52 @@ test('diário no celular preserva sintomas, doses, datas da farmácia e relatór
   await expect(page.locator('.care-report')).not.toContainText('Correção fictícia');
   await expect(page.locator('.care-report')).not.toContainText('Ansiedade');
 });
-test('horário do aparelho gera um aviso genérico e mantém o relato no aparelho', async ({
+test('ativação pede inscrição de push e sincroniza somente horários e datas; desativar cancela no servidor', async ({
   page,
   context,
 }) => {
   await context.grantPermissions(['notifications'], { origin });
+  await page.addInitScript(() => {
+    Object.defineProperty(PushManager.prototype, 'getSubscription', {
+      value: async () => ({
+        toJSON: () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/qa', keys: {} }),
+      }),
+    });
+  });
+  const commands: Record<string, unknown>[] = [];
+  await page.route('**/api/care-push', async (route) => {
+    const req = route.request();
+    if (req.method() === 'GET') return route.fulfill({ json: { key: 'B' + 'a'.repeat(86) } });
+    const data = req.postDataJSON();
+    commands.push(data);
+    return route.fulfill({
+      json: {
+        active: data.op !== 'stop',
+        testAt: data.op === 'test' ? Date.now() + 60000 : null,
+        acceptedAt: null,
+      },
+    });
+  });
   await page.goto(origin + '/cidadao');
   await page.getByRole('button', { name: /João Pedro/ }).click();
   await page.goto(origin + '/cidadao/dia-a-dia/medicacao');
   await page.getByRole('button', { name: 'Novo lembrete' }).click();
-  await page.getByLabel('Nome do medicamento').fill('Medicamento fictício de teste');
-  const hhmm = await page.evaluate(() => {
-    const t = new Date();
-    return String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
-  });
-  await page.getByLabel('Horários diários').fill(hhmm);
+  await page.getByLabel('Nome do medicamento').fill('Nome privativo de teste');
+  await page.getByLabel('Horários diários').fill('08:00, 20:00');
+  await page.getByLabel('Próxima retirada', { exact: true }).fill('2027-01-15');
+  await page.getByLabel('Próxima renovação', { exact: true }).fill('2027-02-15');
   await page.getByRole('button', { name: 'Salvar lembrete' }).click();
   await expect(page.locator('.care-med')).toBeVisible();
   await page.getByRole('button', { name: 'Ativar avisos do aparelho' }).click();
-  await expect
-    .poll(async () =>
-      page.evaluate(async () => {
-        const r = await navigator.serviceWorker.getRegistration('/cidadao/');
-        return (await r?.getNotifications())?.map((n) => [n.title, n.body]);
-      }),
-    )
-    .toEqual([
-      ['Cuidelo · lembrete pessoal', 'Você tem um horário ou uma data para conferir em Dia a dia.'],
-    ]);
+  await expect(page.getByRole('button', { name: 'Testar em 1 minuto' })).toBeVisible();
+  const sync = commands.find((c) => c.op === 'sync')!;
+  expect(sync.schedule).toMatchObject({
+    plans: [{ times: ['08:00', '20:00'], pickup: '2027-01-15', renewal: '2027-02-15' }],
+  });
+  expect(JSON.stringify(sync)).not.toMatch(/Nome privativo|Souza|aurora|example:joao/);
+  await page.getByRole('button', { name: 'Testar em 1 minuto' }).click();
+  await expect(page.getByText(/Teste agendado para/)).toBeVisible();
   await page.getByRole('button', { name: 'Desativar avisos' }).click();
   await expect(page.getByRole('button', { name: 'Ativar avisos do aparelho' })).toBeVisible();
+  expect(commands.at(-1)?.op).toBe('stop');
 });

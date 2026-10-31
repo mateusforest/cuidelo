@@ -24,7 +24,13 @@ import {
 import { shortDate } from '../domain/dates';
 import { readDiary, watchDiary, writeDiary } from '../data/citizen-care';
 import { careCalendar } from '../domain/care-calendar';
-import { enableCareAlerts, showCareAlert } from '../data/care-alerts';
+import {
+  subscribePhone,
+  syncDevice,
+  schedulePushTest,
+  pushState,
+  type PushState,
+} from '../data/device-push';
 import { CareReport } from './CareReport';
 
 const url = '/cidadao/dia-a-dia';
@@ -288,6 +294,9 @@ function Medication({
   run,
   busy,
   message,
+  push,
+  toggle,
+  testPush,
 }: {
   view: CitizenView;
   d: Diary;
@@ -295,6 +304,9 @@ function Medication({
   run: Submit;
   busy: boolean;
   message: (s: string) => void;
+  push: PushState;
+  toggle: () => void;
+  testPush: () => void;
 }) {
   const [adding, setAdding] = useState(false),
     [step, setStep] = useState<{ p: string; kind: Milestone } | null>(null);
@@ -408,7 +420,7 @@ function Medication({
                   </form>
                 )}
                 <details>
-                  <summary>Receber avisos com o app fechado</summary>
+                  <summary>Exportar para calendário (opcional)</summary>
                   <p>
                     Adicione estes eventos ao calendário do celular. O arquivo inclui o nome do
                     medicamento. Confira a importação e os alarmes no calendário escolhido. Se o
@@ -440,26 +452,56 @@ function Medication({
         );
       })}
       <section className="cit-sheet">
-        <h2>Avisos no aparelho</h2>
+        <h2>Avisos com o app fechado</h2>
         <p>
-          Com o Cuidelo aberto, o navegador pode mostrar um aviso discreto. Para receber avisos com
-          o app fechado, use o calendário de cada medicamento.
+          Autorize este aparelho para receber avisos nos horários de medicação e às 9h nas datas de
+          retirada e renovação, incluindo a antecedência cadastrada. A agenda usa o fuso deste
+          aparelho.
         </p>
-        <Button
-          variant="secondary"
-          disabled={busy}
-          onClick={async () => {
-            try {
-              if (!d.notifications) await enableCareAlerts();
-              await run({ type: 'notifications', enabled: !d.notifications });
-            } catch (e) {
-              message((e as Error).message);
-            }
-          }}
-        >
-          <Bell size={16} />
-          {d.notifications ? 'Desativar avisos' : 'Ativar avisos do aparelho'}
-        </Button>
+        <p>
+          O servidor recebe os horários e a inscrição de entrega. A notificação tem texto discreto.
+          No iPhone com iOS 16.4 ou posterior, adicione o app à Tela de Início e abra-o pelo ícone.
+        </p>
+        {push.wanted && !push.pending && (
+          <p>
+            Inscrição ativa neste aparelho.
+            {push.shownAt
+              ? ' Último aviso apresentado pelo navegador em ' +
+                new Date(push.shownAt).toLocaleString('pt-BR') +
+                '.'
+              : ''}
+          </p>
+        )}
+        {d.notifications && !push.wanted && (
+          <p>Ative novamente os avisos para cadastrar este aparelho no envio em segundo plano.</p>
+        )}
+        {push.pending && (
+          <p className="cit-notice">
+            Sincronização pendente. A última agenda confirmada pode continuar ativa até este
+            aparelho se conectar.
+          </p>
+        )}
+        <div className="care-actions">
+          <Button variant="secondary" disabled={busy} onClick={toggle}>
+            <Bell size={16} />
+            {push.wanted
+              ? 'Desativar avisos'
+              : push.pending
+                ? 'Confirmar desativação'
+                : 'Ativar avisos do aparelho'}
+          </Button>
+          {push.wanted && !push.pending && (
+            <Button variant="secondary" disabled={busy} onClick={testPush}>
+              Testar em 1 minuto
+            </Button>
+          )}
+        </div>
+        {push.wanted && push.testAt && push.testAt > Date.now() && (
+          <p>
+            Teste agendado para {new Date(push.testAt).toLocaleTimeString('pt-BR')}. Feche o app e
+            aguarde o aviso neste aparelho.
+          </p>
+        )}
       </section>
     </>
   );
@@ -648,11 +690,77 @@ export function CitizenDaily({
       clearInterval(timer);
     };
   }, [key]);
+  const [push, setPush] = useState(() => pushState(scope));
+  const refreshPush = () => setPush(pushState(scope));
+  useEffect(() => {
+    let active = true;
+    const sync = async () => {
+      try {
+        await syncDevice(scope, view);
+      } catch (e) {
+        if (active) setMessage((e as Error).message);
+      } finally {
+        if (active) refreshPush();
+      }
+    };
+    void sync();
+    const timer = setInterval(sync, 60000);
+    window.addEventListener('online', sync);
+    window.addEventListener('focus', sync);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', sync);
+      window.removeEventListener('online', sync);
+    };
+  }, [key, diary, view]);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      const state = pushState(scope),
+        enable = !state.wanted && !state.pending;
+      const sub = enable ? await subscribePhone() : undefined;
+      await syncDevice(scope, view, enable ? 'enable' : 'stop', sub);
+      await writeDiary(scope, { type: 'notifications', enabled: enable }, view);
+      setMessage(
+        enable
+          ? 'Inscrição confirmada. Os avisos podem chegar com o app fechado.'
+          : 'Avisos desativados para esta pessoa neste aparelho.',
+      );
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      refreshPush();
+      setBusy(false);
+    }
+  };
+  const testPush = async () => {
+    setBusy(true);
+    try {
+      await schedulePushTest(scope);
+      setMessage('Teste confirmado pelo servidor. Feche o app agora.');
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      refreshPush();
+      setBusy(false);
+    }
+  };
   const run: Submit = async (cmd) => {
     setBusy(true);
     setMessage('');
     try {
       await writeDiary(scope, cmd, view);
+      if (['plan', 'close', 'step', 'dose', 'correct-dose'].includes(cmd.type)) {
+        try {
+          await syncDevice(scope, view);
+        } catch (e) {
+          setMessage('Registro salvo no aparelho. ' + (e as Error).message);
+          refreshPush();
+          return true;
+        }
+        refreshPush();
+      }
       setMessage(
         cmd.type === 'notifications'
           ? cmd.enabled
@@ -669,31 +777,6 @@ export function CitizenDaily({
     }
   };
   const due = diary ? dueReminders(diary, view, now) : [];
-  useEffect(() => {
-    if (!diary?.notifications) return;
-    let live = true;
-    const send = async () => {
-      for (const r of dueReminders(diary, view, new Date())) {
-        if (!live || diary.notified[r.key]) continue;
-        try {
-          if (await writeDiary(scope, { type: 'claim', key: r.key }, view)) {
-            try {
-              await showCareAlert(r.key);
-            } catch (error) {
-              await writeDiary(scope, { type: 'alert-failed', key: r.key }, view);
-              throw error;
-            }
-          }
-        } catch (e) {
-          if (live) setMessage((e as Error).message);
-        }
-      }
-    };
-    void send();
-    return () => {
-      live = false;
-    };
-  }, [diary, now, view, key]);
   const [section, tab = '', extra] = path.split('/');
   if (section !== 'dia-a-dia')
     return (
@@ -745,6 +828,9 @@ export function CitizenDaily({
               run={run}
               busy={busy}
               message={setMessage}
+              push={push}
+              toggle={toggle}
+              testPush={testPush}
             />
           ) : (
             <Today d={diary} view={view} now={now} run={run} busy={busy} />

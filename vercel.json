@@ -31,7 +31,27 @@
           "value": "public, max-age=0, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/citizen-alarm-worker.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, max-age=0, must-revalidate"
+        }
+      ]
     }
   ],
-  "regions": ["gru1"]
+  "regions": ["gru1"],
+  "functions": {
+    "api/care-push-tick.mjs": {
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "cuidelo-care-alarms",
+          "retryAfterSeconds": 15
+        }
+      ]
+    }
+  }
 }
