@@ -103,8 +103,46 @@ try {
       { timeout: 240000, intervals: [3000, 5000] },
     )
     .toEqual(['reminder', 'test']);
+  console.log('Avisos de teste e medicamento apresentados com todas as telas do app fechadas.');
+  // O sistema operacional não expõe o toque físico. Abre exatamente o destino entregue ao navegador.
+  const notificationRoutes = () =>
+    probe.evaluate(async () => {
+      const reg = await navigator.serviceWorker.getRegistration('/cidadao/');
+      return (await reg.getNotifications())
+        .map((n) => n.data?.route)
+        .filter((r) => typeof r === 'string' && r.startsWith('/cidadao/dia-a-dia/aviso/'));
+    });
+  const [original] = await notificationRoutes();
+  if (!original) throw Error('O aviso entregue não trouxe o destino da ocorrência.');
+  const first = await ctx.newPage();
+  await first.goto(origin + original);
+  await expect(first.getByRole('heading', { name: 'Teste fictício de entrega' })).toBeVisible();
+  await first.getByLabel('Lembrar novamente em').selectOption('1');
+  await first.getByRole('button', { name: 'Adiar lembrete' }).click();
+  await expect(
+    first.getByText('Adiamento salvo no Dia a dia e enviado à agenda de avisos.'),
+  ).toBeVisible({ timeout: 25000 });
+  await first.close();
+  await expect
+    .poll(async () => (await notificationRoutes()).some((r) => r !== original), {
+      timeout: 140000,
+      intervals: [2500, 5000],
+    })
+    .toBe(true);
+  const latest = (await notificationRoutes()).find((r) => r !== original);
+  const again = await ctx.newPage();
+  await again.goto(origin + latest);
+  await expect(again.getByRole('heading', { name: 'Teste fictício de entrega' })).toBeVisible();
+  await again.getByRole('button', { name: 'Marcar que tomei' }).click();
+  await expect(again.getByText('Registrado no Dia a dia · tomei.')).toBeVisible();
+  await again.reload();
+  await expect(again.getByRole('button', { name: 'Marcar que tomei' })).toHaveCount(0);
+  await again.getByRole('button', { name: 'Ver meu Dia a dia' }).click();
+  await again.getByRole('link', { name: 'Relatório', exact: true }).click();
+  await expect(again.locator('.care-report')).toContainText('Aviso adiado');
+  await expect(again.locator('.care-report')).toContainText('Informou que tomou');
   console.log(
-    'AVISOS APRESENTADOS: teste de um minuto e horário real de medicação, ambos sem página do app.',
+    'Confirmados o medicamento, a nova notificação após adiar com app fechado e a dose única no relatório.',
   );
 } finally {
   try {

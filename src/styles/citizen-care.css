@@ -184,3 +184,16 @@
     display: none !important;
   }
 }
+
+.care-alarm .cit-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.care-alarm .cit-sheet {
+  margin-block: 1rem;
+}
+.care-alarm .care-actions {
+  align-items: end;
+  margin-top: 1rem;
+}

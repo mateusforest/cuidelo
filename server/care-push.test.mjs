@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import webpush from 'web-push';
 import { command, consume, validateSubscription } from './care-push.mjs';
-import { validateSchedule, nextAlarm } from '../src/domain/push-schedule.mjs';
+import { validateSchedule, nextAlarm, alarmTargets } from '../src/domain/push-schedule.mjs';
 
 const tz = 'America/Sao_Paulo',
   now = Date.parse('2026-10-31T10:59:00Z');
@@ -44,6 +44,39 @@ function model() {
   return { runtime, jobs, rows };
 }
 describe('Web Push em segundo plano', () => {
+  it('resolve horários simultâneos por plano e conserva a data original de um adiamento', async () => {
+    const at = Date.parse('2026-10-31T12:00:00Z'),
+      until = at + 60123;
+    const plans = Array.from({ length: 20 }, (_, i) => ({
+      ...plan,
+      ref: '00000000-0000-4000-8000-' + String(i + 1).padStart(12, '0'),
+      times: ['09:00'],
+      renewal: '2026-10-31',
+      later: [],
+    }));
+    plans[0].later.push({ kind: 'pickup', when: plans[0].pickup, until });
+    const s = validateSchedule({ zone: tz, plans });
+    expect(alarmTargets(s, at)).toHaveLength(60);
+    expect(nextAlarm(s, at)).toBe(until);
+    expect(alarmTargets(s, until)).toEqual([
+      { planId: plans[0].ref, kind: 'pickup', when: '2026-11-03' },
+    ]);
+    const { runtime, jobs } = model();
+    await command(
+      runtime,
+      owner,
+      { op: 'sync', subscription: sub, schedule: s, revision: 1 },
+      at - 1000,
+    );
+    await consume(runtime, jobs[0], at + 2500);
+    const messages = runtime.push.mock.calls.map((args) => args[1]);
+    expect(messages.flatMap((m) => m.items)).toEqual(alarmTargets(s, at));
+    expect(new Set(messages.map((m) => m.id)).size).toBe(messages.length);
+    expect(messages.every((m) => m.due === at && Buffer.byteLength(JSON.stringify(m)) < 3900)).toBe(
+      true,
+    );
+    expect(() => validateSchedule({ zone: tz, plans: [plans[0], plans[0]] })).toThrow();
+  });
   it('calcula horários locais, antecedência e dia de retirada e renovação sem importar calendário', () => {
     expect(nextAlarm(schedule, now)).toBe(Date.parse('2026-10-31T11:00:00Z'));
     const dates = { zone: tz, plans: [{ ...plan, times: [] }] };

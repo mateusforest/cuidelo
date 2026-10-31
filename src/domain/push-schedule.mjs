@@ -29,11 +29,13 @@ export function validateSchedule(input) {
   )
     throw Error('Agenda inválida ou acima de 40 lembretes.');
   formatter(input.zone);
+  const refs = new Set();
   const plans = input.plans.map((p) => {
     if (
       !p ||
       Object.keys(p).some(
-        (k) => !['start', 'end', 'times', 'pickup', 'renewal', 'advance'].includes(k),
+        (k) =>
+          !['start', 'end', 'times', 'pickup', 'renewal', 'advance', 'ref', 'later'].includes(k),
       ) ||
       !validDay(p.start) ||
       !(p.end === '' || (validDay(p.end) && p.end >= p.start)) ||
@@ -47,7 +49,34 @@ export function validateSchedule(input) {
       !p.times.every(validTime)
     )
       throw Error('Datas ou horários inválidos.');
+    if (p.ref !== undefined || p.later !== undefined) {
+      if (
+        typeof p.ref !== 'string' ||
+        !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(p.ref) ||
+        refs.has(p.ref) ||
+        !Array.isArray(p.later ?? []) ||
+        (p.later ?? []).length > 32 ||
+        (p.later ?? []).some(
+          (s) =>
+            !s ||
+            Object.keys(s).some((k) => !['kind', 'when', 'until'].includes(k)) ||
+            !Number.isSafeInteger(s.until) ||
+            s.until <= 0 ||
+            s.until > 8640000000000000 ||
+            !(s.kind === 'dose'
+              ? typeof s.when === 'string' &&
+                s.when.length === 16 &&
+                s.when[10] === 'T' &&
+                validDay(s.when.slice(0, 10)) &&
+                p.times.includes(s.when.slice(11))
+              : ['pickup', 'renewal'].includes(s.kind) && validDay(s.when) && s.when === p[s.kind]),
+        )
+      )
+        throw Error('Identificação do aviso inválida.');
+      refs.add(p.ref);
+    }
     return {
+      ...(p.ref ? { ref: p.ref, later: p.later ?? [] } : {}),
       start: p.start,
       end: p.end,
       times: [...new Set(p.times)].sort(),
@@ -74,6 +103,7 @@ export function nextAlarm(schedule, after) {
     today = fmt.format(after).slice(0, 10);
   let next = Infinity;
   for (const p of schedule.plans) {
+    for (const s of p.later ?? []) if (s.until > after) next = Math.min(next, s.until);
     const first = p.start > today ? p.start : today;
     for (const time of p.times) {
       for (let i = 0; i < 3; i++) {
@@ -94,4 +124,31 @@ export function nextAlarm(schedule, after) {
         }
   }
   return Number.isFinite(next) ? next : null;
+}
+
+// A fila pode acordar atrasada. O instante originalmente agendado determina a ocorrência.
+export function alarmTargets(schedule, due) {
+  const fmt = formatter(schedule.zone),
+    stamp = fmt.format(due),
+    [day, time] = stamp.split(' ');
+  const result = [];
+  for (const p of schedule.plans) {
+    if (!p.ref) continue;
+    const targets = new Map();
+    const add = (kind, when) => targets.set(kind + '/' + when, { planId: p.ref, kind, when });
+    if (instant(fmt, day, time) === due) {
+      if (day >= p.start && (!p.end || day <= p.end) && p.times.includes(time))
+        add('dose', day + 'T' + time);
+      for (const kind of ['pickup', 'renewal'])
+        if (
+          time === '09:00' &&
+          p[kind] &&
+          (day === p[kind] || day === dayShift(p[kind], -p.advance))
+        )
+          add(kind, p[kind]);
+    }
+    for (const s of p.later ?? []) if (s.until === due) add(s.kind, s.when);
+    result.push(...targets.values());
+  }
+  return result;
 }

@@ -51,6 +51,7 @@ export function careReport(d: Diary, view: CitizenView, from: string, to: string
         a.slot.slice(11) +
         ' · registro às ' +
         localClock(new Date(a.recordedAt)) +
+        (a.noticeId ? ' · pelo aviso' : '') +
         (a.corrections
           ?.map(
             (c) =>
@@ -66,6 +67,28 @@ export function careReport(d: Diary, view: CitizenView, from: string, to: string
           )
           .join('') || ''),
     });
+  for (const s of d.postponements ?? []) {
+    const at = new Date(s.recordedAt),
+      day = localDay(at),
+      until = new Date(s.until);
+    if (inside(day))
+      rows.push({
+        key: s.noticeId + s.planId + s.kind + s.when,
+        day,
+        time: localClock(at),
+        source: 'Relato pessoal',
+        title: 'Aviso adiado · ' + plans.get(s.planId)?.medicine,
+        detail:
+          (s.kind === 'dose' ? 'Dose' : milestoneNames[s.kind]) +
+          ' · ' +
+          shortDate(s.when.slice(0, 10)) +
+          (s.kind === 'dose' ? ' às ' + s.when.slice(11) : '') +
+          ' · novo aviso em ' +
+          shortDate(localDay(until)) +
+          ' às ' +
+          localClock(until),
+      });
+  }
   for (const s of steps)
     rows.push({
       key: s.planId + s.kind + s.date,
@@ -73,9 +96,9 @@ export function careReport(d: Diary, view: CitizenView, from: string, to: string
       time: '',
       source: 'Relato pessoal',
       title: milestoneNames[s.kind] + ' · ' + plans.get(s.planId)!.medicine,
-      detail: s.next
-        ? 'Próxima data informada: ' + shortDate(s.next)
-        : 'Sem próxima data informada',
+      detail:
+        (s.next ? 'Próxima data informada: ' + shortDate(s.next) : 'Sem próxima data informada') +
+        (s.noticeId ? ' · pelo aviso' : ''),
     });
   for (const a of view.appointments.filter((a) => inside(a.date)))
     rows.push({

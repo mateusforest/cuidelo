@@ -1,9 +1,22 @@
-import { careKey, type CareScope } from '../domain/citizen-care';
+import { careKey, type AlarmTarget, type CareScope } from '../domain/citizen-care';
 import { pushSchedule } from '../domain/push-projection';
 import type { CitizenView } from '../domain/citizen';
 import { readDiary } from './citizen-care';
 
+import { parseCitizenLink, type CitizenLink } from './citizen-links';
+export type CitizenAccess = { example: 'ana' | 'joao' } | { link: CitizenLink };
+export interface DeviceNotice {
+  scope: CareScope;
+  channel: string;
+  zone: string;
+  items: AlarmTarget[];
+  due: number;
+  id: string;
+  access: CitizenAccess | null;
+}
 interface Profile {
+  resumeLink?: CitizenLink;
+  locked?: boolean;
   owner: string;
   want: boolean;
   revision: number;
@@ -41,6 +54,70 @@ function get(scope: CareScope): Profile | null {
 }
 function save(scope: CareScope, p: Profile) {
   localStorage.setItem(key(scope), JSON.stringify(p));
+}
+async function channelFor(owner: string) {
+  const bytes = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode('cuidelo-push-device:' + owner),
+  );
+  return Array.from(new Uint8Array(bytes), (v) => v.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 32);
+}
+export async function readDeviceNotice(channel: string, id: string): Promise<DeviceNotice> {
+  const invalid = () => Error('Este aviso expirou, foi desativado ou pertence a outro aparelho.');
+  if (![channel, id].every((v) => /^[a-f0-9]{32}$/.test(v))) throw invalid();
+  const response = await (
+    await caches.open('cuidelo-push-actions-v1')
+  ).match('/cidadao/.avisos/' + channel + '/' + id);
+  if (!response) throw invalid();
+  const notice = await response.json();
+  if (
+    typeof notice.zone !== 'string' ||
+    !Array.isArray(notice.items) ||
+    !notice.items.length ||
+    !Number.isSafeInteger(notice.due) ||
+    notice.due < Date.now() - 7 * 86400000
+  )
+    throw invalid();
+  for (const k of Object.keys(localStorage).filter((k) => k.startsWith('cuidelo.push.v1.'))) {
+    const [role, organization, unit, subject] = JSON.parse(k.slice('cuidelo.push.v1.'.length));
+    const scope: CareScope = { role, organization, unit, subject };
+    const p = get(scope);
+    if (!p?.want || (await channelFor(p.owner)) !== channel) continue;
+    let access: CitizenAccess | null = null;
+    if (!p.locked) {
+      if (subject === 'example:ana' || subject === 'example:joao')
+        access = { example: subject === 'example:ana' ? 'ana' : 'joao' };
+      else if (
+        p.resumeLink &&
+        parseCitizenLink('#v1.' + p.resumeLink.reader + '.' + p.resumeLink.key)
+      )
+        access = { link: p.resumeLink };
+    }
+    return { scope, id, channel, zone: notice.zone, due: notice.due, items: notice.items, access };
+  }
+  throw invalid();
+}
+export async function forgetNoticeAccess(access: CitizenAccess) {
+  if (!navigator.locks) return;
+  for (const k of Object.keys(localStorage).filter((k) => k.startsWith('cuidelo.push.v1.'))) {
+    const [role, organization, unit, subject] = JSON.parse(k.slice('cuidelo.push.v1.'.length));
+    const scope: CareScope = { role, organization, unit, subject };
+    await navigator.locks.request(k, () => {
+      const p = get(scope);
+      if (
+        p &&
+        ('example' in access
+          ? subject === 'example:' + access.example
+          : p.resumeLink?.reader === access.link.reader)
+      ) {
+        delete p.resumeLink;
+        p.locked = true;
+        save(scope, p);
+      }
+    });
+  }
 }
 export function pushState(scope: CareScope): PushState {
   let p: Profile | null = null;
@@ -162,11 +239,13 @@ export async function subscribePhone() {
     );
   }
 }
+let checkedWorkerAt = 0;
 export async function syncDevice(
   scope: CareScope,
   view: CitizenView,
   action: 'sync' | 'enable' | 'stop' = 'sync',
   sub?: PushSubscription,
+  link?: CitizenLink,
 ) {
   if (action === 'sync') {
     try {
@@ -179,13 +258,7 @@ export async function syncDevice(
   return navigator.locks.request(key(scope), async () => {
     const p = get(scope) ?? initial();
     if ('caches' in window && p.want) {
-      const bytes = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode('cuidelo-push-device:' + p.owner),
-      );
-      const channel = Array.from(new Uint8Array(bytes), (v) => v.toString(16).padStart(2, '0'))
-        .join('')
-        .slice(0, 32);
+      const channel = await channelFor(p.owner);
       try {
         for (const kind of ['test', 'reminder']) {
           const reply = await caches.match('/cidadao/.receipt/' + channel + '/' + kind);
@@ -200,11 +273,23 @@ export async function syncDevice(
         /* Comprovante local opcional. */
       }
     }
+    if (action === 'enable') {
+      p.locked = false;
+      p.resumeLink = link ? { reader: link.reader, key: link.key } : undefined;
+    }
+    if (action === 'stop') {
+      delete p.resumeLink;
+      p.locked = true;
+    }
     const want = action === 'enable' ? true : action === 'stop' ? false : p.want;
     if (!want && !p.want && p.confirmed) return;
     let body: object = { op: 'stop' };
     if (want) {
       const reg = await navigator.serviceWorker.getRegistration('/cidadao/');
+      if (reg && Date.now() - checkedWorkerAt > 3600000) {
+        checkedWorkerAt = Date.now();
+        void reg.update().catch(() => {});
+      }
       const subscription = sub ?? (await reg?.pushManager.getSubscription());
       if (!subscription || Notification.permission !== 'granted') {
         if (action === 'enable') throw Error('Inscrição não confirmada pelo aparelho.');

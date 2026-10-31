@@ -28,9 +28,13 @@ import {
   subscribePhone,
   syncDevice,
   schedulePushTest,
+  readDeviceNotice,
   pushState,
   type PushState,
 } from '../data/device-push';
+import { openCitizenLink, type CitizenLink } from '../data/citizen-links';
+import type { DeviceNotice } from '../data/device-push';
+import { CitizenAlarm } from './CitizenAlarm';
 import { CareReport } from './CareReport';
 
 const url = '/cidadao/dia-a-dia';
@@ -459,8 +463,11 @@ function Medication({
           aparelho.
         </p>
         <p>
-          O servidor recebe os horários e a inscrição de entrega. A notificação tem texto discreto.
-          No iPhone com iOS 16.4 ou posterior, adicione o app à Tela de Início e abra-o pelo ícone.
+          Ao ativar, este aparelho poderá abrir o medicamento pelo aviso, inclusive após fechar o
+          app. Em uma cópia da unidade, o acesso fica lembrado neste navegador até sair, desativar
+          os avisos ou o link expirar. O servidor recebe os horários e a inscrição de entrega. A
+          notificação tem texto discreto. No iPhone com iOS 16.4 ou posterior, adicione o app à Tela
+          de Início e abra-o pelo ícone.
         </p>
         {push.wanted && !push.pending && (
           <p>
@@ -600,6 +607,15 @@ function Today({
                     </div>
                   </form>
                 )}
+                {!log &&
+                  d.postponements
+                    ?.filter((x) => x.planId === p.id && x.kind === 'dose' && x.when === slot)
+                    .slice(-1)
+                    .map((x) => (
+                      <small key={x.noticeId}>
+                        Aviso adiado para {new Date(x.until).toLocaleString('pt-BR')}.
+                      </small>
+                    ))}
                 {!log && slot <= stamp && (
                   <div className="care-actions">
                     <Button
@@ -654,7 +670,13 @@ export function CitizenDaily({
   view,
   path,
   children,
+  link,
+  notice,
+  openDiary,
 }: {
+  link?: CitizenLink;
+  notice?: DeviceNotice;
+  openDiary?: () => void;
   scope: CareScope;
   view: CitizenView;
   path: string;
@@ -720,7 +742,7 @@ export function CitizenDaily({
       const state = pushState(scope),
         enable = !state.wanted && !state.pending;
       const sub = enable ? await subscribePhone() : undefined;
-      await syncDevice(scope, view, enable ? 'enable' : 'stop', sub);
+      await syncDevice(scope, view, enable ? 'enable' : 'stop', sub, link);
       await writeDiary(scope, { type: 'notifications', enabled: enable }, view);
       setMessage(
         enable
@@ -750,10 +772,26 @@ export function CitizenDaily({
     setBusy(true);
     setMessage('');
     try {
-      await writeDiary(scope, cmd, view);
-      if (['plan', 'close', 'step', 'dose', 'correct-dose'].includes(cmd.type)) {
+      let currentView = view;
+      if (cmd.type === 'respond') {
+        if (!notice) throw Error('Abra o aviso original para registrar a ação.');
+        const current = await readDeviceNotice(notice.channel, notice.id);
+        if (
+          careKey(current.scope) !== key ||
+          !current.items.some(
+            (t) =>
+              t.planId === cmd.target.planId &&
+              t.kind === cmd.target.kind &&
+              t.when === cmd.target.when,
+          )
+        )
+          throw Error('Este aviso não pertence ao acompanhamento aberto.');
+        if (link) currentView = (await openCitizenLink(link)).view;
+      }
+      await writeDiary(scope, cmd, currentView);
+      if (['plan', 'close', 'step', 'dose', 'correct-dose', 'respond'].includes(cmd.type)) {
         try {
-          await syncDevice(scope, view);
+          await syncDevice(scope, currentView);
         } catch (e) {
           setMessage('Registro salvo no aparelho. ' + (e as Error).message);
           refreshPush();
@@ -762,11 +800,13 @@ export function CitizenDaily({
         refreshPush();
       }
       setMessage(
-        cmd.type === 'notifications'
-          ? cmd.enabled
-            ? 'Avisos ativados.'
-            : 'Avisos desativados.'
-          : 'Registro salvo neste aparelho.',
+        cmd.type === 'respond' && cmd.action === 'later'
+          ? 'Adiamento salvo no Dia a dia e enviado à agenda de avisos.'
+          : cmd.type === 'notifications'
+            ? cmd.enabled
+              ? 'Avisos ativados.'
+              : 'Avisos desativados.'
+            : 'Registro salvo neste aparelho.',
       );
       return true;
     } catch (e) {
@@ -778,6 +818,28 @@ export function CitizenDaily({
   };
   const due = diary ? dueReminders(diary, view, now) : [];
   const [section, tab = '', extra] = path.split('/');
+  if (notice && openDiary)
+    return (
+      <>
+        {message && (
+          <p className="cit-notice" role="status">
+            {message}
+          </p>
+        )}
+        {diary ? (
+          <CitizenAlarm
+            d={diary}
+            notice={notice}
+            view={view}
+            busy={busy}
+            run={run}
+            openDiary={openDiary}
+          />
+        ) : (
+          !message && <p>Carregando lembrete…</p>
+        )}
+      </>
+    );
   if (section !== 'dia-a-dia')
     return (
       <>

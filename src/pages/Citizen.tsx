@@ -22,17 +22,17 @@ import { documentNames } from '../domain/clinical-documents';
 import { dateKey, clockTime, shortDate } from '../domain/dates';
 import { type CitizenAppointment, type CitizenDocument, type CitizenView } from '../domain/citizen';
 import { citizenExamples, readCitizenExample, type ExampleId } from '../data/citizen-examples';
-import {
-  openCitizenLink,
-  parseCitizenLink,
-  CitizenLinkError,
-  type CitizenLink,
-} from '../data/citizen-links';
+import { openCitizenLink, parseCitizenLink, CitizenLinkError } from '../data/citizen-links';
 import { CitizenDaily } from '../components/CitizenDaily';
 import '../styles/citizen.css';
 import '../styles/citizen-care.css';
 
-type Session = { example: ExampleId } | { link: CitizenLink };
+import {
+  readDeviceNotice,
+  forgetNoticeAccess,
+  type CitizenAccess as Session,
+  type DeviceNotice,
+} from '../data/device-push';
 const sessionKey = 'cuidelo.citizen.tab.v1',
   base = '/cidadao';
 function previous(): Session | null {
@@ -244,7 +244,17 @@ function Pages({ view, path }: { view: CitizenView; path: string }) {
     </>
   );
 }
-function Reader({ session, path }: { session: Session; path: string }) {
+function Reader({
+  session,
+  path,
+  notice,
+  openDiary,
+}: {
+  session: Session;
+  path: string;
+  notice?: DeviceNotice;
+  openDiary?: () => void;
+}) {
   const sample = 'example' in session ? session.example : null,
     link = 'link' in session ? session.link : null;
   const example = useMemo(() => (sample ? readCitizenExample(sample) : null), [sample]);
@@ -307,6 +317,16 @@ function Reader({ session, path }: { session: Session; path: string }) {
         )}
       </section>
     );
+  if (
+    notice &&
+    (notice.scope.subject !== data.careScope?.subject ||
+      notice.scope.organization !== data.careScope?.organization)
+  )
+    return (
+      <p className="cit-notice">
+        O acesso aberto não corresponde à pessoa deste aviso. Reabra o link da unidade.
+      </p>
+    );
   return (
     <>
       {data.careScope ? (
@@ -320,6 +340,9 @@ function Reader({ session, path }: { session: Session; path: string }) {
           }}
           view={data}
           path={path}
+          link={link ?? undefined}
+          notice={notice}
+          openDiary={openDiary}
         >
           <Pages view={data} path={path} />
         </CitizenDaily>
@@ -350,6 +373,51 @@ function Reader({ session, path }: { session: Session; path: string }) {
       </aside>
     </>
   );
+}
+function NoticeEntry({
+  path,
+  current,
+  open,
+}: {
+  path: string;
+  current: Session | null;
+  open: (s: Session) => void;
+}) {
+  const [notice, setNotice] = useState<DeviceNotice | null>(null),
+    [failure, setFailure] = useState('');
+  useEffect(() => {
+    let live = true;
+    const [, , channel, id, ...rest] = path.split('/');
+    if (rest.length) {
+      setFailure('Endereço de aviso inválido.');
+      return;
+    }
+    void readDeviceNotice(channel, id)
+      .then((v) => {
+        if (live) setNotice(v);
+      })
+      .catch((e) => {
+        if (live) setFailure((e as Error).message);
+      });
+    return () => {
+      live = false;
+    };
+  }, [path]);
+  if (!notice)
+    return (
+      <p className="cit-notice" role="status">
+        {failure || 'Abrindo seu lembrete…'}
+      </p>
+    );
+  const session = notice.access ?? current;
+  if (!session)
+    return (
+      <p className="cit-notice">
+        Reabra seu acesso do cidadão neste aparelho e toque novamente no aviso. Para lembrar um link
+        da unidade, ative os avisos após abrir o link.
+      </p>
+    );
+  return <Reader session={session} path={path} notice={notice} openDiary={() => open(session)} />;
 }
 export function Citizen() {
   const loc = useLocation(),
@@ -398,8 +466,10 @@ export function Citizen() {
     remember(link ? { link } : null);
     navigate(base, { replace: true });
   }, [loc.hash, navigate]);
+  const fromNotice = path.startsWith('dia-a-dia/aviso/');
   const active = loc.hash ? null : session;
-  const leave = () => {
+  const leave = async () => {
+    if (active) await forgetNoticeAccess(active).catch(() => {});
     remember(null);
     setInvalid(false);
     navigate(base, { replace: true });
@@ -419,7 +489,7 @@ export function Citizen() {
         </div>
         <div>
           <span className="cit-demo">Demonstração</span>
-          {active && (
+          {active && !fromNotice && (
             <button onClick={leave} aria-label="Sair do app do cidadão">
               <LogOut size={17} /> Sair
             </button>
@@ -438,6 +508,16 @@ export function Citizen() {
       >
         {loc.hash ? (
           <p role="status">Abrindo link…</p>
+        ) : fromNotice ? (
+          <NoticeEntry
+            key={path}
+            path={path}
+            current={active}
+            open={(s) => {
+              remember(s);
+              navigate(base + '/dia-a-dia', { replace: true });
+            }}
+          />
         ) : active ? (
           <Reader session={active} path={path} />
         ) : (
@@ -500,7 +580,7 @@ export function Citizen() {
           </>
         )}
       </main>
-      {active && (
+      {active && !fromNotice && (
         <nav className="cit-nav" aria-label="Navegação do cidadão">
           {tabs.map(({ to, label, Icon }) => (
             <Link

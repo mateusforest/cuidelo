@@ -62,6 +62,7 @@ export interface CarePlan extends PlanFields {
   closedAt?: string;
 }
 export interface Dose {
+  noticeId?: string;
   planId: string;
   slot: string;
   taken: boolean;
@@ -70,6 +71,7 @@ export interface Dose {
 }
 export const effectiveTaken = (dose: Dose) => dose.corrections?.at(-1)?.taken ?? dose.taken;
 interface Step {
+  noticeId?: string;
   planId: string;
   kind: Milestone;
   date: string;
@@ -77,7 +79,18 @@ interface Step {
   next: string;
   recordedAt: string;
 }
+export interface AlarmTarget {
+  planId: string;
+  kind: 'dose' | Milestone;
+  when: string;
+}
+interface Postponement extends AlarmTarget {
+  noticeId: string;
+  recordedAt: string;
+  until: number;
+}
 export interface Diary {
+  postponements?: Postponement[];
   version: 1;
   conditions: string[];
   entries: Entry[];
@@ -98,6 +111,16 @@ export const freshDiary = (): Diary => ({
   notified: {},
 });
 export type CareCommand =
+  | {
+      type: 'respond';
+      target: AlarmTarget;
+      noticeId: string;
+      due: number;
+      zone: string;
+      action: 'confirm' | 'later';
+      minutes?: number;
+      next?: string;
+    }
   | { type: 'condition'; name: string }
   | {
       type: 'entry';
@@ -143,6 +166,28 @@ export function linkedMedicine(view: CitizenView, source: RxLink | null) {
 export const available = (p: CarePlan, view: CitizenView) =>
   !p.closedAt && (!p.source || !!linkedMedicine(view, p.source));
 export const onDay = (p: CarePlan, day: string) => day >= p.start && (!p.end || day <= p.end);
+export const sameAlarm = (a: AlarmTarget, b: AlarmTarget) =>
+  a.planId === b.planId && a.kind === b.kind && a.when === b.when;
+export function alarmStatus(d: Diary, view: CitizenView, t: AlarmTarget) {
+  const plan = d.plans.find((p) => p.id === t.planId);
+  if (!plan || !available(plan, view)) return 'unavailable';
+  if (t.kind === 'dose') {
+    if (d.doses.some((x) => x.planId === t.planId && x.slot === t.when)) return 'done';
+    const [day, time] = t.when.split('T');
+    if (
+      !validDay(day) ||
+      !onDay(plan, day) ||
+      !plan.times.includes(time) ||
+      t.when !== day + 'T' + time
+    )
+      return 'unavailable';
+  } else {
+    if (d.steps.some((x) => x.planId === t.planId && x.kind === t.kind && x.previous === t.when))
+      return 'done';
+    if (!validDay(t.when) || plan[t.kind] !== t.when) return 'unavailable';
+  }
+  return 'open';
+}
 export interface CareReminder {
   key: string;
   planId: string;
@@ -182,7 +227,7 @@ export function applyCare(
   cmd: CareCommand,
   view: CitizenView,
   now: Date,
-) {
+): boolean {
   careKey(scope);
   check(
     scope.subject === view.careScope?.subject && scope.organization === view.careScope.organization,
@@ -192,6 +237,80 @@ export function applyCare(
     today = localDay(now),
     recordedAt = now.toISOString();
   switch (cmd.type) {
+    case 'respond': {
+      const t = cmd.target;
+      check(
+        t &&
+          ['dose', 'pickup', 'renewal'].includes(t.kind) &&
+          /^[a-f0-9]{32}$/.test(cmd.noticeId) &&
+          Number.isSafeInteger(cmd.due) &&
+          cmd.due <= now.getTime() + 5000 &&
+          now.getTime() - cmd.due <= 7 * 86400000,
+        'Este aviso expirou ou está indisponível.',
+      );
+      check(
+        alarmStatus(d, view, t) === 'open',
+        'Este lembrete já foi registrado, alterado ou encerrado.',
+      );
+      if (t.kind === 'dose') {
+        const stampInZone = new Intl.DateTimeFormat('sv-SE', {
+          timeZone: cmd.zone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+        })
+          .format(cmd.due)
+          .replace(' ', 'T');
+        check(
+          t.when <= stampInZone ||
+            d.postponements?.some((s) => sameAlarm(s, t) && s.until === cmd.due),
+          'O horário desta dose ainda não ocorreu.',
+        );
+      }
+      if (cmd.action === 'later') {
+        check([1, 10, 30].includes(cmd.minutes ?? 0), 'Escolha o intervalo do aviso.');
+        const history = (d.postponements ??= []);
+        const last = history.filter((x) => sameAlarm(x, t)).at(-1);
+        check(
+          !last || (last.until <= cmd.due && last.noticeId !== cmd.noticeId),
+          'Este aviso já foi adiado.',
+        );
+        history.push({
+          ...t,
+          noticeId: cmd.noticeId,
+          recordedAt,
+          until: now.getTime() + cmd.minutes! * 60000,
+        });
+      } else {
+        check(cmd.action === 'confirm', 'Ação desconhecida.');
+        if (t.kind === 'dose')
+          d.doses.push({
+            planId: t.planId,
+            slot: t.when,
+            taken: true,
+            recordedAt,
+            noticeId: cmd.noticeId,
+          });
+        else {
+          check(
+            !cmd.next || cmd.next !== t.when,
+            'A próxima data deve ser diferente da etapa confirmada.',
+          );
+          applyCare(
+            scope,
+            d,
+            { type: 'step', planId: t.planId, kind: t.kind, date: today, next: cmd.next ?? '' },
+            view,
+            now,
+          );
+          d.steps[d.steps.length - 1].noticeId = cmd.noticeId;
+        }
+      }
+      break;
+    }
     case 'condition': {
       const name = field(cmd.name, 100, true);
       check(

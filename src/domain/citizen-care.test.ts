@@ -28,6 +28,73 @@ const plan: Extract<CareCommand, { type: 'plan' }> = {
   source: null,
 };
 describe('acompanhamento diário', () => {
+  it('adia a ocorrência original, registra uma única dose depois da meia-noite e preserva histórico', () => {
+    const d = freshDiary(),
+      start = new Date('2026-11-01T02:59:00Z');
+    applyCare(scope, d, { ...plan, times: ['23:59'] }, view, start);
+    const target = { planId: d.plans[0].id, kind: 'dose' as const, when: '2026-10-31T23:59' };
+    const cmd = {
+      type: 'respond' as const,
+      target,
+      noticeId: 'a'.repeat(32),
+      due: start.getTime(),
+      zone: 'America/Sao_Paulo',
+      action: 'later' as const,
+      minutes: 10,
+    };
+    expect(() => applyCare({ ...scope, subject: 'example:joao' }, d, cmd, view, start)).toThrow();
+    applyCare(scope, d, cmd, view, start);
+    expect(d.doses).toHaveLength(0);
+    expect(() => applyCare(scope, d, cmd, view, start)).toThrow();
+    const next = new Date(d.postponements![0].until),
+      confirm = {
+        ...cmd,
+        action: 'confirm' as const,
+        noticeId: 'b'.repeat(32),
+        due: next.getTime(),
+      };
+    applyCare(scope, d, confirm, view, next);
+    expect(d.doses).toMatchObject([
+      { slot: target.when, recordedAt: next.toISOString(), taken: true },
+    ]);
+    expect(() => applyCare(scope, d, confirm, view, next)).toThrow();
+    expect(d.postponements).toHaveLength(1);
+  });
+  it('um aviso antigo não confirma a nova data da farmácia, outra receita ou uma dose futura', () => {
+    const d = freshDiary();
+    applyCare(scope, d, plan, view, now);
+    const cmd = {
+      type: 'respond' as const,
+      target: { planId: d.plans[0].id, kind: 'renewal' as const, when: plan.renewal },
+      zone: 'UTC',
+      noticeId: 'a'.repeat(32),
+      due: now.getTime(),
+      action: 'confirm' as const,
+      next: '2026-12-01',
+    };
+    applyCare(scope, d, cmd, view, now);
+    expect(() => applyCare(scope, d, cmd, view, now)).toThrow();
+    expect(d.steps).toHaveLength(1);
+    expect(() =>
+      applyCare(
+        scope,
+        d,
+        { ...cmd, target: { ...cmd.target, kind: 'dose', when: '2026-11-01T08:00' } },
+        view,
+        now,
+      ),
+    ).toThrow();
+    applyCare(scope, d, { type: 'close', planId: cmd.target.planId }, view, now);
+    expect(() =>
+      applyCare(
+        scope,
+        d,
+        { ...cmd, target: { ...cmd.target, kind: 'pickup', when: plan.pickup } },
+        view,
+        now,
+      ),
+    ).toThrow();
+  });
   it('guarda relatos com autoria pessoal e recusa datas futuras, intensidade inválida e outra pessoa', () => {
     const d = freshDiary(),
       cmd = {

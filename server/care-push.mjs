@@ -1,5 +1,5 @@
 import { createHash, randomUUID, ECDH } from 'node:crypto';
-import { validateSchedule, nextAlarm } from '../src/domain/push-schedule.mjs';
+import { validateSchedule, nextAlarm, alarmTargets } from '../src/domain/push-schedule.mjs';
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const error = (status, message) => Object.assign(new Error(message), { status });
 const keyBytes = (value, n) =>
@@ -137,11 +137,18 @@ export async function consume(runtime, job, now = Date.now()) {
     // Dois consumidores concorrentes não devem disparar a mesma ocorrência.
     etag = await runtime.save(job.id, { ...s, leaseUntil: now + 30000 }, etag);
     try {
-      await runtime.push(s.subscription, {
-        channel: job.id.slice(0, 32),
-        id: hash(job.id + ':' + s.next).slice(0, 32),
-        kind: s.next === s.testAt ? 'test' : 'reminder',
-      });
+      const items = alarmTargets(s.schedule, s.next);
+      // Limita cada pacote Web Push, mesmo se todas as datas e horários coincidirem.
+      for (let i = 0; i < Math.max(items.length, 1); i += 16) {
+        await runtime.push(s.subscription, {
+          channel: job.id.slice(0, 32),
+          id: hash(job.id + ':' + s.generation + ':' + s.next + ':' + i).slice(0, 32),
+          kind: items.length || s.next !== s.testAt ? 'reminder' : 'test',
+          due: s.next,
+          zone: s.schedule.zone,
+          items: items.slice(i, i + 16),
+        });
+      }
     } catch (e) {
       if ([404, 410].includes(e.statusCode)) {
         await runtime.save(
