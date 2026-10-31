@@ -27,6 +27,11 @@ test('no celular o cidadão consulta sua agenda e os três documentos sem abrir 
     await page.locator('.cit-doc-card').click();
     await expect(page.getByRole('heading', { name: kind, exact: true })).toBeVisible();
     await expect(page.locator('.cit-sheet')).toContainText(content);
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('.cit-print-warning')).toBeVisible();
+    await expect(page.locator('.cit-sheet .document-body')).toBeVisible();
+    await expect(page.locator('.cit-nav')).toBeHidden();
+    await page.emulateMedia({ media: 'screen' });
     await page.reload();
     await expect(page.locator('.cit-sheet')).toContainText(content);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
