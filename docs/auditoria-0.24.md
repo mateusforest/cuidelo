@@ -122,6 +122,17 @@ Quatro percursos são demonstráveis, um foi adaptado e 41 continuam parciais. M
 - **Conexões oficiais.** O painel separa oito frentes de implantação, incluindo os sistemas do SUS e parceiros de diagnóstico. Conferimos as referências públicas. A referência de faturamento usa o diretório do Ministério da Saúde para SIA e SIH. [Sistemas do DRAC](https://www.gov.br/saude/pt-br/composicao/saes/drac/sistemas/sistemas/).
 - **Campo e dispositivos.** Permanecem a validação com as equipes nas unidades, acessibilidade com tecnologias assistivas e ensaios em aparelhos físicos, impressoras de senhas e TVs do local.
 
+## Conferência da versão publicada
+
+A revisão `af81ba1` foi publicada em 31/10/2026. Repetimos na Vercel a varredura das 362 combinações e das 66 rotas. Não ocorreram erros de execução, acessos inesperadamente bloqueados nem rolagem horizontal da página nas larguras examinadas. Os três arquivos HTML baixados da versão publicada abriram com a rede desligada.
+
+- Os 206 testes de regras e persistência e os 79 cenários locais de navegador passaram. O cenário adicional de notificação real foi executado contra a Vercel.
+- Na publicação, a TV pareada recebeu a chamada de outra estação, retirou o dado durante a perda de sinal e voltou a receber o painel. O código de leitura ficou restrito aos campos do painel.
+- O cidadão compartilhou cinco tipos de registro do Dia a dia com outro navegador. O consultório revisou o relatório, enviou uma orientação e recebeu a confirmação de leitura. O navegador recebeu a notificação com todas as telas do cidadão fechadas. O teste acionou seu destino e conferiu o horário da leitura na estação médica.
+- O navegador recebeu o aviso do horário de um medicamento fictício com o app fechado. Após adiar, recebeu uma segunda notificação. A confirmação da dose ficou registrada uma única vez no relatório. Os aparelhos físicos da rede ainda precisam ser testados.
+- A agenda, os filtros por perfil, a exportação da prefeitura e os quatro resultados do diagnóstico também passaram pelos cenários de navegador na publicação.
+- O arquivo HTML principal ficou em aproximadamente 1,4 MB. O pacote principal da aplicação web tem cerca de 276 KB com compressão gzip na compilação local. A medição de latência sob carga em 100 postos continua pendente.
+
 ## Reproduzir a verificação
 
 Com a aplicação de desenvolvimento em execução, informe a origem em `CUIDELO_AUDIT_ORIGIN` e execute `node scripts/audit-screens.mjs`. Para guardar as medições e capturas em uma pasta, informe `CUIDELO_AUDIT_DIR`. Os cenários usam sessões e dados fictícios isolados.
