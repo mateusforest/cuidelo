@@ -11,8 +11,16 @@ export function TriageCall({
   encounter: Encounter;
   onChange: () => void;
 }) {
-  const { context, repository, notify } = useApp();
+  const { context, data, repository, notify } = useApp();
   const [busy, setBusy] = useState(false);
+  const blocked = data.sectorSeats.some(
+    (s) => s.roomId === 'escuta-1' && s.encounterId !== encounter.id,
+  );
+  const here = data.sectorSeats.find(
+    (s) => s.roomId === 'escuta-1' && s.encounterId === encounter.id,
+  );
+  const reassessment =
+    data.intakes.some((i) => i.encounterId === encounter.id) && encounter.status === 'waiting';
   return (
     <div className="triage-call-bar">
       <div>
@@ -24,7 +32,7 @@ export function TriageCall({
       </div>
       <Button
         variant="secondary"
-        disabled={busy}
+        disabled={busy || blocked}
         onClick={async () => {
           setBusy(true);
           try {
@@ -43,8 +51,30 @@ export function TriageCall({
         }}
       >
         <Megaphone size={17} />
-        Chamar / rechamar para triagem
+        {blocked ? 'Triagem indisponível' : 'Chamar / rechamar para triagem'}
       </Button>
+      {reassessment && !here?.entered && (
+        <Button
+          disabled={busy || blocked}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await repository.execute(context, {
+                type: 'intake.review-start',
+                encounterId: encounter.id,
+              });
+              onChange();
+              notify('Entrada na sala de triagem registrada.');
+            } catch (e) {
+              notify((e as Error).message, 'error');
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Registrar entrada para reavaliação
+        </Button>
+      )}
     </div>
   );
 }

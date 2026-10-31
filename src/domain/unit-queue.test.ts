@@ -316,3 +316,130 @@ describe('encaminhamentos para outros setores', () => {
     expect(() => validateUnitQueue(db)).toThrow();
   });
 });
+
+describe('ocupação física por setor', () => {
+  it.each(['enfermagem-1', 'vacina-1', 'farmacia-1'])(
+    '%s bloqueia conflito na reserva e na entrada e libera na conclusão',
+    (roomId) => {
+      const db = createSeed(now),
+        team = roomId === 'farmacia-1' ? demoContext('aurora', unit, 'pharmacy') : nurse;
+      for (const id of [e0, e1]) intake(db, id);
+      const directs = [e0, e1].map((id) =>
+        applyCommand(db, nurse, { ...assess(id), roomId }, later(2)),
+      );
+      const announce = (i: number) => ({
+        type: 'queue.call-service' as const,
+        id: [e0, e1][i],
+        assessmentId: directs[i],
+      });
+      const receive = (i: number) => ({
+        type: 'queue.service' as const,
+        id: [e0, e1][i],
+        assessmentId: directs[i],
+        expectedCount: 0,
+        action: 'receive' as const,
+        note: '',
+      });
+      const stay = applyCommand(db, team, announce(0), later(3));
+      expect(readSnapshot(db, reception).sectorSeats).toContainEqual({
+        roomId,
+        encounterId: e0,
+        since: later(3).toISOString(),
+        entered: false,
+        legacy: false,
+      });
+      expect(() => applyCommand(db, team, announce(1), later(3))).toThrow('reservada');
+      expect(() => applyCommand(db, team, receive(1), later(4))).toThrow('reservada');
+      expect(() => applyCommand(db, reception, receive(0), later(4))).toThrow();
+      expect(readSnapshot(db, demoContext('aurora', 'aurora-vila', 'nursing')).sectorSeats).toEqual(
+        [],
+      );
+      expect(
+        readSnapshot(db, demoContext('horizonte', 'horizonte-centro', 'nursing')).sectorSeats,
+      ).toEqual([]);
+      applyCommand(db, team, receive(0), later(4));
+      expect(readSnapshot(db, team).sectorSeats.find((s) => s.encounterId === e0)).toMatchObject({
+        entered: true,
+        since: later(4).toISOString(),
+      });
+      expect(() =>
+        applyCommand(
+          db,
+          reception,
+          { type: 'queue.release-room', id: e0, stayId: stay, reason: 'Conferência' },
+          later(5),
+        ),
+      ).toThrow();
+      applyCommand(
+        db,
+        team,
+        { ...receive(0), action: 'finish', note: 'Passagem encerrada', expectedCount: 1 },
+        later(6),
+      );
+      expect(readSnapshot(db, team).sectorSeats).toEqual([]);
+      applyCommand(db, team, receive(1), later(7));
+      expect(stored(db).recoveryMessage).toBe('');
+      const e = db.encounters.find((x) => x.id === e0)!;
+      expect(e.roomStays?.at(-1)).toMatchObject({
+        id: stay,
+        enteredAt: later(4).toISOString(),
+        endedAt: later(6).toISOString(),
+        entryBy: team.sessionId,
+        outcome: 'finished',
+      });
+      e.roomStays!.at(-1)!.endedAt = later(7).toISOString();
+      expect(() => validateUnitQueue(db)).toThrow();
+    },
+  );
+  it('triagem reserva, confirma entrada, libera ao salvar e volta a ocupar na reavaliação', () => {
+    const db = createSeed(now);
+    applyCommand(db, nurse, call(e0, 'escuta-1'), now);
+    expect(() => applyCommand(db, nurse, { type: 'intake.start', encounterId: e1 }, now)).toThrow(
+      'ocupada',
+    );
+    intake(db, e0);
+    expect(readSnapshot(db, reception).sectorSeats).toEqual([]);
+    applyCommand(db, nurse, { type: 'intake.review-start', encounterId: e0 }, later(2));
+    expect(() => applyCommand(db, nurse, call(e1, 'escuta-1'), later(2))).toThrow('ocupada');
+    applyCommand(db, nurse, assess(e0), later(3));
+    applyCommand(db, nurse, { type: 'intake.start', encounterId: e1 }, later(4));
+    expect(readSnapshot(db, reception).sectorSeats.map((s) => s.encounterId)).toEqual([e1]);
+    expect(stored(db).recoveryMessage).toBe('');
+  });
+  it('preserva uma entrada da versão anterior e a considera na disponibilidade da sala', () => {
+    const db = createSeed(now);
+    for (const id of [e0, e1]) intake(db, id);
+    const [a, b] = [e0, e1].map((id) =>
+      applyCommand(db, nurse, { ...assess(id), roomId: 'vacina-1' }, later(2)),
+    );
+    const receive = {
+      type: 'queue.service' as const,
+      id: e0,
+      assessmentId: a,
+      action: 'receive' as const,
+      expectedCount: 0,
+      note: '',
+    };
+    applyCommand(db, nurse, receive, later(3));
+    db.encounters.forEach((e) => delete e.roomStays);
+    Object.assign(db, { schemaVersion: 11 });
+    const repo = stored(db);
+    expect(repo.recoveryMessage).toBe('');
+    expect(readSnapshot(db, nurse).sectorSeats[0]).toMatchObject({
+      encounterId: e0,
+      roomId: 'vacina-1',
+      entered: true,
+      legacy: true,
+    });
+    expect(() =>
+      applyCommand(db, nurse, { ...receive, id: e1, assessmentId: b }, later(4)),
+    ).toThrow('ocupada');
+    applyCommand(
+      db,
+      nurse,
+      { ...receive, action: 'return', note: 'Voltar à escuta', expectedCount: 1 },
+      later(5),
+    );
+    expect(readSnapshot(db, nurse).sectorSeats).toHaveLength(0);
+  });
+});

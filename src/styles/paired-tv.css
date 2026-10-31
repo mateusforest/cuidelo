@@ -1,0 +1,52 @@
+@media screen {
+  .tv-pair-panel {
+    display: grid;
+    justify-items: start;
+    gap: 1rem;
+  }
+  .tv-pair-panel p {
+    margin: 0;
+    color: #405f56;
+    line-height: 1.55;
+  }
+  .tv-pair-code {
+    font-size: clamp(1.15rem, 4vw, 1.7rem);
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    color: #134f48;
+    overflow-wrap: anywhere;
+  }
+  .tv-join {
+    min-height: 100dvh;
+    display: grid;
+    place-content: center;
+    padding: 1rem;
+    background: #eff5f1;
+  }
+  .tv-join section {
+    width: min(32rem, calc(100vw - 2rem));
+    display: grid;
+    gap: 1.15rem;
+    padding: clamp(1.25rem, 4vw, 2.5rem);
+    background: #fff;
+    border: 1px solid #d7e6df;
+    border-radius: 16px;
+  }
+  .tv-join img {
+    width: 126px;
+    max-width: 100%;
+  }
+  .tv-join h1,
+  .tv-join p {
+    margin: 0;
+  }
+  .tv-join form {
+    display: grid;
+    gap: 0.9rem;
+  }
+  .tv-join input {
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+  }
+}

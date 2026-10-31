@@ -1,4 +1,5 @@
 export { Kiosk } from './KioskScreen';
+import { TVPairing } from '../components/PairedTV';
 import { useApp } from '../app/context';
 import { Notice, PageHeader, Panel, UnitRequired } from '../components/ui';
 import { displayRoute, externalRoute } from '../app/links';
@@ -14,6 +15,7 @@ export function Devices() {
         description="Abra as telas públicas vinculadas a esta unidade. Nenhum prontuário aparece nesses dispositivos."
       />
       <UnitRequired>
+        <TVPairing />
         <Panel title={unit?.name}>
           <div className="panel-body">
             <div className="kiosk-actions">
@@ -37,9 +39,8 @@ export function Devices() {
               </a>
             </div>
             <p>
-              Para testar a chamada ao vivo, abra a TV pelo mesmo HTML ou endereço do sistema e no
-              mesmo navegador. Arquivos separados e computadores diferentes ainda não compartilham a
-              fila.
+              Para a TV em outro equipamento, use o código da estação em /tv. O botão acima abre o
+              painel local para testar em outra aba.
             </p>
             <p>
               A senha pode ser impressa pela janela de impressão do navegador. A integração direta

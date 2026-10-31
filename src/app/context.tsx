@@ -10,6 +10,7 @@ import {
 import type { Context, Snapshot, Summary } from '../domain/model';
 import type { CareRepository } from '../data/repository';
 import { browserRepository } from '../data/demo-repository';
+import { startBroadcast } from '../data/tv-channel';
 import { storageKey } from '../data/demo-repository';
 import { demoContext, demoIdentities, identityFor } from '../domain/access';
 
@@ -65,6 +66,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
   });
+  useEffect(() => {
+    if (demoEntered) return startBroadcast(repository, context);
+  }, [repository, context, demoEntered]);
   const storageWarning = useSyncExternalStore(
     repository.subscribe,
     () => repository.recoveryMessage,

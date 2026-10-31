@@ -16,9 +16,10 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useApp } from '../app/context';
-import { displayRoute, externalRoute, isPortable } from '../app/links';
+import { TVJoin, useRemoteTV } from '../components/PairedTV';
+import { displayRoute, externalRoute } from '../app/links';
 import { dateKey, clockTime } from '../domain/dates';
-import { roomsForUnit, type DisplayFeed, type DisplayCall } from '../domain/queue';
+import { callableRoomsForUnit, type DisplayFeed, type DisplayCall } from '../domain/queue';
 import {
   Button,
   PageHeader,
@@ -53,7 +54,9 @@ function TVCanvas({
   feed,
   preview,
   sound,
+  paired = false,
 }: {
+  paired?: boolean;
   feed: DisplayFeed;
   preview: boolean;
   sound: boolean;
@@ -157,7 +160,11 @@ function TVCanvas({
         <div className="tv-status">
           {sound ? <Volume2 /> : <VolumeX />}
           <span>
-            {preview ? 'Prévia visual · dados fictícios' : 'Demonstração local · dados fictícios'}
+            {paired
+              ? 'TV pareada · demonstração'
+              : preview
+                ? 'Prévia visual · dados fictícios'
+                : 'Demonstração local · dados fictícios'}
           </span>
         </div>
       </footer>
@@ -170,12 +177,13 @@ function TVCanvas({
   );
 }
 
-export function QueueDisplay() {
+export function QueueDisplay({ paired = false }: { paired?: boolean }) {
   const { repository, revision } = useApp();
   const [params, setParams] = useSearchParams();
   const organizationId = params.get('rede') ?? 'aurora',
     unitId = params.get('unidade') ?? 'aurora-centro';
-  const preview = params.get('previa') === '1';
+  const remote = useRemoteTV(paired, repository);
+  const preview = !paired && params.get('previa') === '1';
   const [sequence, setSequence] = useState(23),
     [sound, setSound] = useState(false),
     [full, setFull] = useState(false),
@@ -208,7 +216,7 @@ export function QueueDisplay() {
   }, []);
   let feed: DisplayFeed | null = null;
   try {
-    feed = repository.display(organizationId, unitId);
+    feed = paired ? remote.feed : repository.display(organizationId, unitId);
   } catch {
     /* Invalid scope is shown below. */
   }
@@ -276,6 +284,8 @@ export function QueueDisplay() {
       setMessage('O navegador não liberou o áudio. A chamada permanece visível na tela.');
     }
   };
+  if (paired && !feed)
+    return <TVJoin initial={remote.code} status={remote.status} pair={remote.pair} />;
   if (!feed)
     return (
       <div className="app-error">
@@ -291,7 +301,7 @@ export function QueueDisplay() {
       onPointerMove={revealTools}
       onKeyDown={revealTools}
     >
-      <TVCanvas feed={feed} preview={preview} sound={sound} />
+      <TVCanvas feed={feed} preview={preview} sound={sound} paired={paired} />
       <nav className="tv-tools" aria-label="Controles da demonstração da TV">
         <Link to="/senhas">
           <ArrowLeft />
@@ -303,16 +313,23 @@ export function QueueDisplay() {
             Simular chamada
           </button>
         ) : null}
-        <button
-          onClick={() => {
-            const next = new URLSearchParams(params);
-            if (preview) next.delete('previa');
-            else next.set('previa', '1');
-            setParams(next);
-          }}
-        >
-          {preview ? 'Ver chamadas da recepção' : 'Ver chamada de exemplo'}
-        </button>
+        {paired ? (
+          <button onClick={() => remote.pair('')}>Trocar código da TV</button>
+        ) : (
+          <Link to="/tv">Parear com outro equipamento</Link>
+        )}
+        {!paired && (
+          <button
+            onClick={() => {
+              const next = new URLSearchParams(params);
+              if (preview) next.delete('previa');
+              else next.set('previa', '1');
+              setParams(next);
+            }}
+          >
+            {preview ? 'Ver chamadas da recepção' : 'Ver chamada de exemplo'}
+          </button>
+        )}
         <button onClick={toggleSound} aria-pressed={sound}>
           {sound ? <VolumeX /> : <Volume2 />}
           {sound ? 'Desativar som' : 'Ativar som'}
@@ -346,7 +363,7 @@ export function QueueControl() {
     [busy, setBusy] = useState('');
   const unit = data.units.find((u) => u.id === context.unitId),
     fallback = unit ?? data.units[0];
-  const rooms = unit ? roomsForUnit(unit) : [];
+  const rooms = unit ? callableRoomsForUnit(unit) : [];
   const feed = unit ? repository.display(context.organizationId, unit.id) : null;
   const calls = data.encounters
     .filter((e) => activeEncounter(e) && dateKey(new Date(e.arrivedAt)) === dateKey())
@@ -429,11 +446,8 @@ export function QueueControl() {
       </div>
       <UnitRequired>
         <Notice>
-          {isPortable()
-            ? 'Para testar a ligação, abra a TV pelo botão abaixo e mantenha as duas janelas deste mesmo arquivo no mesmo navegador. '
-            : 'A TV e a recepção se atualizam neste navegador. '}
-          Esta demonstração não conecta computadores ou TVs de outros dispositivos. A conexão real
-          entre dispositivos será implementada com o servidor.
+          Para conectar uma TV em outro aparelho, abra <Link to="/fila">Fila e salas</Link> e gere
+          um código de pareamento. Para testar em duas abas, use o painel local da unidade.
         </Notice>
         <div className="queue-workspace">
           <Panel title="Chamada da unidade" subtitle={unit?.name}>

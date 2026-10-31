@@ -42,6 +42,10 @@ export function roomsForUnit(unit: Unit): Room[] {
       : { id: 'sala-3', name: 'Sala 03', direction: 'Corredor lateral · primeira porta' },
   ];
 }
+// O histórico mantém locais antigos. Novos encaminhamentos usam a oferta atual da unidade.
+export function callableRoomsForUnit(unit: Unit) {
+  return roomsForUnit(unit).filter((room) => room.id !== 'farmacia-1' || unit.kind !== 'upa');
+}
 export function nextTicket(
   encounters: Pick<Encounter, 'organizationId' | 'unitId' | 'arrivedAt' | 'ticket'>[],
   organizationId: string,
@@ -142,7 +146,10 @@ export function readDisplay(
     !!announced?.roomStayId &&
     db.encounters
       .find((e) => e.id === announced.encounterId)
-      ?.roomStays?.some((s) => s.id === announced.roomStayId && s.outcome === 'released');
+      ?.roomStays?.some(
+        (s) =>
+          s.id === announced.roomStayId && (s.outcome === 'released' || s.outcome === 'returned'),
+      );
   return {
     unitName: unit.name,
     organizationName: org.shortName,

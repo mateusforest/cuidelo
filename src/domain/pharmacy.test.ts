@@ -473,7 +473,7 @@ describe('receita, dispensação e baixa por lote', () => {
     const loaded = new DemoRepository(store, () => now);
     expect(loaded.recoveryMessage).toBe('');
     expect(loaded.snapshot(pharmacist).dispensations).toHaveLength(1);
-    expect(JSON.parse(store.getItem(storageKey)!).schemaVersion).toBe(11);
+    expect(JSON.parse(store.getItem(storageKey)!).schemaVersion).toBe(12);
     const saved = store.getItem(storageKey);
     await expect(
       loaded.execute(

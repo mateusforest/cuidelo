@@ -11,6 +11,8 @@ export function SectorHandoffs({ roomId }: { roomId: string }) {
       null,
     ),
     [busy, setBusy] = useState(false);
+  const occupied = data.sectorSeats.filter((s) => s.roomId === roomId);
+  const blocked = (id: string) => occupied.some((s) => s.encounterId !== id);
   const tickets = data.serviceTickets.filter((t) => t.roomId === roomId);
   if (!tickets.length && !form) return null;
   const receive = async (t: ServiceTicket) => {
@@ -33,9 +35,9 @@ export function SectorHandoffs({ roomId }: { roomId: string }) {
   };
   return (
     <Panel
-      title="Encaminhamentos da escuta"
+      title="Encaminhamentos ao setor"
       subtitle={
-        'Pessoas encaminhadas para ' +
+        'Encaminhamentos da recepção ou da escuta para ' +
         roomName(roomId) +
         '. Confira a senha e a identificação na chegada.'
       }
@@ -52,13 +54,19 @@ export function SectorHandoffs({ roomId }: { roomId: string }) {
               </small>
             </div>
             <Badge tone={t.received ? 'blue' : 'amber'}>
-              {t.received ? 'Recebido no setor' : 'Aguardando recebimento'}
+              {t.received
+                ? 'Recebido no setor'
+                : blocked(t.encounterId)
+                  ? 'Aguardar sala'
+                  : occupied.some((s) => s.encounterId === t.encounterId)
+                    ? 'Sala reservada'
+                    : 'Aguardando recebimento'}
             </Badge>
             <div className="row-actions">
               {!t.received && (
                 <Button
                   variant="secondary"
-                  disabled={busy}
+                  disabled={busy || blocked(t.encounterId)}
                   onClick={async () => {
                     setBusy(true);
                     try {
@@ -83,7 +91,7 @@ export function SectorHandoffs({ roomId }: { roomId: string }) {
                   Concluir passagem
                 </Button>
               ) : (
-                <Button disabled={busy} onClick={() => receive(t)}>
+                <Button disabled={busy || blocked(t.encounterId)} onClick={() => receive(t)}>
                   Confirmar recebimento
                 </Button>
               )}

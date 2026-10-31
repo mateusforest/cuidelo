@@ -5,7 +5,7 @@ import { preferenceReasons, servicesForUnit } from './kiosk-options';
 import { cpfDigits, normalizedName, validCpf } from './identification';
 import { dateKey } from './dates';
 import { DomainError } from './errors';
-import { roomsForUnit } from './queue';
+import { callableRoomsForUnit, roomsForUnit } from './queue';
 import { demoIdentities } from './access';
 
 export type ReceptionTarget = { kind: 'arrival' | 'encounter'; id: string };
@@ -52,6 +52,7 @@ export function canClosePriorArrival(e: Encounter, today: string) {
     e.status === 'waiting' &&
     !e.intakeStartedAt &&
     !e.intakeCompletedAt &&
+    !e.roomStays?.some((s) => s.enteredAt) &&
     !e.startedAt &&
     !e.professionalId &&
     dateKey(new Date(e.arrivedAt)) < today
@@ -160,6 +161,7 @@ export function applyReceptionCommand(
     ensure(
       canClosePriorArrival(e, dateKey(now)) &&
         !db.intakes.some((r) => r.encounterId === e.id) &&
+        !db.queueServiceEvents.some((s) => s.encounterId === e.id && s.action === 'receive') &&
         !db.careSegments.some((s) => s.encounterId === e.id) &&
         !db.notes.some((n) => n.encounterId === e.id),
       'Somente chegadas de dias anteriores sem início de atendimento podem ser encerradas no balcão.',
@@ -190,6 +192,11 @@ export function applyReceptionCommand(
   }
   const row = targetRow(db, c, command.target);
   editable(row, now);
+  if (command.target.kind === 'encounter')
+    ensure(
+      db.queueServiceEvents.filter((ev) => ev.encounterId === row.id).at(-1)?.action !== 'receive',
+      'A pessoa está em atendimento no setor. Registre a devolução antes de alterar a conferência.',
+    );
   if (command.type === 'reception.absent') {
     ensure(!row.receptionHold, 'A ausência já foi registrada.');
     ensure(
@@ -272,7 +279,7 @@ export function applyReceptionCommand(
   ensure(
     command.destination === 'triage'
       ? command.roomId === 'escuta-1'
-      : roomsForUnit(unit).some((r) => r.id === command.roomId && r.id !== 'escuta-1'),
+      : callableRoomsForUnit(unit).some((r) => r.id === command.roomId && r.id !== 'escuta-1'),
     'Selecione a sala correspondente ao encaminhamento.',
   );
   const checks = 'patientId' in row ? (row.receptionChecks ?? []) : [];

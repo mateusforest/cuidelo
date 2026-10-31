@@ -122,9 +122,10 @@ function parseDatabase(value: string): Database {
     db.queueAssessments = [];
     db.queueServiceEvents = [];
   }
+  if (isRecord(db) && db.schemaVersion === 11) db.schemaVersion = 12;
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 11 ||
+    db.schemaVersion !== 12 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )

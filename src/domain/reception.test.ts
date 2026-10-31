@@ -343,7 +343,7 @@ describe('recepção, conferência e encaminhamento', () => {
     const reload = new DemoRepository(storage, () => now);
     expect(reload.recoveryMessage).toBe('');
     expect(reload.snapshot(reception).encounters.at(-1)?.receptionChecks).toHaveLength(1);
-    expect(JSON.parse(saved).schemaVersion).toBe(11);
+    expect(JSON.parse(saved).schemaVersion).toBe(12);
     expect(reload.snapshot(reception).encounters[0].receptionStartedAt).toBeUndefined();
   });
   it('falha de conferência não deixa vínculo parcial nem altera armazenamento', async () => {
@@ -397,4 +397,69 @@ describe('recepção, conferência e encaminhamento', () => {
         .recoveryMessage,
     ).not.toBe('');
   });
+});
+
+it('encaminhamento direto da recepção ocupa o setor e pode voltar para a primeira triagem', () => {
+  const db = setup();
+  applyCommand(db, reception, { type: 'reception.start', target }, later(1));
+  const id = applyCommand(
+    db,
+    reception,
+    complete(db, {
+      destination: 'service',
+      roomId: 'farmacia-1',
+      adjustmentReason: 'Encaminhamento demonstrativo.',
+    }),
+    later(2),
+  );
+  const ph = demoContext('aurora', 'aurora-centro', 'pharmacy');
+  const ticket = readSnapshot(db, ph).serviceTickets.find((s) => s.encounterId === id)!;
+  expect(ticket.roomId).toBe('farmacia-1');
+  const receive = {
+    type: 'queue.service' as const,
+    id,
+    assessmentId: ticket.assessmentId,
+    expectedCount: 0,
+    action: 'receive' as const,
+    note: '',
+  };
+  applyCommand(db, ph, receive, later(3));
+  expect(() =>
+    applyCommand(
+      db,
+      reception,
+      { type: 'reception.start', target: { kind: 'encounter', id } },
+      later(4),
+    ),
+  ).toThrow('atendimento no setor');
+  expect(() =>
+    applyCommand(
+      db,
+      reception,
+      { type: 'reception.close-prior', id, reason: 'Teste' },
+      later(1440),
+    ),
+  ).toThrow();
+  applyCommand(
+    db,
+    ph,
+    { ...receive, expectedCount: 1, action: 'return', note: 'Necessita de escuta' },
+    later(4),
+  );
+  applyCommand(db, nurse, { type: 'intake.start', encounterId: id }, later(5));
+  applyCommand(
+    db,
+    nurse,
+    {
+      type: 'intake.record',
+      encounterId: id,
+      content: { complaint: 'Relato fictício.', observations: '', vitals: {} },
+    },
+    later(6),
+  );
+  expect(readSnapshot(db, nurse).sectorSeats).toEqual([]);
+  expect(
+    new DemoRepository({ getItem: () => JSON.stringify(db), setItem: () => {} }, () => later(7))
+      .recoveryMessage,
+  ).toBe('');
 });

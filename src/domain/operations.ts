@@ -3,6 +3,9 @@ import {
   recordService,
   serviceTickets,
   availableRoom,
+  bookSector,
+  sectorSeats,
+  sectorReturn,
   currentStay,
   markEntry,
   closeRoom,
@@ -198,10 +201,25 @@ export function applyCommand(
       ({ entityId, action } = applyWorkCommand(db, c, command, at, newId));
       break;
     }
+    case 'intake.review-start': {
+      permit(c, 'clinical');
+      const e = encounter(command.encounterId);
+      ensure(
+        db.intakes.some((r) => r.encounterId === e.id),
+        'Salve a escuta inicial antes da reavaliação.',
+      );
+      bookSector(db, c, e, 'escuta-1', at, newId(), true);
+      entityId = e.id;
+      action = 'Entrada para reavaliação registrada';
+      break;
+    }
     case 'intake.start': {
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
-      ensure(readyForIntake(e), 'Conclua a conferência e o encaminhamento à triagem na recepção.');
+      ensure(
+        readyForIntake(e) || sectorReturn(db, c, e),
+        'Conclua a conferência e o encaminhamento à triagem na recepção.',
+      );
       ensure(
         e.status === 'waiting' &&
           !e.intakeStartedAt &&
@@ -209,7 +227,7 @@ export function applyCommand(
         'A escuta já começou ou este atendimento saiu da espera.',
         'conflict',
       );
-      if (currentStay(e)) closeRoom(e, c, at, 'released', 'Entrada registrada na escuta');
+      bookSector(db, c, e, 'escuta-1', at, newId(), true);
       e.intakeStartedAt = at;
       entityId = e.id;
       action = 'Escuta iniciada';
@@ -250,7 +268,10 @@ export function applyCommand(
       const e = encounter(command.encounterId);
       const previous = db.intakes.filter((r) => r.encounterId === e.id);
       if (!previous.length && e.receptionRequired) {
-        ensure(readyForIntake(e), 'A conferência e o encaminhamento à triagem estão pendentes.');
+        ensure(
+          readyForIntake(e) || sectorReturn(db, c, e),
+          'A conferência e o encaminhamento à triagem estão pendentes.',
+        );
         ensure(e.intakeStartedAt, 'Registre a entrada na sala antes de concluir a triagem.');
       }
       const original = command.correctionOf
@@ -275,6 +296,10 @@ export function applyCommand(
         );
       const content = validateIntakeContent(command.content);
       if (!previous.length && e.intakeStartedAt) e.intakeCompletedAt = at;
+      if (!original && currentStay(e)?.roomId === 'escuta-1') {
+        const stay = currentStay(e)!;
+        closeRoom(e, c, at, stay.enteredAt ? 'triaged' : 'released', 'Escuta registrada.');
+      }
       if (!previous.length)
         ensure(content.complaint, 'Informe o motivo da procura na escuta inicial.');
       const correctionReason = original
@@ -332,6 +357,7 @@ export function applyCommand(
       );
       ensure(ticket, 'Esta senha não aguarda recebimento no seu setor.', 'permission');
       const call = makeQueueCall(db, e, ticket.roomId, now, newId());
+      call.roomStayId = bookSector(db, c, e, ticket.roomId, at, call.id);
       db.calls.push(call);
       entityId = call.id;
       action = 'Senha chamada pelo setor de destino';
@@ -359,7 +385,7 @@ export function applyCommand(
       const e = encounter(command.id);
       releaseRoom(e, c, command, at);
       entityId = e.id;
-      action = 'Reserva de consultório liberada';
+      action = 'Reserva de sala liberada';
       break;
     }
     case 'queue.call': {
@@ -904,6 +930,7 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     organizations: db.organizations.filter((o) => o.id === c.organizationId),
     workRecords: visibleWorkRecords(db, c),
     serviceTickets: serviceTickets(db, c),
+    sectorSeats: sectorSeats(db, c),
     queueServiceEvents: has('clinical')
       ? org(db.queueServiceEvents)
       : has('queue')

@@ -1,3 +1,4 @@
+import { TVPairing } from '../components/PairedTV';
 import { SectorHandoffs } from '../components/SectorHandoffs';
 import { PharmacyDispensing } from '../components/PharmacyDispensing';
 import { StockMedicationForm } from '../components/StockMedicationForm';
@@ -261,6 +262,7 @@ export function Pharmacy() {
             )}
           </Panel>
         </section>
+        {context.role === 'pharmacy' && <TVPairing />}
       </UnitRequired>
       {stockForm && <StockMedicationForm {...stockForm} onClose={() => setStockForm(null)} />}
       {movement && (

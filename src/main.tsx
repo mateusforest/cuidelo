@@ -34,6 +34,7 @@ import './styles/operations.css';
 import './styles/care-workspaces.css';
 import './styles/continuity-workspaces.css';
 import './styles/unit-queue.css';
+import './styles/paired-tv.css';
 import { Access, WorkspaceHome } from './pages/Access';
 import { Devices, Kiosk } from './pages/Kiosk';
 import { ConsultingRoom, Performance } from './pages/PatientFlow';
@@ -71,6 +72,7 @@ const protect = (permission: Permission, node: ReactNode) => (
   <Gate permission={permission}>{node}</Gate>
 );
 const router = (isPortable() ? createHashRouter : createBrowserRouter)([
+  { path: '/tv', element: <QueueDisplay paired /> },
   { path: '/painel', element: <QueueDisplay /> },
   { path: '/totem', element: <Kiosk /> },
   { path: '/acesso', element: <Access /> },

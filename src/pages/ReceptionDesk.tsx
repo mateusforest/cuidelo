@@ -32,7 +32,7 @@ import {
   type PreferenceReason,
 } from '../domain/kiosk-options';
 import { roomName } from '../domain/unit-queue';
-import { roomsForUnit } from '../domain/queue';
+import { callableRoomsForUnit, roomsForUnit } from '../domain/queue';
 import { clockTime, dateKey, shortDate } from '../domain/dates';
 import { duration, LiveDuration } from './PatientFlow';
 import '../styles/reception.css';
@@ -365,7 +365,7 @@ export function ReceptionDesk() {
       <Notice>
         A preferência administrativa é conferida no balcão. A triagem clínica é realizada pela
         equipe assistencial. Para testar a atualização entre telas, abra o totem e a TV pelos botões
-        acima, no mesmo navegador e arquivo.
+        acima. Para conectar uma TV em outro equipamento, gere o código em Fila e salas.
       </Notice>
       {closing && (
         <Modal
@@ -679,7 +679,7 @@ function CheckArrival({ item, onClose }: { item: DeskRow; onClose: () => void })
             </Field>
             <Field label="Sala de destino">
               <select value={roomId} onChange={(ev) => setRoomId(ev.target.value)}>
-                {roomsForUnit(unit)
+                {callableRoomsForUnit(unit)
                   .filter((r) =>
                     destination === 'triage' ? r.id === 'escuta-1' : r.id !== 'escuta-1',
                   )
@@ -785,7 +785,7 @@ function Journey({ item, onClose }: { item: DeskRow; onClose: () => void }) {
     ...(e?.roomStays ?? []).flatMap((s) => [
       {
         at: s.at,
-        label: 'Consultório vinculado · ' + roomName(s.roomId) + ' · ' + actor(s.actorId),
+        label: 'Sala vinculada · ' + roomName(s.roomId) + ' · ' + actor(s.actorId),
       },
       ...(s.enteredAt
         ? [{ at: s.enteredAt, label: 'Entrada confirmada · ' + roomName(s.roomId) }]
@@ -795,7 +795,7 @@ function Journey({ item, onClose }: { item: DeskRow; onClose: () => void }) {
             {
               at: s.endedAt,
               label:
-                'Consultório liberado · ' +
+                'Sala liberada · ' +
                 roomName(s.roomId) +
                 ' · ' +
                 actor(s.endedBy) +

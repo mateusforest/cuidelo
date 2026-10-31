@@ -66,15 +66,15 @@ export function Coverage() {
             também pode terminar com orientação confirmada.
           </p>
           <p>
-            <strong>02 · Fila e salas — em desenvolvimento.</strong> A chamada na TV reserva um dos
-            dois consultórios. A entrada confirma a ocupação. A devolução justificada, a conclusão e
-            a observação liberam a sala. O controle físico dos outros setores e a sincronização
-            entre dispositivos continuam pendentes.
+            <strong>02 · Fila e salas — demonstrável.</strong> A equipe reserva e libera os
+            consultórios e as salas de triagem, enfermagem, vacinação e farmácia conforme os
+            serviços da unidade. Uma TV pareada em outro equipamento recebe a senha e o destino pela
+            internet.
           </p>
           <p>
-            Restam 43 percursos parciais. A ordem começa pelo atendimento da unidade, com
-            consultório, farmácia e agenda logo após a fila. Protocolos e regras clínicas dependem
-            de validação institucional.
+            Restam {inventory.rows.filter((r) => r.status === 'parcial').length} percursos parciais.
+            A ordem começa pelo atendimento da unidade, com consultório, farmácia e agenda logo após
+            a fila. Protocolos e regras clínicas dependem de validação institucional.
           </p>
           <button
             className="button secondary"

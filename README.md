@@ -6,11 +6,13 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.14.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.15.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 A [auditoria da versão 0.13](docs/auditoria-0.13.md) reúne os percursos verificados e as pendências para a operação real. A recepção concilia as senhas do totem com a agenda e revisa chegadas antigas. O hospital permite transferir de leito com histórico dentro da mesma internação.
 
 A [primeira entrega dos 44 percursos](docs/escuta-fila-salas.md) liga a avaliação da enfermagem à fila, à TV e ao consultório. O mapa **Comparar com Pulso** permite consultar os recursos parciais na ordem de desenvolvimento.
+
+A versão 0.15 amplia a ocupação aos setores de triagem, enfermagem, vacinação e farmácia e conecta a TV de outro equipamento por código. [Roteiro para testar a TV e as salas](docs/html-e-painel-tv.md).
 
 Já é possível testar:
 
@@ -50,7 +52,7 @@ Já é possível testar:
 
 Publicação de teste em 30/10/2026: [Cuidelo](https://cuidelo.vercel.app/acesso), [totem da UBS Centro](https://cuidelo.vercel.app/totem?rede=aurora&unidade=aurora-centro) e [painel da TV da UBS Centro](https://cuidelo.vercel.app/painel?rede=aurora&unidade=aurora-centro).
 
-O endereço hospeda a mesma demonstração com dados fictícios. As alterações continuam salvas somente no navegador de cada visitante; abrir o endereço em outro computador não compartilha filas, estoque ou prontuários. Use abas do mesmo navegador para testar a comunicação entre recepção, consultório, totem e TV. Os dados dos arquivos HTML locais não são transferidos automaticamente para o endereço online.
+O endereço hospeda a mesma demonstração com dados fictícios. As alterações continuam salvas somente no navegador de cada visitante; abrir o endereço em outro computador não compartilha filas, estoque ou prontuários. O pareamento opcional publica o painel de senhas pela internet. A ocupação e o atendimento dos diferentes perfis continuam na mesma estação. Os dados dos arquivos HTML locais não são transferidos automaticamente para o endereço online.
 
 `vercel.json` configura a compilação Vite, a pasta `dist`, a abertura direta das rotas e o cabeçalho `noindex, nofollow`. Esse cabeçalho orienta buscadores; não é controle de acesso. `.vercelignore` exclui arquivos locais, credenciais e entregas da publicação pela CLI. Os avisos de demonstração permanecem visíveis. A publicação não habilita atendimento real, autenticação ou persistência protegida.
 
@@ -62,9 +64,9 @@ A primeira publicação foi enviada pela Vercel CLI para o projeto `cuidelo`, na
 pnpm build:html
 ```
 
-Abra `dist-standalone/Cuidelo.html` com dois cliques. O arquivo funciona sem servidor e contém código, estilos, marca e fontes. `Cuidelo-TV.html` abre diretamente a prévia da TV. `Cuidelo-Totem.html` abre a retirada de senha da UBS Centro de demonstração. Para testar chamada entre janelas, use os botões **Abrir totem conectado** e **Abrir TV conectada** na Recepção (ou **Abrir TV desta unidade** no painel de senhas) dentro de um mesmo arquivo, no mesmo navegador. A demonstração não conecta TVs de outros dispositivos.
+Abra `dist-standalone/Cuidelo.html` com dois cliques. A cópia publicada para download fica em https://cuidelo.vercel.app/downloads/Cuidelo.html. O arquivo funciona sem servidor e contém código, estilos, marca e fontes. `Cuidelo-TV.html` abre diretamente a prévia da TV. `Cuidelo-Totem.html` abre a retirada de senha da UBS Centro de demonstração. Para testar chamada entre janelas, use os botões **Abrir totem conectado** e **Abrir TV conectada** na Recepção (ou **Abrir TV desta unidade** no painel de senhas) dentro de um mesmo arquivo, no mesmo navegador. Para a TV em outro aparelho, gere o código em Fila e salas e abra https://cuidelo.vercel.app/tv no navegador da TV. O HTML da estação e a TV precisam de internet para esse modo.
 
-O painel de comparação registra **2 telas demonstráveis, 43 parciais e 1 adaptada**, considerando o catálogo de 46 telas do Pulso. As 30 telas antes sem base agora possuem correspondência local, mas os percursos continuam parciais. Essa contagem não mede conclusão do sistema nem homologação.
+O painel de comparação registra **3 telas demonstráveis, 42 parciais e 1 adaptada**, considerando o catálogo de 46 telas do Pulso. As 30 telas antes sem base agora possuem correspondência local, mas os percursos continuam parciais. Essa contagem não mede conclusão do sistema nem homologação.
 
 As alterações ficam no navegador atual. O histórico é editável por ferramentas do navegador e não constitui auditoria de produção. Supabase, autenticação, autorização no servidor, assinatura digital e integrações SUS ainda não estão conectados. Não houve teste de capacidade para 100 unidades.
 

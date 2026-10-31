@@ -107,7 +107,7 @@ test('farmácia recebe o encaminhamento, chama na TV e devolve à escuta; enferm
   await classify(page, 'farmacia-1');
   await page.goto('/farmacia');
   await selectSession(page, { unitId: 'aurora-centro', role: 'pharmacy' });
-  await expect(page.getByRole('heading', { name: 'Encaminhamentos da escuta' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Encaminhamentos ao setor' })).toBeVisible();
   await page.getByRole('button', { name: 'Chamar na TV', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Senha chamada');
   await page.getByRole('button', { name: 'Confirmar recebimento' }).click();
@@ -154,4 +154,34 @@ test('orientação registrada encerra a escuta sem criar um SOAP', async ({ page
   await expect(page.getByLabel('A · Avaliação', { exact: true })).toHaveCount(0);
   await page.reload();
   await expect(page.getByText('Orientação e encerramento', { exact: true })).toBeVisible();
+});
+
+test('a sala de vacinação passa de reservada a ocupada e livre no quadro da unidade', async ({
+  page,
+  context,
+}) => {
+  const unit = { unitId: 'aurora-centro', role: 'nursing' };
+  await page.goto('/escuta/aurora-centro-e0');
+  await selectSession(page, unit);
+  const board = await context.newPage();
+  await board.goto('/fila');
+  const sector = (label: string) =>
+    board.locator('.queue-room-card').filter({ has: board.getByText(label, { exact: true }) });
+  const triage = sector('Triagem');
+  await page.getByRole('button', { name: 'Chamar / rechamar para triagem' }).click();
+  await expect(triage).toContainText('Reservado');
+  await classify(page, 'vacina-1');
+  await expect(triage).toContainText('Livre');
+  const vaccine = sector('Sala de vacina');
+  await page.goto('/vacinacao');
+  await page.getByRole('button', { name: 'Chamar na TV', exact: true }).click();
+  await expect(vaccine).toContainText('Reservado');
+  await page.getByRole('button', { name: 'Confirmar recebimento' }).click();
+  await expect(vaccine).toContainText('Em atendimento');
+  await board.reload();
+  await expect(vaccine).toContainText('Em atendimento');
+  await page.getByRole('button', { name: 'Concluir passagem' }).click();
+  await page.getByLabel('Resultado da passagem').fill('Passagem fictícia encerrada.');
+  await page.getByRole('button', { name: 'Confirmar conclusão' }).click();
+  await expect(vaccine).toContainText('Livre');
 });

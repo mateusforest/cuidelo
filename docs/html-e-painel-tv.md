@@ -4,7 +4,7 @@
 
 `pnpm build:html` gera `dist-standalone/Cuidelo.html`, `dist-standalone/Cuidelo-TV.html` e `dist-standalone/Cuidelo-Totem.html`. Cada arquivo contém aplicação, estilos, fontes e marca; pode ser aberto diretamente no navegador, sem instalar Node ou iniciar servidor. O primeiro abre a visão da rede. O segundo abre diretamente uma chamada de exemplo na TV. O guia da marca também é incorporado.
 
-Os três arquivos são demonstrações independentes. O arquivo de totem abre a retirada de senhas da UBS Centro. Para testar a ligação entre recepção e TV, use **um único arquivo**: abra Cuidelo.html, entre na sessão da unidade, acesse Painel de senhas e clique em Abrir TV desta unidade. Mantenha as duas janelas desse mesmo arquivo no mesmo navegador. A persistência e a comunicação local dependem do suporte do navegador a armazenamento de arquivos locais. Não existe sincronização entre computadores ou televisores diferentes.
+Os três arquivos são demonstrações independentes. O arquivo de totem abre a retirada de senhas da UBS Centro. Para testar a ligação entre recepção e TV, use **um único arquivo**: abra Cuidelo.html, entre na sessão da unidade, acesse Painel de senhas e clique em Abrir TV desta unidade. Mantenha as duas janelas desse mesmo arquivo no mesmo navegador. A persistência e a comunicação local dependem do suporte do navegador a armazenamento de arquivos locais. Para transmitir a uma TV em outro equipamento, use o pareamento abaixo.
 
 ## Recepção e TV
 
@@ -16,11 +16,19 @@ Em Ver prévia da TV, a senha A-023 e as chamadas anteriores são exemplos visua
 
 Clique em Ativar som para autorizar o áudio. O sinal sonoro e a leitura da senha dependem do navegador e das vozes instaladas; a informação visual continua disponível. Tela cheia usa a função do navegador, com F11 como alternativa no computador. Os controles somem após alguns segundos de inatividade e reaparecem ao mover o mouse ou usar o teclado.
 
-## Para conectar TVs de verdade
+## Parear uma TV em outro equipamento
 
-O HTML é uma demonstração, não uma instalação de painel operacional. A próxima implementação deve ter canal de exibição por unidade e área, credencial específica para o dispositivo, projeção pública servida por endpoint separado, publicação de eventos após confirmação de gravação, sequência/idempotência, reconhecimento de chamada e reconexão. O dispositivo deve detectar falta de atualizações e sinalizar indisponibilidade, sem apresentar conteúdo antigo como chamada atual.
+1. Na estação de demonstração, abra o HTML principal ou o Cuidelo na Vercel. Entre como Recepção na UBS Centro e abra **Fila e salas**.
+2. Em **TV em outro equipamento**, clique em **Gerar código para a TV**. Mantenha o sistema da unidade aberto nessa estação.
+3. No navegador da TV, abra **https://cuidelo.vercel.app/tv**, digite o código e selecione **Conectar ao painel**. Também é possível copiar o link de leitura e abri-lo no segundo aparelho.
+4. Na estação, chame uma senha. Confira na TV o número e o destino. Para autorizar o áudio, use **Ativar som** na própria TV. **Encerrar transmissão** na estação invalida o pareamento.
+5. Com o perfil de Enfermagem, chame uma senha para a triagem, inicie e salve a escuta. Encaminhe a pessoa para enfermagem, vacinação ou farmácia, conforme os serviços da unidade. Abra o destino com o perfil correspondente, chame a senha e confirme o recebimento. Confira **Reservado**, **Em atendimento** e **Livre** em Fila e salas. Concluir ou devolver a passagem libera a sala. A devolução mantém o percurso para nova escuta.
 
-Também serão necessários cadastro dos locais e orientações reais, impressão ou entrega da senha, separação de filas por serviço, revisão assistencial das regras, acessibilidade em campo, volume de áudio, modo quiosque, suspensão da tela, gerenciamento do dispositivo e contingência. Nenhum dado clínico deve ser enviado ao dispositivo de TV.
+O código permite visualizar as chamadas dessa estação e unidade. A TV recebe por HTTPS o número da senha, o identificador do local e o horário de cada chamada. Duas estações independentes mantêm dados e códigos próprios. As telas de operação da mesma estação compartilham o quadro no navegador.
+
+A TV verifica as chamadas aproximadamente a cada três segundos enquanto está conectada. Ao perder a rede ela retira a chamada e tenta reconectar. Se a estação parar de transmitir, o quadro remoto expira em até 90 segundos, mais o intervalo de consulta. O HTML continua utilizável sem internet para os percursos locais. A projeção temporária da TV usa o cache regional da Vercel, sem guardar cadastros ou prontuários.
+
+Esta entrega usa dados fictícios. Para operação clínica entre vários postos ainda são necessários autenticação, autorização no servidor, persistência protegida e validação dos equipamentos e protocolos municipais.
 
 ## Comparação com o original
 

@@ -47,7 +47,12 @@ export function IntakeQueue() {
   );
   const hasRecord = (id: string) => data.intakes.some((r) => r.encounterId === id);
   const dated = data.encounters.filter((e) => !day || dateKey(new Date(e.arrivedAt)) === day);
-  const stage = (e: (typeof data.encounters)[number]) => intakeQueueState(e, hasRecord(e.id));
+  const stage = (e: (typeof data.encounters)[number]) =>
+    returned.has(e.id) && !hasRecord(e.id)
+      ? e.intakeStartedAt
+        ? 'active'
+        : 'pending'
+      : intakeQueueState(e, hasRecord(e.id));
   const stageLabel = {
     pending: 'Aguardando escuta',
     active: 'Em escuta',
@@ -274,7 +279,11 @@ function IntakeEditor({ id }: { id?: string }) {
         }
       />
     );
-  if (!records.length && !readyForIntake(encounter))
+  if (
+    !records.length &&
+    !readyForIntake(encounter) &&
+    !data.queueDirections.some((d) => d.encounterId === encounter.id && d.roomId === 'escuta-1')
+  )
     return (
       <>
         <PageHeader
@@ -461,7 +470,12 @@ function IntakeEditor({ id }: { id?: string }) {
                       </Notice>
                       <Button
                         type="button"
-                        disabled={busy}
+                        disabled={
+                          busy ||
+                          data.sectorSeats.some(
+                            (s) => s.roomId === 'escuta-1' && s.encounterId !== encounter.id,
+                          )
+                        }
                         onClick={async () => {
                           setBusy(true);
                           try {

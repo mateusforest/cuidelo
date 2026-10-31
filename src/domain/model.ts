@@ -111,7 +111,9 @@ export interface RoomStay {
   segmentId?: string;
   endedAt?: string;
   endedBy?: string;
-  outcome?: 'released' | 'completed' | 'observation';
+  sectorRef?: string;
+  entryBy?: string;
+  outcome?: 'released' | 'completed' | 'observation' | 'triaged' | 'returned' | 'finished';
   reason?: string;
 }
 export interface QueueServiceEvent extends Scoped {
@@ -438,7 +440,7 @@ export interface Database {
   queueAssessments: QueueAssessment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 11;
+  schemaVersion: 12;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -464,7 +466,15 @@ export interface Database {
   intakes: IntakeRecord[];
   addenda: NoteAddendum[];
 }
+export interface SectorSeat {
+  roomId: string;
+  encounterId: string;
+  since: string;
+  entered: boolean;
+  legacy: boolean;
+}
 export interface Snapshot {
+  sectorSeats: SectorSeat[];
   queueServiceEvents: QueueServiceEvent[];
   serviceTickets: ServiceTicket[];
   queueAssessments: QueueAssessment[];
@@ -548,7 +558,7 @@ export type Command =
   | { type: 'work.create'; module: string; values: Record<string, string> }
   | { type: 'work.transition'; id: string; status: string; reason: string }
   | { type: 'work.update'; id: string; values: Record<string, string>; reason: string }
-  | { type: 'intake.start'; encounterId: string }
+  | { type: 'intake.start' | 'intake.review-start'; encounterId: string }
   | { type: 'kiosk.link'; arrivalId: string; patientId: string }
   | {
       type: 'intake.record';

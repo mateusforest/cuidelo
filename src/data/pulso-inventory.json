@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.14. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.15. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -73,9 +73,9 @@
       "quem": "Recepção e coordenação",
       "dispositivo": "desktop",
       "group": "UBS e assistência",
-      "status": "parcial",
+      "status": "demonstravel",
       "route": "/fila",
-      "note": "Fila operacional por etapa, espera, preferência e faixa indicada na escuta. Chamada à TV, reserva, devolução justificada, confirmação da entrada e liberação de dois consultórios com histórico. Faltam controle de ocupação nos demais setores, protocolos locais validados e sincronização entre dispositivos."
+      "note": "Reserva ao chamar, entrada, devolução e liberação de consultórios, triagem, enfermagem, vacinação e farmácia conforme a unidade. O quadro impede dupla ocupação na estação e mantém o histórico. TVs pareadas em outros equipamentos recebem apenas o painel de senhas. A ocupação compartilhada entre estações clínicas depende de persistência e autorização no servidor."
     },
     {
       "id": "tv",
@@ -87,7 +87,7 @@
       "group": "UBS e assistência",
       "status": "demonstravel",
       "route": "/senhas",
-      "note": "Tela dedicada com senha, destino, orientação, histórico, relógio, tela cheia e áudio opcional. A ligação entre recepção e TV é local, no mesmo navegador; não há conexão entre dispositivos. Nomes e dados clínicos não aparecem no painel."
+      "note": "Painel de senha, destino, horário, histórico e áudio opcional. Pode abrir localmente ou receber chamadas de uma estação pareada pela internet em outro equipamento. A falta de sinal retira a chamada da tela. Dados pessoais e clínicos ficam na estação."
     },
     {
       "id": "escuta",

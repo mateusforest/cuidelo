@@ -7,12 +7,13 @@ import {
   type QueueAssessment,
   type RoomStay,
   type ServiceTicket,
+  type SectorSeat,
   type UnitKind,
   type Role,
 } from './model';
 import { demoIdentities } from './access';
 import { DomainError } from './errors';
-import { readyForConsultation } from './reception';
+import { readyForIntake, readyForConsultation } from './reception';
 
 export const consultRooms = [
   { id: 'consultorio-1', name: 'Consultório 01' },
@@ -45,6 +46,168 @@ function serviceRole(roomId: string, role: Role) {
     ? role === 'pharmacy'
     : ['enfermagem-1', 'vacina-1'].includes(roomId) && can(role, 'clinical');
 }
+export function sectorRooms(kind: UnitKind) {
+  return [
+    { id: 'escuta-1', name: 'Triagem' },
+    ...destinations(kind).filter((r) => serviceRooms.some((s) => s.id === r.id)),
+  ];
+}
+const isSector = (room: string) => room === 'escuta-1' || serviceRooms.some((r) => r.id === room);
+type DestinationRef = Pick<
+  QueueAssessment,
+  'id' | 'roomId' | 'at' | 'organizationId' | 'unitId' | 'encounterId'
+>;
+function deskDestination(
+  e: Encounter,
+  index = (e.receptionChecks?.length ?? 0) - 1,
+): DestinationRef | undefined {
+  const check = e.receptionChecks?.[index];
+  if (check?.destination !== 'service' || !serviceRooms.some((r) => r.id === check.roomId)) return;
+  return {
+    id: 'desk:' + e.id + ':' + index,
+    unitId: e.unitId,
+    organizationId: e.organizationId,
+    encounterId: e.id,
+    at: check.at,
+    roomId: check.roomId,
+  };
+}
+function destinationRef(db: Database, e: Encounter): DestinationRef | undefined {
+  return db.queueAssessments.filter((a) => a.encounterId === e.id).at(-1) ?? deskDestination(e);
+}
+export function sectorReturn(db: Database, c: Context, e: Encounter) {
+  if (!inUnit(e, c) || e.status !== 'waiting' || e.receptionHold) return false;
+  const ref = destinationRef(db, e);
+  return (
+    !!ref &&
+    db.queueServiceEvents.some((ev) => ev.assessmentId === ref.id && ev.action === 'return')
+  );
+}
+function sectorSeatsOfUnit(db: Database, c: Context): SectorSeat[] {
+  const seats: SectorSeat[] = [];
+  const events = new Map(
+    db.queueServiceEvents
+      .filter((ev) => ev.organizationId === c.organizationId && ev.unitId === c.unitId)
+      .map((ev) => [ev.encounterId, ev]),
+  );
+  for (const e of db.encounters) {
+    if (!inUnit(e, c)) continue;
+    const stay = currentStay(e);
+    if (stay) {
+      if (isSector(stay.roomId))
+        seats.push({
+          roomId: stay.roomId,
+          encounterId: e.id,
+          since: stay.enteredAt ?? stay.at,
+          entered: !!stay.enteredAt,
+          legacy: false,
+        });
+      continue;
+    }
+    if (e.status !== 'waiting') continue;
+    if (e.intakeStartedAt && !e.intakeCompletedAt)
+      seats.push({
+        roomId: 'escuta-1',
+        encounterId: e.id,
+        since: e.intakeStartedAt,
+        entered: true,
+        legacy: true,
+      });
+    const last = events.get(e.id);
+    if (last?.action === 'receive') {
+      const dest = destinationRef(db, e);
+      if (dest)
+        seats.push({
+          roomId: dest.roomId,
+          encounterId: e.id,
+          since: last.at,
+          entered: true,
+          legacy: true,
+        });
+    }
+  }
+  return seats;
+}
+export function sectorSeats(db: Database, c: Context) {
+  return sectorSeatsOfUnit(db, c).filter(
+    (s) => can(c.role, 'queue') || serviceRole(s.roomId, c.role),
+  );
+}
+export function bookSector(
+  db: Database,
+  c: Context,
+  e: Encounter,
+  roomId: string,
+  at: string,
+  id: string,
+  enter = false,
+) {
+  const kind = db.units.find((u) => u.id === c.unitId)?.kind;
+  requireRule(
+    kind && inUnit(e, c) && sectorRooms(kind).some((r) => r.id === roomId),
+    'Setor indisponível nesta unidade.',
+  );
+  const current = currentStay(e);
+  requireRule(!current || current.roomId === roomId, 'Esta senha já está vinculada a outra sala.');
+  const ref = destinationRef(db, e);
+  if (roomId === 'escuta-1') {
+    const returned =
+      ref &&
+      db.queueServiceEvents.some((ev) => ev.assessmentId === ref.id && ev.action === 'return');
+    requireRule(
+      e.status === 'waiting' && !e.receptionHold && (readyForIntake(e) || returned),
+      'A pessoa não está disponível para triagem.',
+    );
+    requireRule(
+      !ref ||
+        returned ||
+        (!isSector(ref.roomId) &&
+          !db.queueServiceEvents.some(
+            (ev) => ev.assessmentId === ref.id && ev.action === 'receive',
+          )),
+      'O setor de destino precisa devolver a pessoa à triagem.',
+    );
+  } else {
+    requireRule(
+      e.status === 'waiting' &&
+        !e.receptionHold &&
+        ref?.roomId === roomId &&
+        !db.queueServiceEvents.some(
+          (ev) => ev.assessmentId === ref.id && ['return', 'finish'].includes(ev.action),
+        ),
+      'Confira o encaminhamento para este setor.',
+    );
+  }
+  const seats = sectorSeatsOfUnit(db, c);
+  requireRule(
+    !seats.some((s) => s.roomId === roomId && s.encounterId !== e.id),
+    'Esta sala está ocupada ou reservada para outra senha.',
+  );
+  requireRule(
+    at >= (current?.enteredAt ?? current?.at ?? e.roomStays?.at(-1)?.endedAt ?? e.arrivedAt),
+    'Confira o relógio antes de movimentar a sala.',
+  );
+  const legacy = seats.find((s) => s.encounterId === e.id && s.legacy);
+  if (!current && legacy) {
+    requireRule(legacy.roomId === roomId, 'Esta senha já está em outro setor.');
+    requireRule(!enter, 'A pessoa já tem uma entrada anterior registrada.');
+    return undefined;
+  }
+  const stay = current ?? {
+    id,
+    roomId,
+    at,
+    actorId: c.sessionId,
+    ...(roomId !== 'escuta-1' ? { sectorRef: ref!.id } : {}),
+  };
+  if (!current) (e.roomStays ??= []).push(stay);
+  if (enter) {
+    requireRule(!stay.enteredAt, 'A entrada nesta sala já foi registrada.');
+    stay.enteredAt = at;
+    stay.entryBy = c.sessionId;
+  }
+  return stay.id;
+}
 export function serviceTickets(db: Database, c: Context): ServiceTicket[] {
   if (!serviceRooms.some((r) => serviceRole(r.id, c.role))) return [];
   const order = new Map(queueDirections(db, c).map((d) => [d.encounterId, d.order]));
@@ -56,7 +219,7 @@ export function serviceTickets(db: Database, c: Context): ServiceTicket[] {
   return db.encounters
     .filter((e) => inUnit(e, c) && e.status === 'waiting')
     .flatMap((e) => {
-      const a = recent.get(e.id);
+      const a = recent.get(e.id) ?? deskDestination(e);
       if (!a || !serviceRole(a.roomId, c.role)) return [];
       const events = db.queueServiceEvents.filter((ev) => ev.assessmentId === a.id);
       if (events.at(-1)?.action === 'return' || events.at(-1)?.action === 'finish') return [];
@@ -84,7 +247,7 @@ export function recordService(
   at: string,
   id: string,
 ) {
-  const a = db.queueAssessments.filter((a) => a.encounterId === e.id).at(-1);
+  const a = destinationRef(db, e);
   requireRule(
     a && inUnit(e, c) && serviceRole(a.roomId, c.role),
     'Somente a equipe do setor de destino pode registrar a passagem.',
@@ -108,6 +271,15 @@ export function recordService(
     cmd.action === 'receive' || present(cmd.note, 600),
     'Informe o motivo ou resultado da passagem.',
   );
+  if (cmd.action === 'receive') bookSector(db, c, e, a.roomId, at, id, true);
+  else if (currentStay(e)?.roomId === a.roomId)
+    closeRoom(
+      e,
+      c,
+      at,
+      currentStay(e)?.enteredAt ? (cmd.action === 'finish' ? 'finished' : 'returned') : 'released',
+      'Passagem atualizada pelo setor.',
+    );
   db.queueServiceEvents.push({
     id,
     assessmentId: a.id,
@@ -137,14 +309,19 @@ const validRank = (n: number) => Number.isSafeInteger(n) && n >= 1 && n <= 5;
 const inUnit = (e: Encounter, c: Context) =>
   e.unitId === c.unitId && e.organizationId === c.organizationId;
 export function queueDirections(db: Database, c: Context) {
-  const recent = new Map<string, QueueAssessment>();
+  const recent = new Map<string, DestinationRef & { rank?: number }>();
   for (const a of db.queueAssessments)
     if (a.unitId === c.unitId && a.organizationId === c.organizationId)
       recent.set(a.encounterId, a);
+  for (const e of db.encounters)
+    if (inUnit(e, c) && !recent.has(e.id)) {
+      const ref = deskDestination(e);
+      if (ref) recent.set(e.id, ref);
+    }
   return db.encounters
     .filter((e) => inUnit(e, c) && e.status === 'waiting' && recent.has(e.id))
     .sort((a, b) => {
-      const byRank = recent.get(a.id)!.rank - recent.get(b.id)!.rank;
+      const byRank = (recent.get(a.id)!.rank ?? Infinity) - (recent.get(b.id)!.rank ?? Infinity);
       return (
         byRank ||
         Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
@@ -194,18 +371,20 @@ export function assessQueue(
       destinations(db.units.find((u) => u.id === e.unitId)!.kind).some(
         (r) => r.id === command.roomId,
       ),
-    'Selecione uma faixa e um consultório válidos.',
+    'Selecione uma faixa e um destino válidos.',
+  );
+  const history = db.queueAssessments.filter((a) => a.encounterId === e.id);
+  const ref = destinationRef(db, e);
+  const lastService =
+    ref && db.queueServiceEvents.filter((ev) => ev.assessmentId === ref.id).at(-1);
+  requireRule(
+    lastService?.action !== 'receive',
+    'O setor já recebeu a pessoa. Registre a devolução antes de reavaliar.',
   );
   const stay = currentStay(e);
   requireRule(
-    !stay || stay.roomId === command.roomId,
-    'Devolva a senha à fila antes de alterar o consultório reservado.',
-  );
-  const history = db.queueAssessments.filter((a) => a.encounterId === e.id);
-  requireRule(
-    db.queueServiceEvents.filter((ev) => ev.assessmentId === history.at(-1)?.id).at(-1)?.action !==
-      'receive',
-    'O setor já recebeu a pessoa. Registre a devolução antes de reavaliar.',
+    !stay || stay.roomId === 'escuta-1' || stay.roomId === command.roomId,
+    'Devolva a senha à fila antes de alterar o setor reservado.',
   );
   requireRule(
     command.roomId !== 'orientacao' ||
@@ -221,11 +400,7 @@ export function assessQueue(
     'A avaliação mudou. Reabra a ficha antes de salvar.',
   );
   requireRule(
-    at >=
-      (db.queueServiceEvents.filter((ev) => ev.assessmentId === history.at(-1)?.id).at(-1)?.at ??
-        history.at(-1)?.at ??
-        e.intakeCompletedAt ??
-        e.arrivedAt),
+    at >= (lastService?.at ?? history.at(-1)?.at ?? e.intakeCompletedAt ?? e.arrivedAt),
     'Confira o relógio da unidade antes de registrar.',
   );
   const minutes = command.reviewMinutes;
@@ -233,6 +408,18 @@ export function assessQueue(
     minutes === undefined || (Number.isSafeInteger(minutes) && minutes >= 1 && minutes <= 1440),
     'Informe um prazo de reavaliação entre 1 e 1.440 minutos ou deixe em branco.',
   );
+  requireRule(
+    !stay || stay.roomId === 'escuta-1' || isConsultRoom(stay.roomId),
+    'Devolva a reserva do setor antes de reavaliar.',
+  );
+  if (stay?.roomId === 'escuta-1')
+    closeRoom(
+      e,
+      c,
+      at,
+      stay.enteredAt ? 'triaged' : 'released',
+      'Avaliação concluída pela equipe.',
+    );
   db.queueAssessments.push({
     id,
     organizationId: c.organizationId,
@@ -253,10 +440,7 @@ export function assessQueue(
 }
 export function availableRoom(db: Database, c: Context, e: Encounter, requested?: string) {
   const own = currentStay(e);
-  const direction =
-    e.status === 'waiting'
-      ? db.queueAssessments.filter((a) => a.encounterId === e.id).at(-1)?.roomId
-      : undefined;
+  const direction = e.status === 'waiting' ? destinationRef(db, e)?.roomId : undefined;
   const others = new Set(
     db.encounters.filter((x) => inUnit(x, c) && x.id !== e.id).map((x) => currentStay(x)?.roomId),
   );
@@ -269,7 +453,7 @@ export function availableRoom(db: Database, c: Context, e: Encounter, requested?
   requireRule(room && isConsultRoom(room), 'Escolha um consultório livre nesta unidade.');
   requireRule(
     !own || room === own.roomId,
-    'Esta senha já tem consultório reservado. Devolva-a à fila antes de trocar.',
+    'Esta senha já tem uma sala reservada. Devolva-a à fila antes de trocar.',
   );
   requireRule(
     !direction || direction === room,
@@ -287,13 +471,14 @@ export function reserveCall(
   id: string,
 ) {
   const own = currentStay(e);
+  if (isSector(roomId)) return bookSector(db, c, e, roomId, at, id);
   if (!isConsultRoom(roomId)) {
     const direction = queueDirections(db, c).find((d) => d.encounterId === e.id);
     requireRule(
       !direction || direction.roomId === roomId || roomId === 'recepcao-1',
       'Confira o destino indicado na escuta antes da chamada.',
     );
-    requireRule(!own, 'Libere o consultório antes de chamar a pessoa para outro setor.');
+    requireRule(!own, 'Libere a sala antes de chamar a pessoa para outro setor.');
     return;
   }
   const room = availableRoom(db, c, e, roomId);
@@ -346,7 +531,10 @@ export function releaseRoom(
   command: Extract<Command, { type: 'queue.release-room' }>,
   at: string,
 ) {
-  requireRule(inUnit(e, c) && can(c.role, 'queue'), 'Acesso indisponível para esta unidade.');
+  requireRule(
+    inUnit(e, c) && (can(c.role, 'queue') || serviceRole(currentStay(e)?.roomId ?? '', c.role)),
+    'Acesso indisponível para esta unidade.',
+  );
   const stay = currentStay(e);
   requireRule(
     stay && !stay.enteredAt && stay.id === command.stayId,
@@ -395,7 +583,12 @@ export function validateUnitQueue(db: Database) {
     );
     prior.set(e.id, a.at);
   }
-  const byAssessment = new Map(db.queueAssessments.map((a) => [a.id, a]));
+  const byAssessment = new Map<string, DestinationRef>(db.queueAssessments.map((a) => [a.id, a]));
+  for (const e of db.encounters)
+    e.receptionChecks?.forEach((_, i) => {
+      const ref = deskDestination(e, i);
+      if (ref) byAssessment.set(ref.id, ref);
+    });
   const lastEvent = new Map<string, (typeof db.queueServiceEvents)[number]>();
   for (const ev of db.queueServiceEvents) {
     const a = byAssessment.get(ev.assessmentId),
@@ -468,14 +661,76 @@ export function validateUnitQueue(db: Database) {
         last &&
           present(s.id, 150) &&
           !stayIds.has(s.id) &&
-          isConsultRoom(s.roomId) &&
-          localActor(s.actorId, e, false) &&
+          (isConsultRoom(s.roomId) ||
+            sectorRooms(db.units.find((u) => u.id === e.unitId)!.kind).some(
+              (r) => r.id === s.roomId,
+            )) &&
+          (localActor(s.actorId, e, false) ||
+            (!!people.get(s.actorId) &&
+              inUnit(e, people.get(s.actorId)!) &&
+              serviceRole(s.roomId, people.get(s.actorId)!.role))) &&
           instant(s.at) &&
           s.at >= last,
         'Reserva ou sequência de salas inválida.',
       );
       stayIds.add(s.id);
-      if (s.enteredAt !== undefined || s.segmentId !== undefined) {
+      const sector = isSector(s.roomId);
+      const validSectorActor = (id: string) => {
+        const actor = people.get(id);
+        return (
+          !!actor &&
+          inUnit(e, actor) &&
+          (s.roomId === 'escuta-1'
+            ? can(actor.role, 'clinical')
+            : serviceRole(s.roomId, actor.role))
+        );
+      };
+      if (sector) {
+        requireRule(
+          !s.segmentId &&
+            (!s.enteredAt ||
+              (instant(s.enteredAt) && s.enteredAt >= s.at && validSectorActor(s.entryBy!))),
+          'Entrada em setor inválida.',
+        );
+        if (s.roomId === 'escuta-1' && s.outcome === 'triaged') {
+          requireRule(
+            db.intakes.some((r) => r.encounterId === e.id && r.recordedAt === s.endedAt) ||
+              db.queueAssessments.some((a) => a.encounterId === e.id && a.at === s.endedAt),
+            'Liberação sem registro da triagem.',
+          );
+        }
+        if (s.roomId !== 'escuta-1') {
+          const ref = byAssessment.get(s.sectorRef ?? '');
+          requireRule(
+            ref &&
+              ref.encounterId === e.id &&
+              ref.roomId === s.roomId &&
+              (!s.enteredAt ||
+                db.queueServiceEvents.some(
+                  (ev) =>
+                    ev.assessmentId === ref.id &&
+                    ev.action === 'receive' &&
+                    ev.at === s.enteredAt &&
+                    ev.actorId === s.entryBy,
+                )),
+            'Ocupação sem recebimento correspondente.',
+          );
+          if (s.enteredAt)
+            requireRule(
+              s.endedAt
+                ? db.queueServiceEvents.some(
+                    (ev) =>
+                      ev.assessmentId === ref.id &&
+                      ev.at === s.endedAt &&
+                      ev.actorId === s.endedBy &&
+                      ev.action === (s.outcome === 'finished' ? 'finish' : 'return'),
+                  )
+                : lastEvent.get(ref.id)?.action === 'receive',
+              'Saída incompatível com o setor.',
+            );
+        }
+      }
+      if (!sector && (s.enteredAt !== undefined || s.segmentId !== undefined)) {
         const segment = db.careSegments.find((p) => p.id === s.segmentId && p.encounterId === e.id);
         requireRule(
           segment &&
@@ -490,9 +745,13 @@ export function validateUnitQueue(db: Database) {
         requireRule(
           instant(s.endedAt) &&
             s.endedAt >= (s.enteredAt ?? s.at) &&
-            localActor(s.endedBy!, e, false) &&
+            (localActor(s.endedBy!, e, false) || (sector && validSectorActor(s.endedBy!))) &&
             (s.enteredAt
-              ? s.outcome === 'observation' || s.outcome === 'completed'
+              ? sector
+                ? s.roomId === 'escuta-1'
+                  ? s.outcome === 'triaged'
+                  : s.outcome === 'returned' || s.outcome === 'finished'
+                : s.outcome === 'observation' || s.outcome === 'completed'
               : s.outcome === 'released' && present(s.reason!, 400)),
           'Liberação de sala inválida.',
         );
@@ -504,7 +763,7 @@ export function validateUnitQueue(db: Database) {
             !rooms.has(key) &&
             !e.closedWithoutCare &&
             e.status !== 'completed',
-          'Ocupação de consultório inconsistente.',
+          'Ocupação de sala inconsistente.',
         );
         rooms.add(key);
       }

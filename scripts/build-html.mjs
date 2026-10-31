@@ -1,5 +1,5 @@
 import { build } from 'vite';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // Empacota a própria aplicação, mantendo uma única implementação dos fluxos.
@@ -98,6 +98,12 @@ const kiosk = html.replace(
   '<head><script>if(!location.hash)location.hash="/totem?rede=aurora&unidade=aurora-centro";</script>',
 );
 await writeFile(path.join(out, 'Cuidelo-Totem.html'), kiosk, 'utf8');
+if (process.argv.includes('--downloads')) {
+  const downloads = path.join(root, 'dist', 'downloads');
+  await mkdir(downloads, { recursive: true });
+  for (const file of ['Cuidelo.html', 'Cuidelo-TV.html', 'Cuidelo-Totem.html'])
+    await copyFile(path.join(out, file), path.join(downloads, file));
+}
 console.log(
   `HTMLs independentes gerados: Cuidelo.html, Cuidelo-TV.html e Cuidelo-Totem.html (${Math.round(Buffer.byteLength(html) / 1024)} KB cada).`,
 );

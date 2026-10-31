@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DoorOpen, Monitor, Volume2 } from 'lucide-react';
+import { TVPairing } from '../components/PairedTV';
+import { SectorRoomsPanel } from '../components/SectorRoomsPanel';
+import { sectorRooms } from '../domain/unit-queue';
 import { useApp } from '../app/context';
 import { externalRoute, displayRoute } from '../app/links';
 import { can, type Command, type Encounter } from '../domain/model';
@@ -50,7 +53,8 @@ export function UnitQueue() {
     }),
   );
   const rowStage = (e: Encounter) =>
-    directions.get(e.id)?.received
+    directions.get(e.id)?.received ||
+    data.sectorSeats.some((s) => s.encounterId === e.id && s.entered)
       ? 'receiving'
       : currentStay(e)
         ? 'called'
@@ -137,7 +141,7 @@ export function UnitQueue() {
       <PageHeader
         eyebrow="ATENDIMENTO DA UNIDADE"
         title="Fila e salas"
-        description="Acompanhe quem espera, o destino de cada senha e a ocupação dos consultórios."
+        description="Acompanhe a espera, a chamada da senha e a ocupação de cada sala da unidade."
         action={
           <a
             className="button secondary"
@@ -168,10 +172,16 @@ export function UnitQueue() {
           <small>Desde a chegada à unidade</small>
         </article>
         <article>
-          <span>Consultórios ocupados</span>
+          <span>Salas ocupadas</span>
           <strong>
-            {[...visitors.values()].filter((e) => currentStay(e)?.enteredAt).length} /{' '}
-            {consultRooms.length}
+            {consultRooms.filter((r) => {
+              const e = visitors.get(r.id);
+              return e && currentStay(e)?.enteredAt;
+            }).length +
+              new Set(data.sectorSeats.filter((s) => s.entered).map((s) => s.roomId)).size}{' '}
+            /{' '}
+            {consultRooms.length +
+              sectorRooms(data.units.find((u) => u.id === context.unitId)!.kind).length}
           </strong>
           <small>Entrada confirmada pela equipe</small>
         </article>
@@ -264,6 +274,8 @@ export function UnitQueue() {
           })}
         </div>
       </Panel>
+      <SectorRoomsPanel />
+      <TVPairing />
       <Panel
         title={title}
         subtitle="Entre pessoas classificadas, a faixa registrada define a ordem. A preferência administrativa e a chegada desempatam. Pessoas sem classificação aparecem identificadas."
@@ -333,6 +345,34 @@ export function UnitQueue() {
                       {unavailable ? 'Aguardar sala' : 'Chamar senha'}
                     </Button>
                   )}
+                  {e &&
+                    (r.stage === 'triage' ||
+                      r.stage === 'returned' ||
+                      (r.stage === 'service' && d)) && (
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          busy ||
+                          data.sectorSeats.some(
+                            (s) =>
+                              s.roomId === (r.stage === 'service' ? d?.roomId : 'escuta-1') &&
+                              s.encounterId !== e.id,
+                          )
+                        }
+                        onClick={() =>
+                          act(
+                            {
+                              type: 'queue.call',
+                              encounterId: e.id,
+                              roomId: r.stage === 'service' ? d!.roomId : 'escuta-1',
+                            },
+                            'Senha chamada para o setor.',
+                          )
+                        }
+                      >
+                        Chamar para o setor
+                      </Button>
+                    )}
                   {r.stage === 'desk' && (
                     <Link className="text-link" to="/recepcao">
                       Ir à recepção

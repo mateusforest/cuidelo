@@ -1,5 +1,7 @@
 # Escuta, fila e consultórios — entrega 0.14
 
+Este documento registra a versão 0.14. Para testar o controle ampliado de salas e a TV em outro equipamento na 0.15, use o [roteiro atualizado](html-e-painel-tv.md).
+
 O primeiro percurso acompanha uma pessoa desde a avaliação na escuta até a liberação do consultório. Use dados fictícios da mesma prefeitura e unidade, no mesmo navegador.
 
 ## Roteiro de teste
