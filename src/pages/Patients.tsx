@@ -4,7 +4,7 @@ import {
 } from '../components/PatientRegistrationForm';
 import type { Patient } from '../domain/model';
 import { PatientDocumentHistory } from '../components/ClinicalDocuments';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ArrowUpRight, FileText, ShieldCheck } from 'lucide-react';
 import { useApp } from '../app/context';
@@ -30,6 +30,11 @@ export function Patients() {
   const [search, setSearch] = useState(params.get('q') ?? ''),
     [create, setCreate] = useState(false),
     [filter, setFilter] = useState('all');
+  const query = params.get('q') ?? '';
+  useEffect(() => {
+    setSearch(query);
+    setFilter('all');
+  }, [query]);
   const normalized = normalizedName(search);
   const patients = data.patients.filter(
     (p) =>

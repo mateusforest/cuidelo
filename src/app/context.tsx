@@ -65,10 +65,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
   });
+  const storageWarning = useSyncExternalStore(
+    repository.subscribe,
+    () => repository.recoveryMessage,
+  );
   const revision = useSyncExternalStore(repository.subscribe, repository.getRevision);
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key === storageKey) repository.refresh();
+      if (event.key === null || event.key === storageKey) repository.refresh();
     };
     const onFocus = () => repository.refresh();
     window.addEventListener('storage', onStorage);
@@ -80,8 +84,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [repository]);
   const [toast, setToast] = useState<Toast | null>(null);
   const [dirty, setDirty] = useState(false);
-  const data = useMemo(() => repository.snapshot(context), [repository, context, revision]);
-  const summary = useMemo(() => repository.summary(context), [repository, context, revision]);
+  const data = useMemo(
+    () => repository.snapshot(context),
+    [repository, context, revision, storageWarning],
+  );
+  const summary = useMemo(
+    () => repository.summary(context),
+    [repository, context, revision, storageWarning],
+  );
   useEffect(() => {
     try {
       localStorage.setItem(preferenceKey, JSON.stringify(context));

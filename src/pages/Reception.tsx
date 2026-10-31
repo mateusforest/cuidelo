@@ -27,6 +27,7 @@ const statusNames: Record<EncounterStatus, string> = {
   'in-care': 'Em atendimento',
   observation: 'Em observação',
   completed: 'Concluído',
+  'closed-without-care': 'Encerrado sem atendimento',
 };
 export function Reception() {
   const { data, context, repository, notify } = useApp();
@@ -52,7 +53,13 @@ export function Reception() {
           .includes(search.toLocaleLowerCase('pt-BR')),
     )
     .sort((a, b) => {
-      const statusOrder = { waiting: 0, 'in-care': 1, observation: 2, completed: 3 };
+      const statusOrder = {
+        waiting: 0,
+        'in-care': 1,
+        observation: 2,
+        completed: 3,
+        'closed-without-care': 4,
+      };
       return (
         statusOrder[a.status] - statusOrder[b.status] ||
         (a.priority === 'priority' ? -1 : 0) - (b.priority === 'priority' ? -1 : 0) ||
@@ -190,7 +197,7 @@ export function Reception() {
                             </Badge>
                           </td>
                           <td>
-                            {can(context.role, 'clinical') ? (
+                            {can(context.role, 'clinical') && e.status !== 'closed-without-care' ? (
                               <div className="row-actions">
                                 <Link className="button secondary" to={`/escuta/${e.id}`}>
                                   {data.intakes.some((r) => r.encounterId === e.id)

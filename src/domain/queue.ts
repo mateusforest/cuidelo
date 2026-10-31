@@ -1,3 +1,4 @@
+import { activeEncounter } from './model';
 import type { Database, Encounter, QueueCall, Unit } from './model';
 import { dateKey } from './dates';
 import { DomainError } from './errors';
@@ -80,7 +81,7 @@ export function makeQueueCall(
   now: Date,
   id: string,
 ): QueueCall {
-  if (encounter.status === 'completed') throw new DomainError('Este atendimento já foi concluído.');
+  if (!activeEncounter(encounter)) throw new DomainError('Este atendimento já foi concluído.');
   if (dateKey(new Date(encounter.arrivedAt)) !== dateKey(now))
     throw new DomainError('Só é possível chamar senhas emitidas hoje.');
   const unit = db.units.find(

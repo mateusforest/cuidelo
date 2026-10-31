@@ -211,7 +211,7 @@ describe('escuta, aferições e complementos', () => {
     const saved = JSON.parse(storage.getItem(storageKey)!);
     for (const key of ['patients', 'appointments', 'notes', 'encounters', 'calls'])
       expect(saved[key]).toEqual(old[key]);
-    expect(saved.schemaVersion).toBe(9);
+    expect(saved.schemaVersion).toBe(10);
     const restored = new DemoRepository(storage, () => now);
     expect(restored.recoveryMessage).toBe('');
     expect(restored.snapshot(context).intakes).toHaveLength(1);

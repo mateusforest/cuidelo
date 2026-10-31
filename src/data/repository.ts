@@ -18,7 +18,7 @@ export interface CareRepository {
   snapshot(context: Context): Snapshot;
   summary(context: Context): Summary;
   execute(context: Context, command: Command, expectedRevision?: number): Promise<string>;
-  reset(context: Context): Promise<void>;
+  reset(context: Context, expectedRevision?: number): Promise<void>;
   readonly persistent: boolean;
   readonly recoveryMessage: string;
 }

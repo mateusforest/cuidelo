@@ -1,3 +1,4 @@
+import { normalizedName } from '../domain/identification';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, SearchCheck, FileCheck2 } from 'lucide-react';
@@ -27,9 +28,7 @@ export function Coverage() {
     (r) =>
       (group === 'Todas as áreas' || r.group === group) &&
       (status === 'todos' || r.status === status) &&
-      `${r.titulo} ${r.descricao} ${r.note}`
-        .toLocaleLowerCase('pt-BR')
-        .includes(search.toLocaleLowerCase('pt-BR')),
+      normalizedName(`${r.titulo} ${r.descricao} ${r.note}`).includes(normalizedName(search)),
   );
   return (
     <>
@@ -50,20 +49,19 @@ export function Coverage() {
         </div>
       </Notice>
       <Panel
-        title="Avanços da versão 0.12"
-        subtitle="Vacinação, exames e regulação com organização visual unificada."
+        title="Auditoria da versão 0.13"
+        subtitle="Acessos, continuidade do atendimento e registros da unidade."
       >
         <div className="panel-body">
           <p>
-            A vacinação organiza retornos pendentes, previstos para hoje e em atraso. Cada tentativa
-            de contato pode ser registrada com resultado, observação, autoria e horário, mantendo a
-            data e a situação do retorno. Não há envio automático de mensagens.
+            A agenda pode vincular uma senha já emitida no totem, com conferência da pessoa, do
+            serviço e da unidade. A recepção consegue revisar chegadas de dias anteriores e
+            registrar o encerramento quando a pessoa saiu antes da triagem ou da consulta.
           </p>
           <p>
-            Exames e encaminhamentos permitem reagendamento com motivo e histórico preservado. Os
-            filtros destacam datas previstas ultrapassadas para conferência pela equipe, sem
-            presumir falta ou atendimento realizado. A regulação mostra os dados anteriores e os
-            novos horários, sem alterar o encaminhamento clínico emitido.
+            No hospital, a transferência mantém a internação e registra origem, destino, motivo e
+            autoria. A higienização do leito anterior tem uma etapa própria. O histórico do
+            encaminhamento separa as informações administrativas do conteúdo assistencial.
           </p>
           <p>
             Os 44 módulos continuam parciais porque suas pendências completas ainda incluem

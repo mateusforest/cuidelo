@@ -96,7 +96,7 @@ const accessRoles: {
   },
 ];
 
-export function Access() {
+export function Access({ resume = false }: { resume?: boolean }) {
   const formRef = useRef<HTMLFormElement>(null);
   const { repository, chooseSession, context, demoEntered } = useApp();
   const navigate = useNavigate();
@@ -203,7 +203,7 @@ export function Access() {
             onSubmit={(e) => {
               e.preventDefault();
               chooseSession(selected.sessionId);
-              navigate(roleInfo.route);
+              if (!resume) navigate(roleInfo.route);
             }}
           >
             <fieldset className="access-role-fieldset">
@@ -323,7 +323,7 @@ export function Access() {
         </div>
         <footer className="access-entry-footer">
           <span>Cuidelo © {new Date().getFullYear()}</span>
-          <span>Desenvolvimento · 0.12</span>
+          <span>Desenvolvimento · 0.13</span>
         </footer>
       </section>
     </main>

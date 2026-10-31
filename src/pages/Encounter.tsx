@@ -40,6 +40,13 @@ function EncounterEditor({ id }: { id?: string }) {
     setDirty(dirty);
     return () => setDirty(false);
   }, [dirty, setDirty]);
+  if (encounter?.status === 'closed-without-care')
+    return (
+      <EmptyState
+        title="Chegada encerrada sem atendimento"
+        description="O motivo e a autoria ficam no percurso da senha na recepção."
+      />
+    );
   if (!encounter || !patient)
     return (
       <EmptyState

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { BedDouble, Plus, LogOut, Sparkles, LockKeyhole } from 'lucide-react';
 import { useApp } from '../app/context';
 import type { Admission, Bed, BedStatus } from '../domain/model';
-import { shortDate } from '../domain/dates';
+import { demoIdentities } from '../domain/access';
+import { shortDate, clockTime } from '../domain/dates';
 import {
   ActionForm,
   Avatar,
@@ -27,11 +28,19 @@ export function Hospital() {
   const { data, context, repository, notify } = useApp();
   const [filter, setFilter] = useState<BedStatus | 'all'>('all'),
     [admit, setAdmit] = useState<string | null>(null),
+    [transfer, setTransfer] = useState<Admission | null>(null),
     [discharge, setDischarge] = useState<Admission | null>(null),
     [changeBed, setChangeBed] = useState<Bed | null>(null);
   const unit = data.units.find((u) => u.id === context.unitId),
     beds = data.beds.filter((b) => filter === 'all' || b.status === filter),
     available = data.beds.filter((b) => b.status === 'available');
+  const people = new Map(
+    data.patients.map((person) => [person.id, person.socialName || person.name]),
+  );
+  const staff = new Map(
+    demoIdentities(repository.directory()).map((person) => [person.sessionId, person.name]),
+  );
+  const bedNames = new Map(data.beds.map((bed) => [bed.id, bed.name]));
   return (
     <>
       <PageHeader
@@ -53,7 +62,7 @@ export function Hospital() {
           <Panel>
             <EmptyState
               title="Esta unidade não possui internação no cenário"
-              description="Selecione uma unidade hospitalar para acompanhar o mapa de leitos."
+              description="Na entrada de demonstração, escolha um acesso vinculado a um hospital para testar o mapa de leitos."
             />
           </Panel>
         ) : (
@@ -114,6 +123,13 @@ export function Hospital() {
                               <small>Admissão em {shortDate(a.admittedAt)}</small>
                             </div>
                           </div>
+                          <Button
+                            variant="secondary"
+                            disabled={!available.length}
+                            onClick={() => setTransfer(a)}
+                          >
+                            Transferir de leito
+                          </Button>
                           <Button variant="secondary" onClick={() => setDischarge(a)}>
                             <LogOut size={15} />
                             Registrar saída
@@ -167,6 +183,44 @@ export function Hospital() {
                 />
               )}
             </Panel>
+            {data.admissions.some((a) => a.transfers?.length || a.dischargedAt) && (
+              <Panel
+                title="Histórico de movimentações"
+                subtitle="Transferências e saídas registradas nesta unidade."
+              >
+                <div className="panel-body">
+                  {data.admissions
+                    .filter((a) => a.transfers?.length || a.dischargedAt)
+                    .map((a) => (
+                      <details key={a.id} className="document-history">
+                        <summary>
+                          {people.get(a.patientId)} ·{' '}
+                          {a.dischargedAt ? 'Internação encerrada' : bedNames.get(a.bedId)}
+                        </summary>
+                        <ol>
+                          {a.transfers?.map((m, i) => (
+                            <li key={i}>
+                              <strong>
+                                {bedNames.get(m.fromBedId)} → {bedNames.get(m.toBedId)}
+                              </strong>
+                              <p>{m.reason}</p>
+                              <small>
+                                {shortDate(m.at)} às {clockTime(m.at)} · {staff.get(m.actorId)}
+                              </small>
+                            </li>
+                          ))}
+                          {a.dischargedAt && (
+                            <li>
+                              Saída em {shortDate(a.dischargedAt)} às {clockTime(a.dischargedAt)} ·{' '}
+                              {a.dischargeReason}
+                            </li>
+                          )}
+                        </ol>
+                      </details>
+                    ))}
+                </div>
+              </Panel>
+            )}
           </>
         )}
       </UnitRequired>
@@ -211,6 +265,48 @@ export function Hospital() {
                   </option>
                 ))}
               </select>
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
+      {transfer && (
+        <Modal
+          title="Transferir de leito"
+          description={people.get(transfer.patientId)}
+          onClose={() => setTransfer(null)}
+        >
+          <ActionForm
+            onClose={() => setTransfer(null)}
+            submitLabel="Confirmar transferência"
+            onSubmit={async (f) => {
+              await repository.execute(context, {
+                type: 'admission.transfer',
+                id: transfer.id,
+                fromBedId: transfer.bedId,
+                toBedId: valueOf(f, 'bed'),
+                expectedTransfers: transfer.transfers?.length ?? 0,
+                reason: valueOf(f, 'reason'),
+              });
+              notify('Transferência registrada. O leito anterior aguarda higienização.');
+            }}
+          >
+            <p>
+              Leito atual: <strong>{bedNames.get(transfer.bedId)}</strong>
+            </p>
+            <Field label="Leito de destino">
+              <select name="bed" required defaultValue="">
+                <option value="" disabled>
+                  Selecione um leito disponível
+                </option>
+                {available.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} · {b.ward}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Motivo da transferência">
+              <textarea required name="reason" maxLength={1000} rows={3} />
             </Field>
           </ActionForm>
         </Modal>

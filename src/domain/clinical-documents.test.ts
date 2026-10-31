@@ -514,7 +514,7 @@ describe('documentos e continuidade do consultório', () => {
       loaded.execute(doctor, { type: 'document.cancel', id, expectedVersion: 3, reason: 'Teste' }),
     ).rejects.toThrow('resultado');
     expect(store.getItem(storageKey)).toBe(before);
-    expect(JSON.parse(before!).schemaVersion).toBe(9);
+    expect(JSON.parse(before!).schemaVersion).toBe(10);
   });
   it('bloqueia base importada com vínculo, autor, estado ou resposta adulterados', () => {
     const db = setup(),

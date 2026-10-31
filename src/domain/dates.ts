@@ -1,11 +1,23 @@
 export const timeZone = 'America/Sao_Paulo';
+const dayFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone,
+  hour: '2-digit',
+  minute: '2-digit',
+});
+const shortFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
 export function dateKey(date = new Date()): string {
-  return new Intl.DateTimeFormat('sv-SE', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
+  return dayFormatter.format(date);
 }
 export function addDays(day: string, delta: number) {
   const d = new Date(`${day}T12:00:00-03:00`);
@@ -27,17 +39,10 @@ export function minuteOfDay(time: string) {
   return h * 60 + m;
 }
 export function clockTime(iso: string) {
-  return new Intl.DateTimeFormat('pt-BR', { timeZone, hour: '2-digit', minute: '2-digit' }).format(
-    new Date(iso),
-  );
+  return timeFormatter.format(new Date(iso));
 }
 export function shortDate(day: string) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone,
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(day.length === 10 ? `${day}T12:00:00-03:00` : day));
+  return shortFormatter.format(new Date(day.length === 10 ? `${day}T12:00:00-03:00` : day));
 }
 export function ageAt(birthDate: string, now = new Date()) {
   const today = dateKey(now);

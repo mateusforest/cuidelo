@@ -7,7 +7,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: 'http://127.0.0.1:43173',
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
     viewport: { width: 1440, height: 1000 },
@@ -16,9 +16,9 @@ export default defineConfig({
     ...(process.platform === 'win32' ? { channel: 'msedge' } : {}),
   },
   webServer: {
-    command: 'node node_modules/vite/bin/vite.js',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
+    command: 'node node_modules/vite/bin/vite.js --port 43173 --strictPort',
+    url: 'http://127.0.0.1:43173',
+    reuseExistingServer: false,
     timeout: 20000,
   },
 });

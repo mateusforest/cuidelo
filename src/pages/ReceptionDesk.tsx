@@ -18,6 +18,7 @@ import {
 } from '../components/ui';
 import type { Command, Encounter, KioskArrival } from '../domain/model';
 import {
+  canClosePriorArrival,
   flowStage,
   lastReceptionCheck,
   needsReception,
@@ -51,6 +52,7 @@ export function ReceptionDesk() {
     [day, setDay] = useState(dateKey()),
     [selected, setSelected] = useState<DeskRow | null>(null),
     [history, setHistory] = useState<DeskRow | null>(null),
+    [closing, setClosing] = useState<Encounter | null>(null),
     [absent, setAbsent] = useState<DeskRow | null>(null),
     [busy, setBusy] = useState('');
   useEffect(() => {
@@ -81,16 +83,23 @@ export function ReceptionDesk() {
   ]
     .filter((r) => dateKey(new Date(r.row.arrivedAt)) === day)
     .sort((a, b) => a.row.arrivedAt.localeCompare(b.row.arrivedAt));
+  const todayKey = dateKey();
+  const priorDates = data.encounters
+    .filter((e) => canClosePriorArrival(e, todayKey))
+    .map((e) => dateKey(new Date(e.arrivedAt)))
+    .sort();
   const category = (r: DeskRow) =>
-    r.row.receptionHold
-      ? 'absent'
-      : r.stage === 'Concluído'
-        ? 'closed'
-        : r.stage.includes('triagem')
-          ? 'triage'
-          : !asEncounter(r.row) || needsReception(asEncounter(r.row)!) || r.stage === 'Em espera'
-            ? 'desk'
-            : 'service';
+    asEncounter(r.row)?.status === 'closed-without-care'
+      ? 'closed'
+      : r.row.receptionHold
+        ? 'absent'
+        : r.stage === 'Concluído'
+          ? 'closed'
+          : r.stage.includes('triagem')
+            ? 'triage'
+            : !asEncounter(r.row) || needsReception(asEncounter(r.row)!) || r.stage === 'Em espera'
+              ? 'desk'
+              : 'service';
   const categories = [
     ['all', 'Senhas do dia'],
     ['desk', 'Na recepção'],
@@ -162,6 +171,21 @@ export function ReceptionDesk() {
           </button>
         ))}
       </div>
+      {priorDates.length > 0 && day === todayKey && (
+        <Notice tone="amber">
+          Há {priorDates.length} chegada(s) de dias anteriores sem início de atendimento.{' '}
+          <button
+            className="text-button"
+            onClick={() => {
+              setDay(priorDates[0]);
+              setFilter('all');
+              setSearch('');
+            }}
+          >
+            Revisar chegadas anteriores
+          </button>
+        </Notice>
+      )}
       <section className="desk-intro">
         <span className="desk-intro-icon">
           <UserCheck size={22} />
@@ -258,7 +282,9 @@ export function ReceptionDesk() {
                   </Badge>
                   <small>
                     <Clock3 size={13} />
-                    {e?.status === 'completed' ? (
+                    {e?.closedWithoutCare ? (
+                      'Encerrado às ' + clockTime(e.closedWithoutCare.at)
+                    ) : e?.status === 'completed' ? (
                       'Percurso encerrado'
                     ) : (
                       <>
@@ -302,6 +328,11 @@ export function ReceptionDesk() {
                       Registrar retorno
                     </Button>
                   )}
+                  {e && canClosePriorArrival(e, todayKey) && (
+                    <Button variant="secondary" onClick={() => setClosing(e)}>
+                      Encerrar chegada anterior
+                    </Button>
+                  )}
                   <div className="row-actions">
                     <button className="text-button" onClick={() => setHistory(item)}>
                       Ver percurso
@@ -329,6 +360,40 @@ export function ReceptionDesk() {
         equipe assistencial. Para testar a atualização entre telas, abra o totem e a TV pelos botões
         acima, no mesmo navegador e arquivo.
       </Notice>
+      {closing && (
+        <Modal
+          title="Encerrar chegada sem atendimento"
+          onClose={() => setClosing(null)}
+          description={
+            closing.ticket +
+            ' · ' +
+            shortDate(closing.arrivedAt) +
+            ' · ' +
+            (data.patients.find((p) => p.id === closing.patientId)?.name ?? '')
+          }
+        >
+          <ActionForm
+            onClose={() => setClosing(null)}
+            submitLabel="Confirmar encerramento"
+            onSubmit={async (f) => {
+              await repository.execute(context, {
+                type: 'reception.close-prior',
+                id: closing.id,
+                reason: valueOf(f, 'reason'),
+              });
+              notify('Chegada anterior encerrada. A pessoa pode retirar uma nova senha.');
+            }}
+          >
+            <p>
+              Confirme que a pessoa deixou a unidade antes da triagem ou consulta. O motivo ficará
+              no percurso da senha.
+            </p>
+            <Field label="Motivo do encerramento">
+              <textarea rows={3} required maxLength={500} name="reason" />
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
       {selected && <CheckArrival item={selected} onClose={() => setSelected(null)} />}
       {history && <Journey item={history} onClose={() => setHistory(null)} />}
       {absent && (
@@ -699,6 +764,18 @@ function Journey({ item, onClose }: { item: DeskRow; onClose: () => void }) {
       at: event.at,
       label: `${event.kind === 'absent' ? 'Ausência registrada' : 'Retorno registrado'} · ${event.reason}`,
     })),
+    ...(e?.closedWithoutCare
+      ? [
+          {
+            at: e.closedWithoutCare.at,
+            label:
+              'Encerrado sem atendimento · ' +
+              actor(e.closedWithoutCare.actorId) +
+              ' · ' +
+              e.closedWithoutCare.reason,
+          },
+        ]
+      : []),
     ...(e?.intakeStartedAt ? [{ at: e.intakeStartedAt, label: 'Entrada na triagem' }] : []),
     ...(e?.intakeCompletedAt ? [{ at: e.intakeCompletedAt, label: 'Triagem concluída' }] : []),
     ...(e?.startedAt ? [{ at: e.startedAt, label: 'Consulta iniciada' }] : []),

@@ -296,7 +296,7 @@ it('bases anteriores sem histórico continuam válidas; histórico adulterado bl
   storage.setItem(storageKey, JSON.stringify(db));
   const invalid = new DemoRepository(storage, () => now);
   expect(invalid.recoveryMessage).not.toBe('');
-  await expect(invalid.execute(reception, update(db))).rejects.toThrow('Redefina');
+  await expect(invalid.execute(reception, update(db))).rejects.toThrow('incompatível');
   expect(storage.getItem(storageKey)).toBe(JSON.stringify(db));
 });
 

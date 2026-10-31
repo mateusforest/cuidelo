@@ -1,6 +1,7 @@
 import {
   can,
   type Appointment,
+  type Encounter,
   type AppointmentSlot,
   type Context,
   type Database,
@@ -9,7 +10,7 @@ import {
   type RecordChange,
 } from './model';
 import { dateKey, minuteOfDay, validDay, validTime } from './dates';
-import { cpfDigits, validCpf } from './identification';
+import { cpfDigits, validCpf, normalizedName } from './identification';
 import { identityFor, demoIdentities } from './access';
 import { DomainError } from './errors';
 
@@ -74,6 +75,30 @@ function validSlot(values: AppointmentSlot): AppointmentSlot {
   );
   return { professional, service, date: values.date, time: values.time, duration: values.duration };
 }
+export function matchesKioskAppointment(
+  appointment: Appointment,
+  encounter: Encounter,
+  today: string,
+) {
+  const service = (s: string) => {
+    const normalized = normalizedName(s);
+    return normalized === 'consulta medica' ? 'consulta' : normalized;
+  };
+  return (
+    appointment.status === 'scheduled' &&
+    appointment.date === today &&
+    encounter.organizationId === appointment.organizationId &&
+    encounter.unitId === appointment.unitId &&
+    encounter.patientId === appointment.patientId &&
+    encounter.source === 'kiosk' &&
+    encounter.status === 'waiting' &&
+    !encounter.receptionHold &&
+    !encounter.intakeStartedAt &&
+    dateKey(new Date(encounter.arrivedAt)) === today &&
+    service(appointment.service) === service(encounter.service)
+  );
+}
+
 export function validateAppointmentSlot(
   db: Database,
   c: Context,

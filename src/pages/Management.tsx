@@ -360,7 +360,7 @@ const scope = [
 ];
 export function Development() {
   const { context, repository, notify } = useApp();
-  const [reset, setReset] = useState(false),
+  const [resetRevision, setResetRevision] = useState<number | null>(null),
     [busy, setBusy] = useState(false);
   return (
     <>
@@ -431,14 +431,13 @@ export function Development() {
             <div>
               <strong>Recomeçar o cenário de testes</strong>
               <p>
-                Remove as alterações locais de todas as redes fictícias e recria os exemplos.
-                Disponível no perfil Administração.
+                A Prefeitura pode recriar os exemplos e remover as alterações locais da sua rede.
               </p>
             </div>
             <Button
               variant="secondary"
-              disabled={context.role !== 'manager'}
-              onClick={() => setReset(true)}
+              disabled={context.role !== 'manager' || !!repository.recoveryMessage}
+              onClick={() => setResetRevision(repository.getRevision())}
             >
               <RotateCcw size={16} />
               Redefinir cenário da prefeitura
@@ -446,16 +445,24 @@ export function Development() {
           </div>
         </Panel>
       )}
-      {reset && (
-        <Modal title="Redefinir todos os dados fictícios?" onClose={() => setReset(false)}>
+      {resetRevision !== null && (
+        <Modal
+          title="Redefinir os dados fictícios desta prefeitura?"
+          onClose={() => setResetRevision(null)}
+        >
           <div className="modal-body">
             <p>
               Cadastros, agendas, rascunhos, internações e movimentos criados neste navegador serão
-              substituídos pelo cenário inicial de todas as redes de demonstração.
+              substituídos pelos exemplos iniciais de{' '}
+              {
+                repository.directory().organizations.find((o) => o.id === context.organizationId)
+                  ?.shortName
+              }
+              , em todas as suas unidades.
             </p>
           </div>
           <div className="modal-actions">
-            <Button variant="secondary" disabled={busy} onClick={() => setReset(false)}>
+            <Button variant="secondary" disabled={busy} onClick={() => setResetRevision(null)}>
               Manter dados
             </Button>
             <Button
@@ -464,10 +471,11 @@ export function Development() {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await repository.reset(context);
-                  setReset(false);
+                  await repository.reset(context, resetRevision);
+                  setResetRevision(null);
                   notify('Cenário de demonstração recriado.');
                 } catch (e) {
+                  setResetRevision(null);
                   notify((e as Error).message, 'error');
                 } finally {
                   setBusy(false);

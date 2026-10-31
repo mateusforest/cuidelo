@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { matchesKioskAppointment } from '../domain/administrative-records';
 import { normalizedName } from '../domain/identification';
 import { ChevronLeft, ChevronRight, Plus, Check, X, CalendarDays } from 'lucide-react';
 import { useApp } from '../app/context';
 import { addDays, dateKey, shortDate } from '../domain/dates';
-import type { Appointment } from '../domain/model';
+import { can, type Appointment } from '../domain/model';
 import {
   ActionForm,
   Avatar,
@@ -29,6 +30,9 @@ export function Agenda() {
     [search, setSearch] = useState(''),
     [status, setStatus] = useState('all'),
     [cancel, setCancel] = useState<Appointment | null>(null),
+    [linkArrival, setLinkArrival] = useState<{ a: Appointment; id: string; ticket: string } | null>(
+      null,
+    ),
     [busy, setBusy] = useState('');
   const dayAppointments = data.appointments
     .filter((a) => a.date === day && (professional === 'all' || a.professional === professional))
@@ -51,14 +55,24 @@ export function Agenda() {
       ...data.appointments.map((a) => a.professional),
     ]),
   ];
-  const arrive = async (a: Appointment) => {
+  const arrive = async (a: Appointment, kioskEncounterId?: string) => {
+    const existing = data.encounters.find((e) => matchesKioskAppointment(a, e, dateKey()));
+    if (existing && !kioskEncounterId) {
+      setLinkArrival({ a, id: existing.id, ticket: existing.ticket });
+      return;
+    }
     setBusy(a.id);
     try {
-      await repository.execute(context, { type: 'appointment.checkIn', id: a.id });
+      await repository.execute(context, {
+        type: 'appointment.checkIn',
+        id: a.id,
+        kioskEncounterId,
+      });
       notify('Chegada confirmada. A pessoa já aparece na recepção.');
     } catch (e) {
       notify((e as Error).message, 'error');
     } finally {
+      setLinkArrival(null);
       setBusy('');
     }
   };
@@ -239,7 +253,7 @@ export function Agenda() {
                         </button>
                       </>
                     )}
-                    {a.status === 'checked-in' && (
+                    {a.status === 'checked-in' && can(context.role, 'queue') && (
                       <Link className="button secondary" to="/recepcao">
                         Ver recepção
                       </Link>
@@ -263,6 +277,26 @@ export function Agenda() {
           )}
         </Panel>
       </UnitRequired>
+      {linkArrival && (
+        <Modal title="Vincular senha do totem" onClose={() => setLinkArrival(null)}>
+          <div className="modal-body">
+            <p>
+              {data.patients.find((p) => p.id === linkArrival.a.patientId)?.name} já retirou a senha{' '}
+              <strong>{linkArrival.ticket}</strong> para este serviço. Confira o vínculo com o
+              agendamento das {linkArrival.a.time}.
+            </p>
+            <p>A recepção usará a mesma senha e o horário de chegada registrado no totem.</p>
+          </div>
+          <div className="modal-actions">
+            <Button variant="secondary" onClick={() => setLinkArrival(null)}>
+              Voltar
+            </Button>
+            <Button disabled={!!busy} onClick={() => arrive(linkArrival.a, linkArrival.id)}>
+              Confirmar vínculo da senha
+            </Button>
+          </div>
+        </Modal>
+      )}
       {(create || editing) && (
         <Modal
           title={editing ? 'Remarcar agendamento' : 'Novo agendamento'}

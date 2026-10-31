@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, ArrowRight, ClipboardCheck, Download } from 'lucide-react';
 import { useApp } from '../app/context';
+import { normalizedName } from '../domain/identification';
 import { demoIdentities } from '../domain/access';
 import { can, type Permission, type WorkRecord } from '../domain/model';
 import { workModules, type WorkModule } from '../domain/work-modules';
@@ -160,15 +161,19 @@ function ModuleEditor({ module: m }: { module: WorkModule }) {
     [status, setStatus] = useState('all'),
     [editing, setEditing] = useState<WorkRecord | 'new' | null>(null),
     [detail, setDetail] = useState<string | null>(null),
-    [transition, setTransition] = useState<{ record: WorkRecord; status: string } | null>(null);
+    [transition, setTransition] = useState<{
+      record: WorkRecord;
+      status: string;
+      revision: number;
+    } | null>(null);
   const records = data.workRecords.filter((r) => r.module === m.id),
     filtered = records
       .filter(
         (r) =>
           (status === 'all' || r.status === status) &&
-          JSON.stringify(r.values)
-            .toLocaleLowerCase('pt-BR')
-            .includes(search.toLocaleLowerCase('pt-BR')),
+          normalizedName(
+            [recordTitle(r, data.workRecords, data.patients), ...Object.values(r.values)].join(' '),
+          ).includes(normalizedName(search)),
       )
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const current = records.find((r) => r.id === detail),
@@ -273,7 +278,13 @@ function ModuleEditor({ module: m }: { module: WorkModule }) {
                             <Button
                               key={next}
                               variant="secondary"
-                              onClick={() => setTransition({ record: r, status: next })}
+                              onClick={() =>
+                                setTransition({
+                                  record: r,
+                                  status: next,
+                                  revision: repository.getRevision(),
+                                })
+                              }
                             >
                               {m.states[next]}
                             </Button>
@@ -320,12 +331,16 @@ function ModuleEditor({ module: m }: { module: WorkModule }) {
             submitLabel="Confirmar alteração"
             onClose={() => setTransition(null)}
             onSubmit={async (f) => {
-              await repository.execute(context, {
-                type: 'work.transition',
-                id: transition.record.id,
-                status: transition.status,
-                reason: String(f.get('reason') ?? ''),
-              });
+              await repository.execute(
+                context,
+                {
+                  type: 'work.transition',
+                  id: transition.record.id,
+                  status: transition.status,
+                  reason: String(f.get('reason') ?? ''),
+                },
+                transition.revision,
+              );
               notify('Situação atualizada com histórico preservado.');
             }}
           >

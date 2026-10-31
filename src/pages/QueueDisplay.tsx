@@ -1,3 +1,4 @@
+import { activeEncounter } from '../domain/model';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -348,7 +349,7 @@ export function QueueControl() {
   const rooms = unit ? roomsForUnit(unit) : [];
   const feed = unit ? repository.display(context.organizationId, unit.id) : null;
   const calls = data.encounters
-    .filter((e) => e.status !== 'completed' && dateKey(new Date(e.arrivedAt)) === dateKey())
+    .filter((e) => activeEncounter(e) && dateKey(new Date(e.arrivedAt)) === dateKey())
     .sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt));
   const openTV = (preview = false) =>
     externalRoute(displayRoute(context.organizationId, fallback.id, preview));

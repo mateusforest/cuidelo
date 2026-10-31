@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-30",
+  "date": "2026-10-31",
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.12. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.13. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -27,7 +27,7 @@
       "group": "Acesso",
       "status": "parcial",
       "route": "/acesso",
-      "note": "Entrada por sessões fictícias vinculadas a perfil, unidade e prefeitura. Autenticação real, recuperação de acesso e segundo fator continuam pendentes."
+      "note": "Entrada por sessões fictícias vinculadas a perfil, unidade e prefeitura. Links diretos da equipe pedem escolha de sessão e retomam a tela solicitada. Autenticação real, recuperação de acesso e segundo fator continuam pendentes."
     },
     {
       "id": "ativar",
@@ -63,7 +63,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/recepcao",
-      "note": "Senha do totem identificada ou anônima, busca por CPF/nome, cadastro e atualização justificada com valores anteriores/autoria, conferência presencial, preferência confirmada e encaminhamento à triagem/serviço. Ausência e retorno preservam a senha. Faltam conciliação cadastral nacional, validação documental e operação entre dispositivos."
+      "note": "Senha do totem identificada ou anônima, busca por CPF/nome, cadastro e atualização justificada com valores anteriores/autoria, conferência presencial, preferência confirmada e encaminhamento à triagem/serviço. Ausência e retorno preservam a senha. A equipe pode encerrar chegadas antigas sem atendimento com motivo rastreável. Faltam conciliação cadastral nacional, validação documental e operação entre dispositivos."
     },
     {
       "id": "fila",
@@ -159,7 +159,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/agenda",
-      "note": "Agenda organizada por data, profissional, busca e situação, com criação, remarcação justificada e histórico de horários/autoria, conflitos de pessoa e profissional, cancelamento e chegada. Faltam gestão de faltas, disponibilidade por profissional e lembretes enviados."
+      "note": "Agenda organizada por data, profissional, busca e situação, com criação, remarcação justificada e histórico de horários/autoria, conflitos de pessoa e profissional, cancelamento e chegada. Chegadas identificadas pelo totem podem ser vinculadas ao horário confirmado. Faltam gestão de faltas, disponibilidade por profissional e lembretes enviados."
     },
     {
       "id": "visao",

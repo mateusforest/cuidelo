@@ -1,3 +1,4 @@
+import { activeEncounter } from './model';
 import { can, type Context, type Database, type Encounter } from './model';
 import { demoIdentities } from './access';
 import { dateKey, validDay } from './dates';
@@ -16,7 +17,7 @@ export function ownCare(e: Encounter, c: Context) {
     );
 }
 export function startCare(db: Database, c: Context, e: Encounter, at: string, id: () => string) {
-  if (e.status === 'completed' || db.careSegments.some((s) => s.encounterId === e.id && !s.endedAt))
+  if (!activeEncounter(e) || db.careSegments.some((s) => s.encounterId === e.id && !s.endedAt))
     throw new DomainError(
       'Este atendimento já está em curso com um profissional ou foi concluído.',
       'conflict',
@@ -159,7 +160,7 @@ export function issueKiosk(
         e.organizationId === unit.organizationId &&
         e.unitId === unit.id &&
         e.patientId === patient.id &&
-        e.status !== 'completed',
+        activeEncounter(e),
     );
   if (existing && dateKey(new Date(existing.arrivedAt)) !== dateKey(now))
     throw new DomainError(
@@ -312,7 +313,7 @@ export function performance(db: Database, c: Context, from: string, to: string, 
     : entries;
   const identities = demoIdentities(db);
   const awaiting = (e: Encounter) =>
-    e.status === 'waiting' && !(e.intakeStartedAt && !e.intakeCompletedAt);
+    e.status === 'waiting' && !e.receptionHold && !(e.intakeStartedAt && !e.intakeCompletedAt);
   return {
     arrivals: encounters.length,
     waiting: encounters.filter(awaiting).length,

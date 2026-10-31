@@ -1,3 +1,4 @@
+import { activeEncounter } from '../domain/model';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Megaphone, Play, Clock3 } from 'lucide-react';
@@ -89,7 +90,7 @@ export function DoctorCall({
           )}
         </p>
       </div>
-      {encounter.status !== 'completed' && (
+      {activeEncounter(encounter) && (
         <>
           <Field label="Destino da chamada">
             <select value={room} onChange={(e) => setRoom(e.target.value)}>

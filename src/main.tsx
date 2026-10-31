@@ -49,7 +49,8 @@ function Home() {
 }
 
 function Gate({ permission, children }: { permission: Permission; children: ReactNode }) {
-  const { context } = useApp();
+  const { context, demoEntered } = useApp();
+  if (!demoEntered) return <Access resume />;
   return can(context.role, permission) ? (
     children
   ) : (
@@ -57,8 +58,8 @@ function Gate({ permission, children }: { permission: Permission; children: Reac
       title="Este módulo não faz parte do perfil selecionado"
       description="Sua sessão não permite acessar este módulo. Para testar outro perfil, use a entrada de demonstração."
       action={
-        <Link className="button secondary" to="/">
-          Voltar à visão da rede
+        <Link className="button secondary" to="/acesso">
+          Escolher acesso de demonstração
         </Link>
       }
     />

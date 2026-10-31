@@ -294,7 +294,7 @@ export function Referrals() {
                 </ol>
               </details>
             )}
-            {context.role === 'admin' && detail.sourceDocumentId && (
+            {context.role === 'admin' && (
               <Notice>
                 Este perfil acompanha a operação da unidade. Justificativas clínicas e
                 contrarreferências ficam disponíveis à equipe médica e à regulação.

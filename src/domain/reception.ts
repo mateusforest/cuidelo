@@ -1,3 +1,4 @@
+import { activeEncounter } from './model';
 import type { Context, Database, Encounter, KioskArrival, Patient, QueueCall } from './model';
 import type { PreferenceReason } from './kiosk-options';
 import { preferenceReasons, servicesForUnit } from './kiosk-options';
@@ -20,6 +21,7 @@ export interface ReceptionCheck {
   adjustmentReason: string;
 }
 export type ReceptionCommand =
+  | { type: 'reception.close-prior'; id: string; reason: string }
   | { type: 'reception.start'; target: ReceptionTarget }
   | { type: 'reception.absent'; target: ReceptionTarget; reason: string }
   | { type: 'reception.return'; target: ReceptionTarget }
@@ -45,7 +47,18 @@ function ensure(value: unknown, message: string): asserts value {
 }
 export const lastReceptionCheck = (e: Encounter) => e.receptionChecks?.at(-1);
 export const needsReception = (e: Encounter) => !!e.receptionRequired && !lastReceptionCheck(e);
+export function canClosePriorArrival(e: Encounter, today: string) {
+  return (
+    e.status === 'waiting' &&
+    !e.intakeStartedAt &&
+    !e.intakeCompletedAt &&
+    !e.startedAt &&
+    !e.professionalId &&
+    dateKey(new Date(e.arrivedAt)) < today
+  );
+}
 export function flowStage(e: Encounter) {
+  if (e.status === 'closed-without-care') return 'Encerrado sem atendimento';
   if (e.status === 'completed') return 'Concluído';
   if (e.status === 'observation') return 'Em observação';
   if (e.status === 'in-care') return 'Em consulta';
@@ -59,6 +72,7 @@ export function flowStage(e: Encounter) {
 }
 export function readyForIntake(e: Encounter) {
   return (
+    activeEncounter(e) &&
     !e.receptionHold &&
     !needsReception(e) &&
     (!e.receptionRequired || lastReceptionCheck(e)?.destination === 'triage')
@@ -66,13 +80,20 @@ export function readyForIntake(e: Encounter) {
 }
 export function readyForConsultation(e: Encounter) {
   return (
+    activeEncounter(e) &&
     !e.receptionHold &&
     !needsReception(e) &&
+    !(e.intakeStartedAt && !e.intakeCompletedAt) &&
     !(lastReceptionCheck(e)?.destination === 'triage' && !e.intakeCompletedAt)
   );
 }
 export function assertCallDestination(e: Encounter, roomId: string) {
   ensure(!e.receptionHold, 'Registre o retorno da pessoa antes de chamar novamente.');
+  if (e.intakeStartedAt && !e.intakeCompletedAt)
+    ensure(
+      roomId === 'escuta-1',
+      'A escuta está em andamento. Conclua a triagem antes de chamar para outro setor.',
+    );
   if (!e.receptionRequired) return;
   if (roomId === 'recepcao-1') return;
   ensure(!needsReception(e), 'Conclua a conferência da recepção antes de chamar para outro setor.');
@@ -134,6 +155,23 @@ export function applyReceptionCommand(
     'Somente recepção ou administração da unidade pode conferir a chegada.',
   );
   const at = now.toISOString();
+  if (command.type === 'reception.close-prior') {
+    const e = targetRow(db, c, { kind: 'encounter', id: command.id }) as Encounter;
+    ensure(
+      canClosePriorArrival(e, dateKey(now)) &&
+        !db.intakes.some((r) => r.encounterId === e.id) &&
+        !db.careSegments.some((s) => s.encounterId === e.id) &&
+        !db.notes.some((n) => n.encounterId === e.id),
+      'Somente chegadas de dias anteriores sem início de atendimento podem ser encerradas no balcão.',
+    );
+    ensure(
+      typeof command.reason === 'string' && !!command.reason.trim() && command.reason.length <= 500,
+      'Informe o motivo do encerramento, com até 500 caracteres.',
+    );
+    e.closedWithoutCare = { at, actorId: c.sessionId, reason: command.reason.trim() };
+    e.status = 'closed-without-care';
+    return { entityId: e.id, action: 'Chegada anterior encerrada sem atendimento' };
+  }
   if (command.type === 'queue.call-arrival') {
     const a = targetRow(db, c, { kind: 'arrival', id: command.arrivalId }) as KioskArrival;
     editable(a, now);
@@ -258,7 +296,7 @@ export function applyReceptionCommand(
           e.organizationId === c.organizationId &&
           e.unitId === c.unitId &&
           e.patientId === patient.id &&
-          e.status !== 'completed',
+          activeEncounter(e),
       ),
       'Esta pessoa já tem atendimento aberto. Confira a senha existente antes de vincular outra.',
     );
@@ -325,6 +363,31 @@ export function validateReceptionDatabase(db: Database) {
           i.unitId === row.unitId &&
           ['reception', 'admin'].includes(i.role),
       );
+    if ('patientId' in row) {
+      const close = row.closedWithoutCare;
+      ensure(
+        (row.status === 'closed-without-care') === (close !== undefined),
+        'Invalid administrative closure',
+      );
+      if (close)
+        ensure(
+          validAt(close.at) &&
+            actor(close.actorId) &&
+            dateKey(new Date(close.at)) > dateKey(new Date(row.arrivedAt)) &&
+            typeof close.reason === 'string' &&
+            !!close.reason.trim() &&
+            close.reason.length <= 500 &&
+            !row.startedAt &&
+            !row.intakeStartedAt &&
+            !row.intakeCompletedAt &&
+            !row.professionalId &&
+            !row.completedAt &&
+            !db.intakes.some((i) => i.encounterId === row.id) &&
+            !db.notes.some((n) => n.encounterId === row.id) &&
+            !db.careSegments.some((s) => s.encounterId === row.id),
+          'Invalid administrative closure history',
+        );
+    }
     if (row.receptionRequired !== undefined)
       ensure(typeof row.receptionRequired === 'boolean', 'Invalid reception requirement');
     if (row.receptionStartedAt !== undefined)

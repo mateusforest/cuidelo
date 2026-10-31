@@ -142,7 +142,7 @@ export function Shell() {
             : 'Pessoas e prontuários');
   const org = data.organizations.find((o) => o.id === context.organizationId);
   const identity = identityFor(repository.directory(), context);
-  if (location.pathname === '/' && !demoEntered) return <Access />;
+  if (!demoEntered) return <Access resume={location.pathname !== '/'} />;
   const navContent = (
     <>
       <a
@@ -193,13 +193,20 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.12</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.13</span>
       </div>
     </>
   );
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('main-content')?.focus();
+        }}
+      >
         Ir para o conteúdo
       </a>
       <aside className="sidebar">{navContent}</aside>
@@ -317,13 +324,8 @@ export function Shell() {
             <ChevronRight size={13} />
           </button>
         </div>
-        <main id="main-content" className="main-content">
-          {repository.recoveryMessage && (
-            <Notice tone="amber">
-              {repository.recoveryMessage}{' '}
-              <NavLink to="/desenvolvimento">Abrir plano e redefinir</NavLink>
-            </Notice>
-          )}
+        <main id="main-content" tabIndex={-1} className="main-content">
+          {repository.recoveryMessage && <Notice tone="amber">{repository.recoveryMessage}</Notice>}
           <Outlet key={`${context.sessionId}:${context.unitId}`} />
         </main>
         <footer className="app-footer">

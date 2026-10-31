@@ -82,13 +82,18 @@ export interface Appointment extends Scoped {
   duration: number;
   status: AppointmentStatus;
   cancellationReason?: string;
+  encounterId?: string;
   reschedules?: RecordChange<AppointmentSlot>[];
 }
 export type AppointmentSlot = Pick<
   Appointment,
   'professional' | 'service' | 'date' | 'time' | 'duration'
 >;
-export type EncounterStatus = 'waiting' | 'in-care' | 'observation' | 'completed';
+export type EncounterStatus =
+  'waiting' | 'in-care' | 'observation' | 'completed' | 'closed-without-care';
+export function activeEncounter(e: { status: EncounterStatus }) {
+  return e.status !== 'completed' && e.status !== 'closed-without-care';
+}
 export interface ReceptionTracking {
   receptionRequired?: boolean;
   receptionEvents?: { at: string; actorId: string; kind: 'absent' | 'returned'; reason: string }[];
@@ -98,6 +103,8 @@ export interface ReceptionTracking {
   receptionChecks?: import('./reception').ReceptionCheck[];
 }
 export interface Encounter extends Scoped, ReceptionTracking {
+  closedWithoutCare?: { at: string; actorId: string; reason: string };
+
   preferenceReason?: import('./kiosk-options').PreferenceReason;
   source?: 'reception' | 'kiosk';
   intakeStartedAt?: string;
@@ -176,6 +183,7 @@ export interface Admission extends Scoped {
   patientId: string;
   bedId: string;
   admittedAt: string;
+  transfers?: { fromBedId: string; toBedId: string; at: string; actorId: string; reason: string }[];
   dischargedAt?: string;
   dischargeReason?: string;
 }
@@ -382,7 +390,7 @@ export interface VaccinationSummary {
 export interface Database {
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 9;
+  schemaVersion: 10;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -518,7 +526,7 @@ export type Command =
       duration: number;
     }
   | { type: 'appointment.cancel'; id: string; reason: string }
-  | { type: 'appointment.checkIn'; id: string }
+  | { type: 'appointment.checkIn'; id: string; kioskEncounterId?: string }
   | {
       type: 'encounter.create';
       patientId: string;
@@ -530,6 +538,14 @@ export type Command =
   | { type: 'note.save'; encounterId: string; soap: Soap }
   | { type: 'note.finalize'; encounterId: string }
   | { type: 'admission.create'; patientId: string; bedId: string }
+  | {
+      type: 'admission.transfer';
+      id: string;
+      fromBedId: string;
+      toBedId: string;
+      expectedTransfers: number;
+      reason: string;
+    }
   | { type: 'admission.discharge'; id: string; reason: string }
   | { type: 'bed.status'; id: string; status: 'available' | 'cleaning' | 'blocked'; reason: string }
   | { type: 'stock.move'; id: string; kind: 'entry' | 'exit'; quantity: number; reason: string }

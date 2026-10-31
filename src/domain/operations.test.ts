@@ -364,7 +364,7 @@ describe('persistência de demonstração', () => {
     ).rejects.toThrow('outra ação ou aba');
     expect(b.snapshot(admin).patients.some((p) => p.name === 'Pessoa da aba A')).toBe(true);
   });
-  it('preserva armazenamento incompatível até a redefinição explícita por administração', async () => {
+  it('preserva armazenamento incompatível inclusive durante uma tentativa de redefinição municipal', async () => {
     const storage = new MemoryStorage();
     storage.setItem(storageKey, '{"schemaVersion":999}');
     const repo = new DemoRepository(storage, () => now);
@@ -377,10 +377,12 @@ describe('persistência de demonstração', () => {
         birthDate: '1990-01-01',
         phone: '',
       }),
-    ).rejects.toThrow('Redefina');
+    ).rejects.toThrow('incompatível');
     expect(storage.getItem(storageKey)).toBe('{"schemaVersion":999}');
     await expect(repo.reset(clinic)).rejects.toThrow('gestão da prefeitura');
-    await repo.reset(demoContext('aurora', 'all', 'manager'));
-    expect(repo.recoveryMessage).toBe('');
+    await expect(repo.reset(demoContext('aurora', 'all', 'manager'))).rejects.toThrow(
+      'incompatível',
+    );
+    expect(storage.getItem(storageKey)).toBe('{"schemaVersion":999}');
   });
 });

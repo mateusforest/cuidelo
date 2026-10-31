@@ -1,3 +1,4 @@
+import { validateAdmissions } from '../domain/hospital';
 import { validateContinuity } from '../domain/continuity';
 import { validateAdministrativeHistory } from '../domain/administrative-records';
 import { validatePharmacy } from '../domain/pharmacy';
@@ -112,9 +113,10 @@ function parseDatabase(value: string): Database {
     db.schemaVersion = 9;
     db.dispensations = [];
   }
+  if (isRecord(db) && db.schemaVersion === 9) db.schemaVersion = 10;
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 9 ||
+    db.schemaVersion !== 10 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -276,6 +278,23 @@ function parseDatabase(value: string): Database {
     )
   )
     throw new Error('Invalid patients');
+  const linkedAppointments = typed.appointments.filter((a) => a.encounterId !== undefined);
+  if (
+    new Set(linkedAppointments.map((a) => a.encounterId)).size !== linkedAppointments.length ||
+    linkedAppointments.some(
+      (a) =>
+        a.status !== 'checked-in' ||
+        !typed.encounters.some(
+          (e) =>
+            e.id === a.encounterId &&
+            e.patientId === a.patientId &&
+            e.unitId === a.unitId &&
+            e.organizationId === a.organizationId &&
+            dateKey(new Date(e.arrivedAt)) === a.date,
+        ),
+    )
+  )
+    throw new Error('Invalid appointment arrival');
   if (
     typed.appointments.some(
       (r) =>
@@ -291,7 +310,9 @@ function parseDatabase(value: string): Database {
       (r) =>
         !strings(r, ['patientId', 'unitId', 'service', 'arrivedAt', 'ticket']) ||
         !/^A-\d{3,4}$/.test(r.ticket) ||
-        !['waiting', 'in-care', 'observation', 'completed'].includes(r.status) ||
+        !['waiting', 'in-care', 'observation', 'completed', 'closed-without-care'].includes(
+          r.status,
+        ) ||
         !Number.isFinite(Date.parse(r.arrivedAt)),
     )
   )
@@ -437,12 +458,14 @@ function parseDatabase(value: string): Database {
   validatePharmacy(typed);
   validateAdministrativeHistory(typed);
   validateContinuity(typed);
+  validateAdmissions(typed);
   return typed;
 }
 
 export class DemoRepository implements CareRepository {
   private db: Database;
   private listeners = new Set<() => void>();
+  private persistedValue?: string;
   persistent = false;
   recoveryMessage = '';
   constructor(
@@ -453,32 +476,63 @@ export class DemoRepository implements CareRepository {
     if (storage) {
       try {
         const value = storage.getItem(storageKey);
-        if (value) this.db = parseDatabase(value);
-        else storage.setItem(storageKey, JSON.stringify(this.db));
+        if (value !== null) {
+          this.db = parseDatabase(value);
+          this.persistedValue = value;
+        } else {
+          this.persist(this.db);
+        }
         this.persistent = true;
       } catch {
         this.recoveryMessage =
-          'Não foi possível carregar a base local. O cenário exibido é temporário; registros estão bloqueados até redefinir a demonstração.';
+          'Base local indisponível ou incompatível. As gravações estão bloqueadas para preservar os registros das prefeituras.';
       }
     }
+  }
+  private persist(next: Database) {
+    if (!this.storage) return;
+    const serialized = JSON.stringify(next);
+    this.storage.setItem(storageKey, serialized);
+    this.persistedValue = serialized;
+  }
+  // A TV consulta a cada 1,5 s. Só valide o conjunto inteiro quando o conteúdo mudar.
+  private latest(): Database {
+    if (!this.storage) return this.db;
+    try {
+      const raw = this.storage.getItem(storageKey);
+      if (raw === null) throw new Error('Missing database');
+      if (raw === this.persistedValue && !this.recoveryMessage) return this.db;
+      const parsed = parseDatabase(raw);
+      this.persistedValue = raw;
+      return parsed;
+    } catch {
+      const message =
+        'Base local indisponível ou incompatível. Preserve o armazenamento deste navegador. Para testar um cenário novo, use outro perfil do navegador.';
+      if (this.recoveryMessage !== message) {
+        this.recoveryMessage = message;
+        this.notify();
+      }
+      throw new DomainError(message, 'storage');
+    }
+  }
+  private sync() {
+    const latest = this.latest();
+    if (latest !== this.db || this.recoveryMessage) {
+      this.db = latest;
+      this.recoveryMessage = '';
+      this.persistent = !!this.storage;
+      this.notify();
+    }
+    return latest;
   }
   getRevision = () => this.db.revision;
   display = (organizationId: string, unitId: string) =>
     readDisplay(this.db, organizationId, unitId, this.now());
   refresh = () => {
-    if (!this.storage || this.recoveryMessage) return;
     try {
-      const value = this.storage.getItem(storageKey);
-      if (!value) return;
-      const next = parseDatabase(value);
-      if (next.revision !== this.db.revision) {
-        this.db = next;
-        this.notify();
-      }
+      this.sync();
     } catch {
-      this.recoveryMessage =
-        'A base de demonstração mudou para um formato inválido. Preserve os dados e redefina o cenário para continuar.';
-      this.notify();
+      /* O aviso de recuperação já foi publicado. */
     }
   };
   directory = () => structuredClone({ organizations: this.db.organizations, units: this.db.units });
@@ -498,16 +552,10 @@ export class DemoRepository implements CareRepository {
   };
   async issueTicket(request: KioskRequest) {
     return this.locked(() => {
-      if (this.recoveryMessage)
-        throw new DomainError(
-          'A recepção precisa revisar o ambiente antes de emitir senhas.',
-          'storage',
-        );
-      const saved = this.storage?.getItem(storageKey);
-      const next = saved ? parseDatabase(saved) : structuredClone(this.db);
+      const next = structuredClone(this.sync());
       const receipt = issueKiosk(next, request, this.now());
       try {
-        this.storage?.setItem(storageKey, JSON.stringify(next));
+        this.persist(next);
       } catch {
         throw new DomainError('Não foi possível salvar a senha. Procure a recepção.', 'storage');
       }
@@ -528,37 +576,21 @@ export class DemoRepository implements CareRepository {
     expectedRevision = this.db.revision,
   ): Promise<string> {
     return this.locked(() => {
-      if (this.recoveryMessage)
-        throw new DomainError('Redefina a demonstração antes de registrar alterações.', 'storage');
-      if (this.storage) {
-        const latest = this.storage.getItem(storageKey);
-        if (latest) {
-          let next: Database;
-          try {
-            next = parseDatabase(latest);
-          } catch {
-            throw new DomainError(
-              'A base local foi alterada em um formato incompatível.',
-              'storage',
-            );
-          }
-          if (next.revision !== expectedRevision) {
-            this.db = next;
-            this.notify();
-            throw new DomainError(
-              'Os dados mudaram em outra ação ou aba. Revise a tela e tente novamente.',
-              'conflict',
-            );
-          }
-        }
-      }
-      if (this.db.revision !== expectedRevision)
-        throw new DomainError('Os dados foram atualizados. Revise antes de salvar.', 'conflict');
+      const previous = this.db;
+      const latest = this.sync();
+      if (
+        latest.revision !== expectedRevision ||
+        (previous !== latest && previous.revision === latest.revision)
+      )
+        throw new DomainError(
+          'Os dados mudaram em outra ação ou aba. Revise a tela e tente novamente.',
+          'conflict',
+        );
       const next = structuredClone(this.db);
       const id = applyCommand(next, context, command, this.now());
       if (this.storage) {
         try {
-          this.storage.setItem(storageKey, JSON.stringify(next));
+          this.persist(next);
         } catch {
           throw new DomainError(
             'Não foi possível salvar no navegador. A alteração não foi aplicada.',
@@ -571,7 +603,7 @@ export class DemoRepository implements CareRepository {
       return id;
     });
   }
-  async reset(context: Context): Promise<void> {
+  async reset(context: Context, expectedRevision = this.db.revision): Promise<void> {
     assertContext(this.db, context);
     if (context.role !== 'manager')
       throw new DomainError(
@@ -579,6 +611,12 @@ export class DemoRepository implements CareRepository {
         'permission',
       );
     return this.locked(() => {
+      const latest = this.sync();
+      if (latest.revision !== expectedRevision)
+        throw new DomainError(
+          'Os dados mudaram desde a confirmação. Revise o cenário antes de redefinir.',
+          'conflict',
+        );
       const seed = createSeed(this.now()),
         next = structuredClone(this.db);
       for (const key of collections) {
@@ -591,7 +629,7 @@ export class DemoRepository implements CareRepository {
       next.revision = this.db.revision + 1;
       if (this.storage) {
         try {
-          this.storage.setItem(storageKey, JSON.stringify(next));
+          this.persist(next);
           this.persistent = true;
         } catch {
           throw new DomainError('O navegador não permitiu salvar a demonstração.', 'storage');

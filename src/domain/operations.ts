@@ -1,8 +1,11 @@
+import { checkMovementTime } from './hospital';
+import { activeEncounter } from './model';
 import { rescheduleReferral } from './continuity';
 import {
   updateRegistration,
   rescheduleAppointment,
   validateAppointmentSlot,
+  matchesKioskAppointment,
 } from './administrative-records';
 import { applyPharmacyCommand, pharmacyPrescription } from './pharmacy';
 import {
@@ -100,7 +103,7 @@ export function applyCommand(
           e.organizationId === c.organizationId &&
           e.unitId === c.unitId &&
           e.patientId === patientId &&
-          e.status !== 'completed',
+          activeEncounter(e),
       ),
       'Esta pessoa já tem um atendimento aberto nesta unidade.',
       'conflict',
@@ -154,6 +157,7 @@ export function applyCommand(
       ({ entityId, action } = applyDocumentCommand(db, c, command, now, newId));
       break;
     }
+    case 'reception.close-prior':
     case 'reception.start':
     case 'reception.complete':
     case 'reception.absent':
@@ -238,7 +242,7 @@ export function applyCommand(
         );
       } else
         ensure(
-          e.status !== 'completed',
+          activeEncounter(e),
           'O atendimento foi concluído. Somente correções de registros existentes são permitidas.',
           'immutable',
         );
@@ -402,7 +406,31 @@ export function applyCommand(
         'conflict',
       );
       ensure(a.date === today, 'Confirme a chegada no dia agendado.');
-      entityId = addEncounter(a.patientId, a.service, 'routine');
+      if (command.kioskEncounterId) {
+        const existing = encounter(command.kioskEncounterId);
+        ensure(
+          matchesKioskAppointment(a, existing, today),
+          'A senha não corresponde a uma chegada disponível para este agendamento.',
+          'conflict',
+        );
+        ensure(
+          !db.appointments.some(
+            (other) =>
+              other.encounterId === existing.id ||
+              (other.status === 'checked-in' &&
+                !other.encounterId &&
+                other.patientId === a.patientId &&
+                other.unitId === a.unitId &&
+                other.date === a.date),
+          ),
+          'A chegada já foi confirmada em outro agendamento desta pessoa.',
+          'conflict',
+        );
+        entityId = existing.id;
+      } else {
+        entityId = addEncounter(a.patientId, a.service, 'routine');
+      }
+      a.encounterId = entityId;
       a.status = 'checked-in';
       action = 'Chegada confirmada';
       break;
@@ -566,10 +594,45 @@ export function applyCommand(
       action = 'Admissão hospitalar registrada';
       break;
     }
+    case 'admission.transfer': {
+      permit(c, 'beds');
+      const admission = member(db.admissions, command.id, c);
+      ensure(
+        !admission.dischargedAt &&
+          admission.bedId === command.fromBedId &&
+          (admission.transfers?.length ?? 0) === command.expectedTransfers,
+        'A internação mudou. Confira o leito atual antes de transferir.',
+        'conflict',
+      );
+      checkMovementTime(admission, now);
+      const from = member(db.beds, admission.bedId, c);
+      const to = member(db.beds, command.toBedId, c);
+      ensure(
+        from.status === 'occupied' && to.status === 'available' && from.id !== to.id,
+        'Escolha outro leito disponível desta unidade.',
+        'conflict',
+      );
+      const reason = required(command.reason, 'Motivo da transferência', 1000);
+      (admission.transfers ??= []).push({
+        fromBedId: from.id,
+        toBedId: to.id,
+        actorId: c.sessionId,
+        at,
+        reason,
+      });
+      from.status = 'cleaning';
+      to.status = 'occupied';
+      delete to.reason;
+      admission.bedId = to.id;
+      entityId = admission.id;
+      action = 'Transferência de leito registrada';
+      break;
+    }
     case 'admission.discharge': {
       permit(c, 'beds');
       const admission = member(db.admissions, command.id, c);
       ensure(!admission.dischargedAt, 'Esta internação já foi encerrada.', 'conflict');
+      checkMovementTime(admission, now);
       admission.dischargeReason = required(command.reason, 'Motivo da saída');
       admission.dischargedAt = at;
       member(db.beds, admission.bedId, c).status = 'cleaning';
@@ -823,7 +886,7 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
       ? org(db.referrals)
       : has('regulation')
         ? unit(db.referrals).map((r) =>
-            c.role === 'admin' && r.sourceDocumentId
+            c.role === 'admin'
               ? {
                   ...r,
                   reason: '',
