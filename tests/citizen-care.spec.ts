@@ -87,7 +87,8 @@ test('ativação pede inscrição de push e sincroniza somente horários e datas
   });
   await page.goto(origin + '/cidadao');
   await page.getByRole('button', { name: /João Pedro/ }).click();
-  await page.goto(origin + '/cidadao/dia-a-dia/medicacao');
+  await page.getByRole('link', { name: 'Dia a dia', exact: true }).click();
+  await page.getByRole('link', { name: 'Medicação', exact: true }).click();
   await page.getByRole('button', { name: 'Novo lembrete' }).click();
   await page.getByLabel('Nome do medicamento').fill('Nome privativo de teste');
   await page.getByLabel('Horários diários').fill('08:00, 20:00');

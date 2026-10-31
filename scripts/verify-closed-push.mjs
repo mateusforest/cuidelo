@@ -30,7 +30,8 @@ async function openPerson(page) {
   await page.goto(origin + '/cidadao');
   const person = page.getByRole('button', { name: /João Pedro/ });
   if (await person.isVisible()) await person.click();
-  await page.goto(origin + '/cidadao/dia-a-dia/medicacao');
+  await page.getByRole('link', { name: 'Dia a dia', exact: true }).click();
+  await page.getByRole('link', { name: 'Medicação', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Meus medicamentos' })).toBeVisible();
 }
 try {

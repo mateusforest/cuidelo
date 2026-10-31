@@ -122,12 +122,31 @@ export async function subscribePhone() {
   const { key: publicKey } = await call();
   if (typeof publicKey !== 'string' || !/^[A-Za-z0-9_-]{87}$/.test(publicKey))
     throw Error('Configuração de avisos indisponível.');
-  await navigator.serviceWorker.register('/citizen-alarm-worker.js', {
+  const reg = await navigator.serviceWorker.register('/citizen-alarm-worker.js', {
     scope: '/cidadao/',
     updateViaCache: 'none',
   });
-  const reg = await navigator.serviceWorker.ready;
-  await reg.update();
+  // A primeira página pode ter sido aberta em /cidadao, fora do escopo /cidadao/.
+  // Aguarde o registro solicitado mesmo quando a navegação interna já mudou a URL.
+  if (reg.active?.state !== 'activated') {
+    const worker = reg.installing ?? reg.waiting ?? reg.active;
+    if (!worker) throw Error('Reabra o app para concluir a ativação dos avisos.');
+    await new Promise<void>((resolve, reject) => {
+      const finish = (ok: boolean) => {
+        clearTimeout(timeout);
+        worker.removeEventListener('statechange', changed);
+        if (ok) resolve();
+        else reject(Error('O aparelho não concluiu a ativação dos avisos. Tente novamente.'));
+      };
+      const changed = () => {
+        if (worker.state === 'activated') finish(true);
+        else if (worker.state === 'redundant') finish(false);
+      };
+      const timeout = setTimeout(() => finish(false), 20000);
+      worker.addEventListener('statechange', changed);
+      changed();
+    });
+  }
   try {
     const existing = await reg.pushManager.getSubscription();
     return (

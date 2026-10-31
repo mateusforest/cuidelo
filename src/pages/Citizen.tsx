@@ -469,7 +469,7 @@ export function Citizen() {
                   onClick={() => {
                     setInvalid(false);
                     remember({ example: id as ExampleId });
-                    navigate(base, { replace: true });
+                    if (!path) navigate(base, { replace: true });
                   }}
                 >
                   <span className="cit-initial">
