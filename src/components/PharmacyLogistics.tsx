@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../app/context';
 import { clockTime, dateKey, shortDate } from '../domain/dates';
 import { normalizedName } from '../domain/identification';
@@ -49,17 +49,57 @@ const views = {
 const when = (at: string) => shortDate(at) + ' às ' + clockTime(at);
 
 export function PharmacyLogistics() {
-  const { data, context } = useApp();
+  const { data, context, repository, notify } = useApp();
+  const [importing, setImporting] = useState(false),
+    [shared, setShared] = useState(''),
+    [networkError, setNetworkError] = useState(''),
+    [sending, setSending] = useState('');
+  const hasChannels = data.shipmentChannels.some((ch) => ch.published);
+  useEffect(() => {
+    if (!hasChannels) return;
+    let active = true,
+      busy = false;
+    async function sync() {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        await repository.refreshShipments(context);
+        if (active) setNetworkError('');
+      } catch (e) {
+        if (active) setNetworkError((e as Error).message);
+      } finally {
+        busy = false;
+      }
+    }
+    void sync();
+    const timer = setInterval(sync, 6000);
+    window.addEventListener('focus', sync);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', sync);
+    };
+  }, [hasChannels, context, repository]);
+  async function publish(id: string) {
+    setSending(id);
+    setNetworkError('');
+    try {
+      setShared(await repository.shareShipment(context, id));
+    } catch (e) {
+      setNetworkError((e as Error).message);
+    } finally {
+      setSending('');
+    }
+  }
   const [view, setView] = useState<LotAction>('shipment'),
     [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false),
     [receiving, setReceiving] = useState<Shipment | null>(null);
   const unitName = (id: string) => data.units.find((u) => u.id === id)?.name ?? id;
-  const receipts = new Map(
-    data.stockLogistics
-      .filter((e): e is Receipt => e.kind === 'receipt')
-      .map((e) => [e.shipmentId, e]),
-  );
+  const receipts = new Map<string, Receipt[]>();
+  for (const e of data.stockLogistics)
+    if (e.kind === 'receipt')
+      receipts.set(e.shipmentId, [...(receipts.get(e.shipmentId) ?? []), e]);
   const latestCount = new Map(
     data.stockLogistics.filter((e) => e.kind === 'inventory').map((e) => [e.lotId, e.id]),
   );
@@ -73,14 +113,21 @@ export function PharmacyLogistics() {
     .filter((e) => {
       const extra =
         e.kind === 'shipment'
-          ? [unitName(e.unitId), unitName(e.toUnitId), receipts.get(e.id)?.reference]
+          ? [
+              unitName(e.unitId),
+              unitName(e.toUnitId),
+              ...(receipts.get(e.id) ?? []).map((r) => r.reference),
+            ]
           : e.kind === 'disposal'
             ? [e.destination]
             : [];
       return normalizedName([e.product, e.lot, e.reference, ...extra].join(' ')).includes(query);
     });
   if (view === 'shipment')
-    rows.sort((a, b) => Number(receipts.has(a.id)) - Number(receipts.has(b.id)));
+    rows.sort(
+      (a, b) =>
+        Number(!pending.some((s) => s.id === a.id)) - Number(!pending.some((s) => s.id === b.id)),
+    );
   return (
     <>
       <div className="pharmacy-logistics-tabs" role="group" aria-label="Operações de logística">
@@ -118,10 +165,33 @@ export function PharmacyLogistics() {
             </div>
           )}
           {view === 'shipment' && (
-            <p className="pharmacy-logistics-help">
-              Na demonstração, use o mesmo navegador e arquivo para as duas sessões. Entre no perfil
-              da unidade de destino para conferir a remessa recebida.
-            </p>
+            <div className="pharmacy-logistics-help">
+              <strong>Transferir entre computadores</strong>
+              <p>
+                Na origem, faça a expedição e gere o código da remessa. No computador da UBS de
+                destino, conecte o código para registrar cada parcela recebida.
+              </p>
+              <Button variant="secondary" onClick={() => setImporting(true)}>
+                Conectar remessa por código
+              </Button>
+              {hasChannels && (
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    try {
+                      await repository.refreshShipments(context);
+                      setNetworkError('');
+                      notify('Remessas atualizadas.');
+                    } catch (e) {
+                      setNetworkError((e as Error).message);
+                    }
+                  }}
+                >
+                  Atualizar remessas
+                </Button>
+              )}
+              {networkError && <p role="alert">{networkError}</p>}
+            </div>
           )}
           <div className="table-toolbar">
             <SearchField
@@ -131,7 +201,10 @@ export function PharmacyLogistics() {
             />
           </div>
           {rows.map((e) => {
-            const receipt = e.kind === 'shipment' ? receipts.get(e.id) : undefined;
+            const entries = receipts.get(e.id) ?? [];
+            const received = entries.reduce((n, r) => n + r.quantity, 0);
+            const remaining = e.kind === 'shipment' ? e.quantity - received : 0;
+            const channel = data.shipmentChannels.find((ch) => ch.id === e.id);
             const openCount =
               e.kind === 'inventory' && !e.reconciled && latestCount.get(e.lotId) === e.id;
             return (
@@ -144,8 +217,12 @@ export function PharmacyLogistics() {
                     </small>
                   </div>
                   {e.kind === 'shipment' ? (
-                    <Badge tone={receipt ? 'green' : 'blue'}>
-                      {receipt ? 'Recebida' : 'Em trânsito'}
+                    <Badge tone={remaining === 0 ? 'green' : received ? 'amber' : 'blue'}>
+                      {remaining === 0
+                        ? 'Recebida'
+                        : received
+                          ? 'Recebida parcialmente'
+                          : 'Em trânsito'}
                     </Badge>
                   ) : e.kind === 'inventory' ? (
                     <Badge tone={e.reconciled ? 'green' : openCount ? 'amber' : 'neutral'}>
@@ -170,28 +247,34 @@ export function PharmacyLogistics() {
                     <div className="pharmacy-logistics-stage">
                       <strong>Expedição</strong>
                       <span>
+                        Expedida · {e.quantity} · Recebida · {received} · Em trânsito · {remaining}{' '}
+                        {e.quantityUnit}
+                      </span>
+                      <span>
                         {when(e.at)} · {e.author}
                       </span>
                       <span>Referência · {e.reference}</span>
                       <p>{e.reason}</p>
-                      {e.unitId === context.unitId && (
+                      {e.unitId === context.unitId && e.before !== undefined && (
                         <span>
                           Saldo na origem · {e.before} → {e.after} {e.quantityUnit}
                         </span>
                       )}
                     </div>
-                    {receipt ? (
-                      <div className="pharmacy-logistics-stage">
-                        <strong>Recebimento</strong>
+                    {entries.map((receipt) => (
+                      <div className="pharmacy-logistics-stage" key={receipt.id}>
+                        <strong>
+                          Recebimento · {receipt.quantity} {receipt.quantityUnit}
+                        </strong>
                         <span>
-                          {when(receipt.at)} · {receipt.author}
+                          {when(receipt.confirmedAt ?? receipt.at)} · {receipt.author}
                         </span>
                         <span>Referência · {receipt.reference}</span>
                         <span>
                           {receipt.destination === 'segregated'
                             ? 'Entrada em segregação'
                             : 'Entrada no estoque disponível'}
-                          {receipt.unitId === context.unitId
+                          {receipt.unitId === context.unitId && receipt.before !== undefined
                             ? ' · ' +
                               receipt.before +
                               ' → ' +
@@ -201,12 +284,42 @@ export function PharmacyLogistics() {
                             : ''}
                         </span>
                       </div>
-                    ) : e.toUnitId === context.unitId ? (
-                      <Button variant="secondary" onClick={() => setReceiving(e)}>
-                        Receber transferência
-                      </Button>
-                    ) : (
-                      <small>Aguardando conferência pela unidade de destino.</small>
+                    ))}
+                    {remaining > 0 &&
+                      (e.toUnitId === context.unitId && (!channel || channel.canReceive) ? (
+                        <Button variant="secondary" onClick={() => setReceiving(e)}>
+                          Receber transferência
+                        </Button>
+                      ) : (
+                        <small>
+                          {channel && !channel.canReceive && e.toUnitId === context.unitId
+                            ? 'Conecte o código no computador da UBS.'
+                            : 'Aguardando conferência pela unidade de destino.'}
+                        </small>
+                      ))}
+                    {e.unitId === context.unitId &&
+                      e.before !== undefined &&
+                      (channel || received === 0) && (
+                        <Button
+                          variant="secondary"
+                          disabled={!!sending}
+                          onClick={() => publish(e.id)}
+                        >
+                          {sending === e.id
+                            ? 'Enviando…'
+                            : channel?.published
+                              ? 'Ver código da remessa'
+                              : channel
+                                ? 'Tentar publicar remessa'
+                                : 'Enviar para outro computador'}
+                        </Button>
+                      )}
+                    {channel && (
+                      <small>
+                        {channel.published
+                          ? 'Remessa conectada pela internet'
+                          : 'Publicação pendente de confirmação'}
+                      </small>
                     )}
                   </>
                 ) : (
@@ -269,6 +382,64 @@ export function PharmacyLogistics() {
           )}
         </section>
       </Panel>
+      {importing && (
+        <Modal title="Conectar remessa por código" onClose={() => setImporting(false)}>
+          <ActionForm
+            onClose={() => setImporting(false)}
+            submitLabel="Conectar à unidade"
+            onSubmit={async (f) => {
+              await repository.connectShipment(context, valueOf(f, 'code'));
+              setSearch('');
+              notify('Remessa conectada a este computador.');
+            }}
+          >
+            <p>
+              Use o computador que registrará as entradas desta remessa. Continue neste navegador
+              para receber as próximas parcelas.
+            </p>
+            <Field label="Código da remessa">
+              <input
+                name="code"
+                autoComplete="off"
+                required
+                maxLength={64}
+                placeholder="Cole o código enviado pela origem"
+              />
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
+      {shared && (
+        <Modal title="Enviar código à UBS" onClose={() => setShared('')}>
+          <div className="modal-body">
+            <p>
+              Na farmácia da unidade de destino, abra Logística, selecione{' '}
+              <strong>Conectar remessa por código</strong> e cole este código. Guarde-o apenas com a
+              equipe responsável.
+            </p>
+            <Field label="Código da remessa">
+              <input
+                readOnly
+                value={shared.match(/.{1,4}/g)?.join('-') ?? shared}
+                onFocus={(e) => e.target.select()}
+              />
+            </Field>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(shared);
+                  notify('Código copiado.');
+                } catch {
+                  notify('Selecione e copie o código no campo acima.');
+                }
+              }}
+            >
+              Copiar código
+            </Button>
+          </div>
+        </Modal>
+      )}
       {creating && <LotLogisticsForm kind={view} onClose={() => setCreating(false)} />}
       {receiving && <ReceiveTransfer shipment={receiving} onClose={() => setReceiving(null)} />}
     </>
@@ -555,6 +726,9 @@ function ReceiveTransfer({ shipment, onClose }: { shipment: Shipment; onClose: (
   const { context, data, repository, notify } = useApp();
   const [initial] = useState(() => ({
     revision: repository.getRevision(),
+    received: data.stockLogistics
+      .filter((e): e is Receipt => e.kind === 'receipt' && e.shipmentId === shipment.id)
+      .reduce((n, r) => n + r.quantity, 0),
     requestId: crypto.randomUUID(),
   }));
   const expired = shipment.expiresAt < dateKey();
@@ -573,6 +747,8 @@ function ReceiveTransfer({ shipment, onClose }: { shipment: Shipment; onClose: (
             context,
             {
               type: 'stock.receive',
+              quantity: Number(valueOf(f, 'quantity')),
+              expectedReceived: initial.received,
               shipmentId: shipment.id,
               reference: valueOf(f, 'reference'),
               requestId: initial.requestId,
@@ -596,20 +772,34 @@ function ReceiveTransfer({ shipment, onClose }: { shipment: Shipment; onClose: (
         </div>
         {expired && (
           <Notice tone="amber">
-            O lote venceu durante o trânsito. O recebimento será integralmente registrado em
-            segregação.
+            O lote venceu durante o trânsito. Esta parcela será registrada em segregação.
           </Notice>
         )}
         <p className="pharmacy-note">
-          Confira a remessa inteira. Se o lote ou a quantidade recebida divergir do registro,
-          mantenha a remessa em trânsito e verifique com a origem.
+          Informe somente o que chegou nesta conferência. O restante continua em trânsito.
         </p>
+        <Field
+          label="Quantidade recebida nesta parcela"
+          hint={
+            'Em trânsito: ' + (shipment.quantity - initial.received) + ' ' + shipment.quantityUnit
+          }
+        >
+          <input
+            name="quantity"
+            type="number"
+            required
+            min={1}
+            max={shipment.quantity - initial.received}
+            step={1}
+            defaultValue={shipment.quantity - initial.received}
+          />
+        </Field>
         <Field label="Referência do comprovante">
           <input name="reference" required maxLength={200} />
         </Field>
         <label className="document-check">
           <input type="checkbox" required />
-          Conferi fisicamente o lote, a validade e toda a quantidade da remessa.
+          Conferi fisicamente o lote, a validade e a quantidade recebida nesta parcela.
         </label>
         {repository.getRevision() !== initial.revision && (
           <Notice tone="amber">

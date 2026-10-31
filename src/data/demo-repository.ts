@@ -7,7 +7,21 @@ import { validateUnitQueue } from '../domain/unit-queue';
 import { validateAdmissions } from '../domain/hospital';
 import { validateContinuity } from '../domain/continuity';
 import { validateAdministrativeHistory } from '../domain/administrative-records';
-import { previousLogisticsRequest } from '../domain/pharmacy-logistics';
+import { demoContext } from '../domain/access';
+import {
+  makeManifest,
+  requireStockSession,
+  type ChannelReply,
+  type OnlineReceipt,
+  type TransferChannel,
+  type ShipmentRole,
+} from '../domain/shared-shipments';
+import { stationSecret, shipmentRequest } from './shipment-channel';
+import {
+  previousLogisticsRequest,
+  receivingLot,
+  checkIncomingIdentity,
+} from '../domain/pharmacy-logistics';
 import { validatePharmacy } from '../domain/pharmacy';
 import type { Command, Context, Database } from '../domain/model';
 import {
@@ -36,6 +50,7 @@ const collections = [
   'dispensations',
   'dispensationAdjustments',
   'stockLogistics',
+  'transferChannels',
   'clinicalDocuments',
   'workRecords',
   'careSegments',
@@ -146,9 +161,13 @@ function parseDatabase(value: string): Database {
     db.schemaVersion = 16;
     db.stockLogistics = [];
   }
+  if (isRecord(db) && db.schemaVersion === 16) {
+    db.schemaVersion = 17;
+    db.transferChannels = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 16 ||
+    db.schemaVersion !== 17 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -632,11 +651,258 @@ export class DemoRepository implements CareRepository {
       return navigator.locks.request('cuidelo-demo-write', fn);
     return fn();
   }
+  // A chave do computador fica neste navegador. Nenhuma projeção de sessão a inclui.
+  private async changeChannel<T>(
+    c: Context,
+    edit: (db: Database) => { changed: boolean; result: T },
+  ): Promise<T> {
+    return this.locked(() => {
+      const db = this.sync();
+      requireStockSession(db, c);
+      if (!this.storage || !this.persistent)
+        throw new DomainError(
+          'O armazenamento deste navegador precisa estar disponível para conectar remessas.',
+        );
+      const next = structuredClone(db);
+      const { changed, result } = edit(next);
+      if (changed) {
+        next.revision += 1;
+        this.persist(next);
+        this.db = next;
+        this.notify();
+      }
+      return result;
+    });
+  }
+
+  private async acceptReply(c: Context, reply: ChannelReply, side: 'source' | 'dest', key: string) {
+    const db = this.sync();
+    requireStockSession(db, c);
+    const m = reply.manifest;
+    if (
+      m.organizationId !== c.organizationId ||
+      (side === 'dest' ? m.toUnitId : m.unitId) !== c.unitId
+    )
+      throw new DomainError('Remessa fora da unidade.');
+    const saved = db.transferChannels.find((ch) => ch.id === m.id);
+    if (
+      saved?.code === reply.code &&
+      (side === 'dest' ? saved.receiverKey : saved.senderKey) === key &&
+      JSON.stringify(saved.manifest) === JSON.stringify(m) &&
+      JSON.stringify(saved.receipts) === JSON.stringify(reply.receipts)
+    )
+      return;
+    await this.changeChannel(c, (next) => {
+      let ch = next.transferChannels.find((x) => x.id === m.id);
+      if (
+        ch &&
+        (JSON.stringify(ch.manifest) !== JSON.stringify(m) || (ch.code && ch.code !== reply.code))
+      )
+        throw new DomainError('O lote publicado não corresponde à remessa salva.');
+      if (side === 'source' && ch?.senderKey !== key)
+        throw new DomainError('Expedição não vinculada a este computador.');
+      if (side === 'dest' && ch?.receiverKey && ch.receiverKey !== key)
+        throw new DomainError('Outro aparelho já está vinculado ao recebimento.');
+      if (!ch && next.stockLogistics.some((e) => e.id === m.id))
+        throw new DomainError('Conflito com uma expedição local.');
+      if (!ch) {
+        ch = {
+          id: m.id,
+          organizationId: m.organizationId,
+          unitId: m.unitId,
+          manifest: m,
+          receipts: [],
+        };
+        next.transferChannels.push(ch);
+      }
+      const common = Math.min(ch.receipts.length, reply.receipts.length);
+      for (let i = 0; i < common; i++)
+        if (JSON.stringify(ch.receipts[i]) !== JSON.stringify(reply.receipts[i]))
+          throw new DomainError('O histórico do servidor diverge da remessa salva.');
+      let changed = !ch.code || (side === 'dest' && !ch.receiverKey);
+      ch.code = reply.code;
+      if (side === 'dest' && !ch.receiverKey) {
+        receivingLot(next, c.organizationId, c.unitId, m);
+        checkIncomingIdentity(next, c.organizationId, c.unitId, m);
+        ch.receiverKey = key;
+      }
+      if (reply.receipts.length > ch.receipts.length) {
+        ch.receipts = reply.receipts;
+        changed = true;
+      }
+      if (ch.receiverKey) {
+        for (const r of ch.receipts) {
+          if (
+            next.stockLogistics.some(
+              (e) => e.kind === 'receipt' && e.shipmentId === m.id && e.requestId === r.requestId,
+            )
+          )
+            continue;
+          const actor = demoContext(m.organizationId, m.toUnitId, r.role);
+          applyCommand(
+            next,
+            actor,
+            {
+              type: 'stock.receive',
+              shipmentId: m.id,
+              quantity: r.quantity,
+              reference: r.reference,
+              requestId: r.requestId,
+            },
+            new Date(Math.max(+this.now(), Date.parse(r.at))),
+          );
+          changed = true;
+        }
+      }
+      return { changed, result: undefined };
+    });
+  }
+
+  async shareShipment(c: Context, id: string): Promise<string> {
+    const link = await this.changeChannel(c, (next) => {
+      const prior = next.transferChannels.find((ch) => ch.id === id);
+      if (prior) {
+        if (
+          prior.organizationId !== c.organizationId ||
+          prior.unitId !== c.unitId ||
+          !prior.senderKey
+        )
+          throw new DomainError('Apenas a estação de origem pode publicar esta remessa.');
+        return { changed: false, result: prior };
+      }
+      const m = makeManifest(next, c, id);
+      if (next.stockLogistics.some((e) => e.kind === 'receipt' && e.shipmentId === id))
+        throw new DomainError('A remessa já teve recebimento local. Conclua-a no mesmo navegador.');
+      const link: TransferChannel = {
+        id,
+        organizationId: c.organizationId,
+        unitId: c.unitId,
+        manifest: m,
+        senderKey: stationSecret(),
+        receipts: [],
+      };
+      next.transferChannels.push(link);
+      return { changed: true, result: link };
+    });
+    const reply = await shipmentRequest(c, link.senderKey!, {
+      op: 'publish',
+      manifest: link.manifest,
+    });
+    await this.acceptReply(c, reply, 'source', link.senderKey!);
+    return reply.code;
+  }
+  async connectShipment(c: Context, raw: string) {
+    const code = raw.replace(/[\s-]/g, '').toLowerCase();
+    if (!/^[0-9a-f]{32}$/.test(code))
+      throw new DomainError('Informe os 32 caracteres do código da remessa.');
+    const key = await this.locked(() => {
+      requireStockSession(this.sync(), c);
+      if (!this.storage || !this.persistent)
+        throw new DomainError('Armazenamento local indisponível.');
+      const name = 'cuidelo.remessas.aparelho.v1.' + c.organizationId + '.' + c.unitId;
+      const saved = this.storage.getItem(name);
+      if (saved) return saved;
+      const secret = stationSecret();
+      this.storage.setItem(name, secret);
+      return secret;
+    });
+    const preview = await shipmentRequest(c, key, { op: 'inspect', code });
+    const m = preview.manifest,
+      db = this.sync();
+    if (m.organizationId !== c.organizationId || m.toUnitId !== c.unitId)
+      throw new DomainError('Esta remessa se destina a outra unidade.');
+    receivingLot(db, c.organizationId, c.unitId, m);
+    checkIncomingIdentity(db, c.organizationId, c.unitId, m);
+    const reply = await shipmentRequest(c, key, { op: 'claim', code });
+    await this.acceptReply(c, reply, 'dest', key);
+  }
+  async refreshShipments(c: Context) {
+    const db = this.sync();
+    requireStockSession(db, c);
+    const links = db.transferChannels.filter(
+      (ch) =>
+        ch.code &&
+        ch.organizationId === c.organizationId &&
+        ch.receipts.reduce((n, r) => n + r.quantity, 0) < ch.manifest.quantity &&
+        ((ch.unitId === c.unitId && ch.senderKey) ||
+          (ch.manifest.toUnitId === c.unitId && ch.receiverKey)),
+    );
+    const results = await Promise.allSettled(
+      links.map(async (ch) => {
+        const source = c.unitId === ch.unitId;
+        const key = (source ? ch.senderKey : ch.receiverKey)!;
+        const reply = await shipmentRequest(c, key, {
+          op: source ? 'source' : 'status',
+          code: ch.code,
+        });
+        await this.acceptReply(c, reply, source ? 'source' : 'dest', key);
+      }),
+    );
+    for (const r of results) if (r.status === 'rejected') throw r.reason;
+  }
+  private async receiveShared(
+    c: Context,
+    cmd: Extract<Command, { type: 'stock.receive' }>,
+    ch: TransferChannel,
+    revision: number,
+  ) {
+    requireStockSession(this.db, c);
+    if (
+      !ch.receiverKey ||
+      c.unitId !== ch.manifest.toUnitId ||
+      c.organizationId !== ch.organizationId
+    )
+      throw new DomainError('Conecte o código no computador da unidade de destino.');
+    const received = ch.receipts.reduce((n, r) => n + r.quantity, 0);
+    const quantity = cmd.quantity ?? ch.manifest.quantity - received;
+    const expected = cmd.expectedReceived ?? received;
+    if (!ch.receipts.some((r) => r.requestId === cmd.requestId)) {
+      if (this.db.revision !== revision)
+        throw new DomainError('Os dados mudaram. Atualize e reabra a conferência.');
+      const preview = structuredClone(this.db);
+      const candidate: OnlineReceipt = {
+        at: new Date(Math.max(+this.now(), Date.parse(ch.manifest.at))).toISOString(),
+        quantity,
+        reference: cmd.reference.trim(),
+        requestId: cmd.requestId,
+        role: c.role as ShipmentRole,
+      };
+      preview.transferChannels.find((t) => t.id === ch.id)!.receipts.push(candidate);
+      applyCommand(
+        preview,
+        c,
+        { ...cmd, quantity, expectedReceived: expected },
+        new Date(candidate.at),
+      );
+    }
+    const reply = await shipmentRequest(c, ch.receiverKey, {
+      op: 'receive',
+      code: ch.code,
+      quantity,
+      requestId: cmd.requestId,
+      reference: cmd.reference,
+      expected,
+    });
+    try {
+      await this.acceptReply(c, reply, 'dest', ch.receiverKey);
+    } catch {
+      throw new DomainError(
+        'Recebimento confirmado no servidor. Atualize a remessa para lançar a entrada neste navegador.',
+      );
+    }
+    return this.db.stockLogistics.find(
+      (e) => e.kind === 'receipt' && e.shipmentId === ch.id && e.requestId === cmd.requestId,
+    )!.id;
+  }
   async execute(
     context: Context,
     command: Command,
     expectedRevision = this.db.revision,
   ): Promise<string> {
+    if (command.type === 'stock.receive') {
+      const ch = this.sync().transferChannels.find((t) => t.id === command.shipmentId);
+      if (ch) return this.receiveShared(context, command, ch, expectedRevision);
+    }
     return this.locked(() => {
       const previous = this.db;
       const latest = this.sync();

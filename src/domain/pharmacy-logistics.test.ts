@@ -108,6 +108,25 @@ describe('logística de estoque da farmácia', () => {
     expect(db).toEqual(saved);
     validatePharmacy(db);
   });
+  it('soma parcelas e conserva o restante em trânsito após recarregar', () => {
+    const { db, ship } = prepare(),
+      id = applyCommand(db, origin, ship, now);
+    const first = { ...receipt(id), quantity: 2, expectedReceived: 0 };
+    applyCommand(db, dest, first, now);
+    applyCommand(db, dest, first, now);
+    expect(pendingStockTransfers(readSnapshot(db, origin).stockLogistics)).toHaveLength(1);
+    expect(() => applyCommand(db, dest, { ...receipt(id), quantity: 5 }, now)).toThrow();
+    expect(() =>
+      applyCommand(db, dest, { ...receipt(id), quantity: 1, expectedReceived: 0 }, now),
+    ).toThrow();
+    validatePharmacy(db);
+    applyCommand(db, dest, { ...receipt(id), quantity: 4, expectedReceived: 2 }, now);
+    expect(pendingStockTransfers(readSnapshot(db, origin).stockLogistics)).toHaveLength(0);
+    expect(db.stockLogistics.filter((e) => e.kind === 'receipt').map((e) => e.quantity)).toEqual([
+      2, 4,
+    ]);
+    validatePharmacy(db);
+  });
   it('mantém o número do lote e soma o recebimento a um lote equivalente existente', () => {
     const { db, ship, register } = prepare();
     const destinationLot = applyCommand(
@@ -288,6 +307,32 @@ describe('logística de estoque da farmácia', () => {
     ).toThrow('incompatível');
     validatePharmacy(db);
   });
+  it('preserva entradas integrais da versão 16 e permite receber em parcelas uma expedição antiga pendente', async () => {
+    const { db, ship } = prepare();
+    const finished = applyCommand(db, origin, ship, now);
+    applyCommand(db, dest, receipt(finished), now);
+    const pending = applyCommand(
+      db,
+      origin,
+      { ...ship, quantity: 3, expectedStock: 4, requestId: crypto.randomUUID() },
+      now,
+    );
+    const { transferChannels: unused, ...legacy } = db;
+    expect(unused).toEqual([]);
+    const storage = storeWith({ ...legacy, schemaVersion: 16 });
+    const station = new DemoRepository(storage, () => now);
+    expect(pendingStockTransfers(station.snapshot(dest).stockLogistics).map((s) => s.id)).toEqual([
+      pending,
+    ]);
+    await expect(station.execute(dest, receipt(finished))).rejects.toThrow('já foi recebida');
+    await station.execute(dest, { ...receipt(pending), quantity: 1, expectedReceived: 0 });
+    const loaded = new DemoRepository(storage, () => now);
+    expect(loaded.recoveryMessage).toBe('');
+    expect(loaded.snapshot(dest).lots.find((l) => l.lot === 'TRANS-1')?.quantity).toBe(7);
+    expect(pendingStockTransfers(loaded.snapshot(origin).stockLogistics).map((s) => s.id)).toEqual([
+      pending,
+    ]);
+  });
   it('migra a versão 15, faz repetição segura, detecta disputa por duas estações e reverte a transação que não pôde persistir', async () => {
     const { db, ship } = prepare(),
       { stockLogistics: unused, ...legacy } = db;
@@ -307,7 +352,7 @@ describe('logística de estoque da farmácia', () => {
     const loaded = new DemoRepository(storage, () => now);
     expect(loaded.recoveryMessage).toBe('');
     expect(loaded.snapshot(dest).stockLogistics).toHaveLength(1);
-    expect(JSON.parse(storage.getItem(storageKey)!).schemaVersion).toBe(16);
+    expect(JSON.parse(storage.getItem(storageKey)!).schemaVersion).toBe(17);
     storage.setItem = () => {
       throw Error('teste sem espaço');
     };

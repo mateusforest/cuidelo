@@ -52,16 +52,16 @@ test('diagnóstico diferencia dependências e permite repetir depois de uma falh
   await selectSession(page, { role: 'admin', unitId: 'aurora-centro' });
   const verify = page.getByRole('button', { name: 'Verificar conexões' }),
     rows = page.locator('.connection-row');
-  await expect(rows.getByText('A verificar', { exact: true })).toHaveCount(4);
+  await expect(rows.getByText('A verificar', { exact: true })).toHaveCount(5);
   await page.route('**/api/cidadao', (r) =>
     r.fulfill({ json: { service: 'citizen', sharing: true, inbox: false } }),
   );
   await verify.click();
   await expect(rows.filter({ hasText: 'Caixa de orientações' })).toContainText('Indisponível');
-  await expect(rows.getByText('Disponível', { exact: true })).toHaveCount(3);
+  await expect(rows.getByText('Disponível', { exact: true })).toHaveCount(4);
   await page.unroute('**/api/cidadao');
   await verify.click();
-  await expect(rows.getByText('Disponível', { exact: true })).toHaveCount(4);
+  await expect(rows.getByText('Disponível', { exact: true })).toHaveCount(5);
   await expect(page.getByText('Não conectado', { exact: true })).toHaveCount(8);
 });
 

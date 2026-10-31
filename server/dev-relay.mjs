@@ -1,3 +1,4 @@
+import { shipmentHttp } from './shipment-relay.mjs';
 import { deliverGuidance } from './guidance-notices.mjs';
 import { memoryMailbox } from './report-mailbox.mjs';
 import { developmentPush } from './dev-care-push.mjs';
@@ -31,6 +32,19 @@ export function tvDevelopmentRelay() {
         setTimeout(attempt, 1000).unref();
       };
 
+      const transfers = new Map();
+      server.middlewares.use('/api/remessas', (req, res) =>
+        shipmentHttp(req, res, {
+          async read(key) {
+            return transfers.get(key);
+          },
+          async save(key, value, etag) {
+            if (transfers.get(key)?.etag !== etag) return false;
+            transfers.set(key, { etag: crypto.randomUUID(), value });
+            return true;
+          },
+        }),
+      );
       server.middlewares.use('/api/cidadao', (req, res) => citizenRelay(req, res, cache, mailbox));
       server.middlewares.use('/api/tv', (req, res) => tvRelay(req, res, cache));
     },

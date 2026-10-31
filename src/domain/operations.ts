@@ -1,4 +1,9 @@
-import { applyStockLogistics, visibleStockLogistics } from './pharmacy-logistics';
+import { networkEvents } from './shared-shipments';
+import {
+  applyStockLogistics,
+  pendingStockTransfers,
+  visibleStockLogistics,
+} from './pharmacy-logistics';
 import { applyReportReview } from './report-review';
 import {
   assessQueue,
@@ -1009,6 +1014,19 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     vaccineRecalls: has('vaccination') ? org(db.vaccineRecalls) : [],
     beds: has('beds') || has('manage') ? unit(db.beds) : [],
     admissions: has('beds') ? unit(db.admissions) : [],
+    shipmentChannels: has('stock')
+      ? db.transferChannels
+          .filter(
+            (ch) =>
+              ch.organizationId === c.organizationId &&
+              (ch.unitId === c.unitId || ch.manifest.toUnitId === c.unitId),
+          )
+          .map((ch) => ({
+            id: ch.id,
+            published: !!ch.code,
+            canReceive: !!ch.receiverKey && ch.manifest.toUnitId === c.unitId,
+          }))
+      : [],
     stockLogistics: visibleStockLogistics(db, c),
     lots: has('stock') ? unit(db.lots) : [],
     movements: has('stock')
@@ -1051,13 +1069,9 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
 function stockRoutes(db: Database, c: Context): StockRouteSummary[] {
   if (c.role !== 'manager') return [];
   const routes = new Map<string, StockRouteSummary>();
-  const received = new Set(
-    db.stockLogistics
-      .filter((e) => e.kind === 'receipt')
-      .filter((e) => e.organizationId === c.organizationId)
-      .map((e) => e.shipmentId),
-  );
-  for (const e of db.stockLogistics) {
+  const events = networkEvents(db);
+  const pending = new Set(pendingStockTransfers(events).map((s) => s.id));
+  for (const e of events) {
     if (e.kind !== 'shipment' || e.organizationId !== c.organizationId) continue;
     if (c.unitId !== 'all' && c.unitId !== e.unitId && c.unitId !== e.toUnitId) continue;
     const key = JSON.stringify([e.unitId, e.toUnitId]);
@@ -1067,7 +1081,7 @@ function stockRoutes(db: Database, c: Context): StockRouteSummary[] {
       inTransit: 0,
       received: 0,
     };
-    if (received.has(e.id)) row.received++;
+    if (!pending.has(e.id)) row.received++;
     else row.inTransit++;
     routes.set(key, row);
   }

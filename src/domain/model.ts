@@ -476,7 +476,8 @@ export interface Database {
   dispensationAdjustments: import('./pharmacy').DispensationAdjustment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 16;
+  schemaVersion: 17;
+  transferChannels: import('./shared-shipments').TransferChannel[];
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -511,6 +512,7 @@ export interface SectorSeat {
   legacy: boolean;
 }
 export interface Snapshot {
+  shipmentChannels: { id: string; published: boolean; canReceive: boolean }[];
   stockLogistics: import('./pharmacy-logistics').StockLogisticsEvent[];
   sectorSeats: SectorSeat[];
   queueServiceEvents: QueueServiceEvent[];

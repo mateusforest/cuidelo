@@ -1,3 +1,4 @@
+import { channelShipment, networkEvents, validateChannels } from './shared-shipments';
 import { dateKey } from './dates';
 import { DomainError } from './errors';
 import { demoIdentities, identityFor } from './access';
@@ -38,6 +39,7 @@ type StockReceipt = LogisticsHeader & {
   fromUnitId: string;
   shipmentId: string;
   destination: 'stock' | 'segregated';
+  confirmedAt?: string;
 };
 export type StoredStockLogisticsEvent =
   StockDisposal | StockInventory | StoredShipment | StockReceipt;
@@ -64,7 +66,12 @@ export type StockLogisticsCommand =
       expectedSegregated: number;
     })
   | (LotRequest & { type: 'stock.ship'; quantity: number; toUnitId: string; expectedStock: number })
-  | (Request & { type: 'stock.receive'; shipmentId: string });
+  | (Request & {
+      type: 'stock.receive';
+      shipmentId: string;
+      quantity?: number;
+      expectedReceived?: number;
+    });
 
 function ensure(condition: unknown, message: string, code = 'validation'): asserts condition {
   if (!condition) throw new DomainError(message, code);
@@ -81,7 +88,7 @@ const amount = (v: unknown, min = 0) =>
 const authorized = (c: Context) => c.unitId !== 'all' && can(c.role, 'stock');
 export function visibleStockLogistics(db: Database, c: Context): StockLogisticsEvent[] {
   if (!authorized(c)) return [];
-  return db.stockLogistics
+  return networkEvents(db)
     .filter(
       (e) =>
         e.organizationId === c.organizationId &&
@@ -102,8 +109,13 @@ export function visibleStockLogistics(db: Database, c: Context): StockLogisticsE
     });
 }
 export function pendingStockTransfers(events: StockLogisticsEvent[]): StockShipment[] {
-  const received = new Set(events.filter((e) => e.kind === 'receipt').map((e) => e.shipmentId));
-  return events.filter((e): e is StockShipment => e.kind === 'shipment' && !received.has(e.id));
+  const received = new Map<string, number>();
+  for (const e of events)
+    if (e.kind === 'receipt')
+      received.set(e.shipmentId, (received.get(e.shipmentId) ?? 0) + e.quantity);
+  return events.filter(
+    (e): e is StockShipment => e.kind === 'shipment' && (received.get(e.id) ?? 0) < e.quantity,
+  );
 }
 export function incomingTransfersForLot(
   events: StockLogisticsEvent[],
@@ -139,9 +151,11 @@ export function checkIncomingIdentity(
   unit: string,
   identity: LotIdentity,
 ) {
-  for (const transfer of pendingStockTransfers(db.stockLogistics)) {
+  for (const transfer of pendingStockTransfers(networkEvents(db))) {
     if (transfer.organizationId !== org || transfer.toUnitId !== unit) continue;
-    const source = db.lots.find((l) => l.id === transfer.lotId);
+    const source =
+      db.transferChannels.find((ch) => ch.id === transfer.id)?.manifest ??
+      db.lots.find((l) => l.id === transfer.lotId);
     if (source && sameCode(source, identity))
       ensure(
         compatible(source, identity),
@@ -150,7 +164,7 @@ export function checkIncomingIdentity(
       );
   }
 }
-function receivingLot(db: Database, org: string, unit: string, source: StockLot) {
+export function receivingLot(db: Database, org: string, unit: string, source: LotIdentity) {
   const targets = db.lots.filter(
     (l) => l.organizationId === org && l.unitId === unit && sameCode(l, source),
   );
@@ -182,7 +196,10 @@ export function previousLogisticsRequest(db: Database, c: Context, cmd: StockLog
   let details = false;
   switch (cmd.type) {
     case 'stock.receive':
-      details = prior.kind === 'receipt' && prior.shipmentId === cmd.shipmentId;
+      details =
+        prior.kind === 'receipt' &&
+        prior.shipmentId === cmd.shipmentId &&
+        (cmd.quantity === undefined || prior.quantity === cmd.quantity);
       break;
     case 'stock.dispose':
       details =
@@ -235,7 +252,7 @@ export function applyStockLogistics(
   const reference = field(cmd.reference, 'a referência', 200);
   const reason =
     cmd.type === 'stock.receive'
-      ? 'Recebimento integral conferido no destino'
+      ? 'Recebimento conferido no destino'
       : field(cmd.reason, 'o motivo', 500);
   const header = (lot: StockLot): Omit<LogisticsHeader, 'before' | 'after'> => {
     const previous = db.movements.filter((m) => m.lotId === lot.id).at(-1);
@@ -265,26 +282,54 @@ export function applyStockLogistics(
   let lot: StockLot, event: StoredStockLogisticsEvent;
   let newLot = false;
   if (cmd.type === 'stock.receive') {
-    const shipment = db.stockLogistics.find(
-      (e): e is StoredShipment =>
-        e.kind === 'shipment' &&
-        e.id === cmd.shipmentId &&
-        e.organizationId === c.organizationId &&
-        e.toUnitId === c.unitId,
-    );
-    ensure(shipment, 'Remessa não encontrada para recebimento nesta unidade.', 'scope');
+    const ch = db.transferChannels.find((t) => t.id === cmd.shipmentId);
+    const shipment =
+      db.stockLogistics.find(
+        (e): e is StoredShipment => e.kind === 'shipment' && e.id === cmd.shipmentId,
+      ) ??
+      (ch && channelShipment(db, ch));
     ensure(
-      !db.stockLogistics.some((e) => e.kind === 'receipt' && e.shipmentId === shipment.id),
-      'Esta remessa já foi recebida.',
+      shipment && shipment.organizationId === c.organizationId && shipment.toUnitId === c.unitId,
+      'Remessa não encontrada para recebimento nesta unidade.',
+      'scope',
+    );
+    const received = db.stockLogistics
+      .filter((e): e is StockReceipt => e.kind === 'receipt' && e.shipmentId === shipment.id)
+      .reduce((sum, e) => sum + e.quantity, 0);
+    const remaining = shipment.quantity - received;
+    ensure(remaining > 0, 'Esta remessa já foi recebida.', 'conflict');
+    const quantity = cmd.quantity ?? remaining;
+    ensure(
+      amount(quantity, 1) && quantity <= remaining,
+      'A quantidade deve estar entre 1 e o saldo em trânsito.',
       'conflict',
     );
-    ensure(at >= shipment.at, 'O recebimento não pode anteceder a expedição.');
-    const origin = db.lots.find(
-      (l) =>
-        l.id === shipment.lotId &&
-        l.unitId === shipment.unitId &&
-        l.organizationId === c.organizationId,
+    ensure(
+      cmd.expectedReceived === undefined || cmd.expectedReceived === received,
+      'O saldo em trânsito mudou. Reabra o recebimento.',
+      'conflict',
     );
+    if (ch) {
+      const r = ch.receipts.find((r) => r.requestId === cmd.requestId);
+      ensure(
+        ch.receiverKey &&
+          r &&
+          r.quantity === quantity &&
+          r.reference === reference &&
+          r.role === c.role,
+        'Confira esta remessa no canal conectado da UBS.',
+        'permission',
+      );
+    }
+    ensure(at >= shipment.at, 'O recebimento não pode anteceder a expedição.');
+    const origin =
+      ch?.manifest ??
+      db.lots.find(
+        (l) =>
+          l.id === shipment.lotId &&
+          l.unitId === shipment.unitId &&
+          l.organizationId === c.organizationId,
+      );
     ensure(origin?.medication, 'Identificação do lote de origem indisponível.', 'scope');
     const existing = receivingLot(db, c.organizationId, c.unitId, origin);
     newLot = !existing;
@@ -300,15 +345,20 @@ export function applyStockLogistics(
       minimum: 0,
       quantity: 0,
     };
-    const destination = lot.expiresAt < today ? 'segregated' : 'stock';
+    const confirmation = ch?.receipts.find((r) => r.requestId === cmd.requestId);
+    const destination =
+      lot.expiresAt < (confirmation ? dateKey(new Date(confirmation.at)) : today)
+        ? 'segregated'
+        : 'stock';
     const before = destination === 'stock' ? lot.quantity : (lot.segregatedQuantity ?? 0);
-    ensure(amount(before + shipment.quantity), 'O saldo do lote excede o limite permitido.');
+    ensure(amount(before + quantity), 'O saldo do lote excede o limite permitido.');
     event = {
       ...header(lot),
       kind: 'receipt',
       before,
-      after: before + shipment.quantity,
-      quantity: shipment.quantity,
+      after: before + quantity,
+      quantity,
+      ...(confirmation ? { confirmedAt: confirmation.at } : {}),
       fromUnitId: shipment.unitId,
       shipmentId: shipment.id,
       destination,
@@ -351,7 +401,7 @@ export function applyStockLogistics(
       const reconciled = cmd.countedSegregated === segregated;
       if (reconciled && cmd.countedStock > lot.quantity)
         ensure(
-          !incomingTransfersForLot(db.stockLogistics, lot).length,
+          !incomingTransfersForLot(networkEvents(db), lot).length,
           'Há remessa pendente para este lote. Confira o recebimento antes de aumentar o disponível pelo inventário.',
           'conflict',
         );
@@ -422,6 +472,8 @@ export function applyStockLogistics(
 }
 
 export function validateStockLogistics(db: Database) {
+  validateChannels(db);
+  const receivedByShipment = new Map<string, number>();
   // Bases antigas podem ter saldo de abertura sem um lançamento inicial. A reconstituição
   // parte do saldo atual e distingue os dois compartimentos em cada linha do extrato.
   const lots = new Map(db.lots.map((l) => [l.id, l]));
@@ -568,25 +620,44 @@ export function validateStockLogistics(db: Database) {
         pending.set(e.id, e);
         break;
       case 'receipt': {
-        const shipment = pending.get(e.shipmentId);
+        const channel = db.transferChannels.find((ch) => ch.id === e.shipmentId);
+        const shipment =
+          pending.get(e.shipmentId) ??
+          (channel && !channel.senderKey && channelShipment(db, channel));
+        const received = (receivedByShipment.get(e.shipmentId) ?? 0) + e.quantity;
+        if (channel) {
+          const ack = channel.receipts.find((r) => r.requestId === e.requestId);
+          ensure(
+            channel.receiverKey &&
+              ack &&
+              ack.quantity === e.quantity &&
+              ack.reference === e.reference &&
+              e.confirmedAt === ack.at &&
+              actor.role === ack.role,
+            'Recebimento local sem confirmação compartilhada.',
+          );
+        }
         ensure(
           shipment &&
             shipment.unitId === e.fromUnitId &&
             shipment.toUnitId === e.unitId &&
             shipment.organizationId === e.organizationId &&
             shipment.at <= e.at &&
-            shipment.quantity === e.quantity &&
+            amount(e.quantity, 1) &&
+            received <= shipment.quantity &&
             e.after === e.before + e.quantity,
           'Recebimento sem remessa compatível.',
         );
-        const origin = lots.get(shipment.lotId)!;
+        const origin = channel?.manifest ?? lots.get(shipment.lotId)!;
         ensure(
           sameCode(origin, lot) &&
             compatible(origin, lot) &&
-            e.destination === (lot.expiresAt < dateKey(new Date(e.at)) ? 'segregated' : 'stock'),
+            e.destination ===
+              (lot.expiresAt < dateKey(new Date(e.confirmedAt ?? e.at)) ? 'segregated' : 'stock'),
           'Lote ou compartimento de recebimento inválido.',
         );
-        pending.delete(shipment.id);
+        receivedByShipment.set(shipment.id, received);
+        if (received === shipment.quantity) pending.delete(shipment.id);
         break;
       }
       default:

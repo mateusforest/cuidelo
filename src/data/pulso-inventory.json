@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.26. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.27. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -147,7 +147,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/farmacia",
-      "note": "Receitas do consultório, entrega parcial ou total e baixa por lote. Devoluções físicas entram em saldo segregado. Estornos corrigem a saída e o saldo da receita. Cada ajuste conserva a entrega original, o lote, a quantidade, o motivo e a autoria. A destinação reduz o segregado com responsável e referência. Inventário e recontagem registram diferenças. Transferências preservam item, lote e validade e ficam em trânsito até recebimento integral no destino. A prefeitura acompanha os totais por percurso. Permanecem perdas e recolhimentos, recebimento parcial, controlados, validação farmacêutica, sincronização protegida e integração com SI-BNAFAR e RNDS."
+      "note": "Receitas do consultório, entrega parcial ou total e baixa por lote. Devoluções físicas entram em saldo segregado. Estornos corrigem a saída e o saldo da receita. Cada ajuste conserva a entrega original, o lote, a quantidade, o motivo e a autoria. A destinação reduz o segregado com responsável e referência. Inventário e recontagem registram diferenças. Transferências preservam item, lote e validade. Entre computadores, a origem publica a remessa e a UBS conecta o código. Cada parcela confirmada entra no estoque local de destino e reduz o saldo em trânsito nas duas estações. A prefeitura acompanha os totais por percurso. Permanecem perdas, recolhimentos, avarias em trânsito, controlados, validação farmacêutica, sincronização protegida e integração com SI-BNAFAR e RNDS."
     },
     {
       "id": "agenda",

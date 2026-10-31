@@ -41,14 +41,23 @@ Use a mesma UBS e o mesmo navegador para as sessões de demonstração do consul
 
 ## Logística da central ao posto
 
-Use o sistema publicado em um único navegador ou o mesmo arquivo Cuidelo.html durante todo o exercício. Trocar o perfil ou a unidade da sessão preserva o cenário. Cada equipamento mantém seu próprio armazenamento.
+O exercício abaixo pode ser feito localmente no mesmo navegador. Para usar dois computadores, siga também o roteiro de remessa conectada adiante. Cada equipamento mantém seu próprio estoque de demonstração.
 
 1. Na **Rede Aurora**, escolha **Farmácia → Central de Distribuição de Medicamentos** e entre na demonstração. O lote fictício **CD-DEMO-01** começa com 24 unidades na central. Se já tiver repetido o exercício, use o saldo atual que a tela mostrar.
 2. Em **Logística → Transferências**, clique em **Expedir transferência**. Escolha o lote, a **UBS Centro**, a quantidade 3 e informe motivo e referência fictícios. Confirme a expedição. Na primeira execução, a central fica com 21 disponíveis e uma remessa de 3 em trânsito.
-3. Use **Trocar sessão**, escolha **Farmácia** na **UBS Centro** da mesma prefeitura. O lote fica disponível para o posto apenas depois que a equipe confirma todo o recebimento físico na remessa e informa sua referência. Se o lote compatível já tiver 2 unidades no posto, o saldo passa a 5. Caso seja um lote novo, começa com 3. Se vencer no caminho, a quantidade recebida fica segregada.
+3. Use **Trocar sessão**, escolha **Farmácia** na **UBS Centro** da mesma prefeitura. O lote fica disponível para o posto apenas depois que a equipe confirma a quantidade fisicamente recebida na remessa e informa sua referência. Se o lote compatível já tiver 2 unidades no posto, o saldo passa a 5. Caso seja um lote novo, começa com 3. Se o lote vencer no caminho, as parcelas recebidas depois do vencimento ficam segregadas.
 4. Na sessão **Prefeitura**, veja **Distribuição de medicamentos**. Uma expedição cria uma pendência no percurso. Ao receber, a contagem passa para a coluna de recebidas. A administração de uma UBS pode registrar logística somente na própria unidade.
 5. Em **Inventário → Contar lote**, informe o que contou no disponível e no segregado. Uma contagem segregada divergente fica registrada para recontagem e preserva os dois saldos. Quando o segregado confere, a diferença justificada do disponível é reconciliada. Os registros anteriores ficam no histórico. Se houver remessa desse lote a receber, a unidade precisa resolver a conferência antes de conciliar uma diferença positiva.
 6. Para **Destinação**, use um lote com saldo segregado do roteiro de devolução acima. Registre quantidade, destino efetivo, motivo e referência do comprovante. A saída reduz somente o segregado. A demonstração guarda a referência informada e a autoria da sessão. A destinação física e sua documentação cabem à equipe da rede.
+
+### Remessa conectada entre dois computadores
+
+1. No computador da Central da Rede Aurora, expeça 6 unidades do lote **CD-DEMO-01** para a **UBS Centro**. No registro dessa expedição, escolha **Enviar para outro computador** e repasse o código à equipe de destino. Compartilhe antes do primeiro recebimento. A central pode fechar o app depois que o código aparecer.
+2. No outro computador, entre como **Farmácia** ou **Administração** da UBS Centro. Em **Logística → Transferências**, abra **Conectar remessa por código** e confirme. O primeiro navegador autorizado fica vinculado ao recebimento dessa remessa. Conserve o armazenamento desse navegador para as parcelas seguintes.
+3. Escolha **Receber transferência**. Informe 2 unidades e a referência do primeiro comprovante. A UBS ganha 2 unidades e 4 seguem em trânsito. Registre as outras 4 com outra referência quando chegarem. A central consulta os dois registros em **Atualizar remessas** e sua baixa continua sendo de 6.
+4. O servidor valida a quantidade restante e a identificação de cada recebimento. Depois de uma interrupção, reabra a farmácia e atualize a remessa para recuperar o histórico confirmado. Uma parcela já registrada não produz nova entrada. O HTML também pode conectar a remessa pela internet. Sem internet, uma transferência local ainda pode ser recebida em parcelas no mesmo arquivo e navegador.
+
+A conexão compartilha a remessa e suas confirmações. O estoque completo, as outras movimentações e os prontuários continuam no navegador de cada estação de demonstração.
 
 ### Como conferir um estorno depois de inventariar
 
@@ -56,4 +65,4 @@ Um lote começa com 10. A farmácia registra entrega de 6, mas apenas 5 saem fis
 
 ## Pendências
 
-A farmácia permanece parcial no mapa de 41 percursos parciais. Para operação municipal, permanecem perdas e recolhimento, tratamento de avarias e recebimentos parciais, validação farmacêutica, controlados, catálogo nacional e integrações oficiais. A farmácia hospitalar também precisa de fracionamento e rastreio até a administração no leito. Identidade autenticada e persistência protegida continuam pendentes.
+A farmácia permanece parcial no mapa de 41 percursos parciais. Para operação municipal, permanecem perdas e recolhimento, tratamento de avarias e encerramento justificado de faltas no transporte, validação farmacêutica, controlados, catálogo nacional e integrações oficiais. A farmácia hospitalar também precisa de fracionamento e rastreio até a administração no leito. Identidade autenticada e persistência protegida continuam pendentes.

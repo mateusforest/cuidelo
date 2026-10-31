@@ -1,4 +1,9 @@
 export const connectionLabels = [
+  {
+    key: 'shipments',
+    title: 'Remessas da farmácia',
+    detail: 'Armazenamento que liga a expedição da central à conferência na UBS.',
+  },
   { key: 'tv', title: 'Painel de senhas', detail: 'Serviço usado pelas TVs pareadas.' },
   {
     key: 'sharing',
@@ -46,12 +51,14 @@ async function probe(path: string, portable: boolean, post: boolean) {
 }
 export async function checkConnections(): Promise<ConnectionState> {
   const portable = location.protocol === 'file:';
-  const [tv, citizen, push] = await Promise.all([
+  const [shipments, tv, citizen, push] = await Promise.all([
+    probe('/api/remessas', portable, true),
     probe('/api/tv', portable, true),
     probe('/api/cidadao', portable, true),
     portable ? null : probe('/api/care-push', false, false),
   ]);
   return {
+    shipments: shipments?.service === 'remessas' && shipments.available === true ? 'ok' : 'error',
     tv: tv?.service === 'tv' && tv.available === true ? 'ok' : 'error',
     sharing: citizen?.service === 'citizen' && citizen.sharing === true ? 'ok' : 'error',
     inbox: citizen?.service === 'citizen' && citizen.inbox === true ? 'ok' : 'error',

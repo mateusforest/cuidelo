@@ -12,6 +12,9 @@ export interface CareRepository {
   workMetrics(
     context: Context,
   ): { unit: string; prenatal: number; consultations: number; families: number; visits: number }[];
+  shareShipment(c: Context, id: string): Promise<string>;
+  connectShipment(c: Context, code: string): Promise<void>;
+  refreshShipments(c: Context): Promise<void>;
   issueTicket(request: KioskRequest): Promise<TicketReceipt>;
   performance(context: Context, from: string, to: string): PerformanceReport;
   subscribe(listener: () => void): () => void;

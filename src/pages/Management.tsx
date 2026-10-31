@@ -273,7 +273,7 @@ export function Integrations() {
         serviços respondem. O recebimento de avisos no celular também depende da permissão no
         aparelho.
         {location.protocol === 'file:'
-          ? ' No HTML, a TV e o app consultam a demonstração publicada. Para testar notificações, abra cuidelo.vercel.app.'
+          ? ' No HTML, as remessas, a TV e o app consultam a demonstração publicada. Para testar notificações, abra cuidelo.vercel.app.'
           : ''}
       </p>
       <div className="section-caption">
@@ -356,8 +356,8 @@ const scope = [
   [
     'Farmácia e suprimentos',
     'Fluxo local',
-    'Entrega e ajustes por lote, destinação do segregado, inventário e transferência em duas etapas entre unidades da mesma rede.',
-    'Recolhimentos, perdas, avarias em trânsito, controlados, validação farmacêutica, sincronização entre equipamentos e integração nacional.',
+    'Entrega e ajustes por lote, destinação do segregado, inventário e transferência por código entre computadores com recebimento parcial.',
+    'Recolhimentos, perdas, avarias em trânsito, controlados, validação farmacêutica, estoque municipal compartilhado e integração nacional.',
   ],
   [
     'Regulação e transporte',
