@@ -26,6 +26,7 @@ interface Profile {
   testAt: number | null;
   acceptedAt: number | null;
   shownAt?: number | null;
+  linkedGrant?: string;
 }
 export interface PushState {
   wanted: boolean;
@@ -63,6 +64,36 @@ async function channelFor(owner: string) {
   return Array.from(new Uint8Array(bytes), (v) => v.toString(16).padStart(2, '0'))
     .join('')
     .slice(0, 32);
+}
+export function guidanceDevice(scope: CareScope) {
+  const p = get(scope);
+  return p?.want && p.confirmed && !p.locked ? p.owner : undefined;
+}
+async function attachCurrentGrant(scope: CareScope, p: Profile) {
+  if (!p.want || p.locked) return;
+  const { activeReport } = await import('./report-sharing');
+  const grant = await activeReport(scope);
+  if (!grant || p.linkedGrant === grant.owner) return;
+  const { citizenRequest } = await import('./citizen-links');
+  await citizenRequest({ op: 'report.device', device: p.owner }, grant.owner);
+  p.linkedGrant = grant.owner;
+  save(scope, p);
+}
+export async function guidanceNoticeScope(channel: string) {
+  if (!/^[a-f0-9]{32}$/.test(channel)) throw Error('Aviso inválido.');
+  for (const k of Object.keys(localStorage).filter((k) => k.startsWith('cuidelo.push.v1.'))) {
+    const [role, organization, unit, subject] = JSON.parse(k.slice('cuidelo.push.v1.'.length));
+    const scope: CareScope = { role, organization, unit, subject },
+      p = get(scope);
+    if (
+      p?.want &&
+      !p.locked &&
+      (subject.startsWith('example:') || p.resumeLink) &&
+      (await channelFor(p.owner)) === channel
+    )
+      return scope;
+  }
+  throw Error('Aviso indisponível neste acesso. Abra as orientações no app da pessoa.');
 }
 export async function readDeviceNotice(channel: string, id: string): Promise<DeviceNotice> {
   const invalid = () => Error('Este aviso expirou, foi desativado ou pertence a outro aparelho.');
@@ -326,7 +357,10 @@ export async function syncDevice(
       p.confirmed = false;
       save(scope, p);
     }
-    if (p.confirmed && Date.now() - p.verifiedAt < 60000) return;
+    if (p.confirmed && Date.now() - p.verifiedAt < 60000) {
+      await attachCurrentGrant(scope, p);
+      return;
+    }
     const response = await call(
       p.confirmed ? { op: 'status' } : { ...body, revision: p.revision },
       p.owner,
@@ -345,6 +379,7 @@ export async function syncDevice(
       acceptedAt: response.acceptedAt,
     });
     save(scope, p);
+    await attachCurrentGrant(scope, p);
   });
 }
 export async function schedulePushTest(scope: CareScope) {

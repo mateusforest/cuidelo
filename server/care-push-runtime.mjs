@@ -82,7 +82,7 @@ export function pushRuntime() {
           publicKey,
           privateKey: secret,
         },
-        TTL: 240,
+        TTL: message.kind === 'guidance' ? 86400 : 240,
         urgency: 'high',
         topic: message.id,
         timeout: 10000,

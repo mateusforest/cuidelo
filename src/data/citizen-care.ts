@@ -38,6 +38,7 @@ function open() {
 }
 // A leitura, a validação do comando e a gravação pertencem à mesma transação entre abas.
 export interface GuidanceInbox {
+  acknowledged?: Record<string, string>;
   handles: { owner: string; expires: number; settled: boolean }[];
   messages: PatientGuidance[];
 }
@@ -72,7 +73,21 @@ async function transaction<K extends keyof Tables, T>(
   });
 }
 export const guidanceInbox = (scope: CareScope) =>
-  transaction('guidance', careKey(scope), 'readonly', (v) => v ?? { handles: [], messages: [] });
+  transaction(
+    'guidance',
+    careKey(scope),
+    'readonly',
+    (v): GuidanceInbox => v ?? { handles: [], messages: [] },
+  );
+export function rememberGuidanceRead(scope: CareScope, id: string, readAt: string) {
+  return transaction('guidance', careKey(scope), 'readwrite', (stored, save) => {
+    const box: GuidanceInbox = stored ?? { handles: [], messages: [] };
+    (box.acknowledged ??= {})[id] = readAt;
+    const row = box.messages.find((m) => m.id === id);
+    if (row) row.readAt = readAt;
+    save(box);
+  });
+}
 export async function trackGuidance(scope: CareScope, owner: string, expires: number) {
   return transaction('guidance', careKey(scope), 'readwrite', (v, save) => {
     const box = v ?? { handles: [], messages: [] };
@@ -91,12 +106,13 @@ export async function mergeGuidance(
   return transaction('guidance', careKey(scope), 'readwrite', (v, save) => {
     const handle = v?.handles.find((h) => h.owner === owner);
     if (!v || !handle) return;
-    const existing = new Set(v.messages.map((m) => m.id));
+    const existing = new Map(v.messages.map((m) => [m.id, m]));
     for (const row of rows)
       if (!existing.has(row.id)) {
         v.messages.push(row);
-        existing.add(row.id);
-      }
+        existing.set(row.id, row);
+      } else if (row.readAt && !existing.get(row.id)!.readAt)
+        existing.get(row.id)!.readAt = row.readAt;
     if (checkedAt > handle.expires + 120000) handle.settled = true;
     v.messages.sort((a, b) => b.at.localeCompare(a.at));
     save(v);

@@ -13,6 +13,12 @@ self.addEventListener('push', (event) => {
     (async () => {
       const valid = (s) => typeof s === 'string' && /^[a-f0-9]{32}$/.test(s);
       let route = '/cidadao/dia-a-dia';
+      const guidance =
+        data.kind === 'guidance' &&
+        valid(data.channel) &&
+        typeof data.messageId === 'string' &&
+        /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(data.messageId);
+      if (guidance) route = '/cidadao/dia-a-dia/orientacao/' + data.channel + '/' + data.messageId;
       if (
         !test &&
         valid(data.id) &&
@@ -49,11 +55,17 @@ self.addEventListener('push', (event) => {
         }
       }
       await self.registration.showNotification(
-        test ? 'Cuidelo · teste de aviso' : 'Cuidelo · lembrete pessoal',
+        guidance
+          ? 'Cuidelo · nova orientação'
+          : test
+            ? 'Cuidelo · teste de aviso'
+            : 'Cuidelo · lembrete pessoal',
         {
-          body: test
-            ? 'O aviso de teste chegou a este aparelho.'
-            : 'Você tem um horário ou uma data para conferir em Dia a dia.',
+          body: guidance
+            ? 'Toque para abrir a mensagem da sua equipe de saúde.'
+            : test
+              ? 'O aviso de teste chegou a este aparelho.'
+              : 'Você tem um horário ou uma data para conferir em Dia a dia.',
           data: { route },
           icon: '/citizen-icons/192.png',
           badge: '/citizen-icons/192.png',
@@ -66,8 +78,16 @@ self.addEventListener('push', (event) => {
         try {
           const cache = await caches.open('cuidelo-push-receipts-v1');
           await cache.put(
-            '/cidadao/.receipt/' + data.channel + '/' + (test ? 'test' : 'reminder'),
-            new Response(JSON.stringify({ kind: test ? 'test' : 'reminder', shownAt: Date.now() })),
+            '/cidadao/.receipt/' +
+              data.channel +
+              '/' +
+              (guidance ? 'guidance' : test ? 'test' : 'reminder'),
+            new Response(
+              JSON.stringify({
+                kind: guidance ? 'guidance' : test ? 'test' : 'reminder',
+                shownAt: Date.now(),
+              }),
+            ),
           );
         } catch {
           /* O aviso já foi apresentado ao navegador. */
@@ -83,7 +103,9 @@ self.addEventListener('notificationclick', (event) => {
       const stored = event.notification.data?.route;
       const route =
         typeof stored === 'string' &&
-        /^\/cidadao\/dia-a-dia\/aviso\/[a-f0-9]{32}\/[a-f0-9]{32}$/.test(stored)
+        /^(?:\/cidadao\/dia-a-dia\/aviso\/[a-f0-9]{32}\/[a-f0-9]{32}|\/cidadao\/dia-a-dia\/orientacao\/[a-f0-9]{32}\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/.test(
+          stored,
+        )
           ? stored
           : '/cidadao/dia-a-dia';
       const windows = await self.clients.matchAll({ type: 'window' });

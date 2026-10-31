@@ -4,15 +4,22 @@ import { careKey, type CareScope } from '../domain/citizen-care';
 import { patientGuidance, validGuidance, type PatientGuidance } from '../domain/report-review';
 import {
   normalizeReportCode,
+  legacyReceiptToken,
   reportCode,
   replyProof,
   reportCipherKey,
   reportReader,
   reportReference,
 } from '../domain/report-code.mjs';
-import { citizenRequest, decryptCitizenPayload, encryptCitizenPayload } from './citizen-links';
+import {
+  CitizenLinkError,
+  type CitizenLink,
+  citizenRequest,
+  decryptCitizenPayload,
+  encryptCitizenPayload,
+} from './citizen-links';
 import { retainedReport, readReport, tabReportCode } from './report-sharing';
-import { guidanceInbox, trackGuidance, mergeGuidance } from './citizen-care';
+import { rememberGuidanceRead, guidanceInbox, trackGuidance, mergeGuidance } from './citizen-care';
 
 export type RevisionChange = (before: number, after: number) => void;
 async function commit(repo: CareRepository, c: Context, cmd: Command, changed: RevisionChange) {
@@ -136,10 +143,15 @@ export async function sendGuidance(
         };
         localStorage.setItem(key, JSON.stringify(packet));
       }
-      const { sentAt } = await citizenRequest(packet.body, packet.token);
+      const { sentAt, tracking } = await citizenRequest(packet.body, packet.token);
       if (typeof sentAt !== 'string' || !Number.isFinite(Date.parse(sentAt)))
         throw Error('Sem confirmação do envio.');
-      await commit(repo, c, { type: 'report.sent', reviewId: rid, messageId: id, sentAt }, changed);
+      await commit(
+        repo,
+        c,
+        { type: 'report.sent', reviewId: rid, messageId: id, sentAt, tracking },
+        changed,
+      );
       localStorage.removeItem(key);
     },
   );
@@ -161,7 +173,16 @@ export async function syncGuidance(scope: CareScope) {
             cipher = await reportCipherKey(code);
           const rows: PatientGuidance[] = [];
           for (const envelope of result.messages) {
-            if (box.messages.some((m) => m.id === envelope.id)) continue;
+            const existing = box.messages.find((m) => m.id === envelope.id);
+            if (existing) {
+              if (
+                !existing.readAt &&
+                envelope.readAt &&
+                Number.isFinite(Date.parse(envelope.readAt))
+              )
+                rows.push({ ...existing, readAt: envelope.readAt });
+              continue;
+            }
             const opened = (await decryptCitizenPayload(envelope.payload, cipher)) as {
               ref: string;
               message: PatientGuidance;
@@ -172,7 +193,7 @@ export async function syncGuidance(scope: CareScope) {
               opened.message.id !== envelope.id
             )
               throw Error('Não foi possível conferir a orientação.');
-            rows.push(opened.message);
+            rows.push({ ...opened.message, readAt: envelope.readAt });
           }
           await mergeGuidance(scope, h.owner, rows, result.checkedAt);
         }),
@@ -180,4 +201,66 @@ export async function syncGuidance(scope: CareScope) {
     if (failures.some((v) => v.status === 'rejected'))
       throw Error('Não foi possível atualizar todas as orientações. Tente novamente com internet.');
   });
+}
+
+export async function confirmGuidanceRead(
+  scope: CareScope,
+  message: PatientGuidance,
+  link?: CitizenLink,
+) {
+  if (!validGuidance(message)) throw Error('Orientação inválida.');
+  const box = await guidanceInbox(scope);
+  let result: { readAt: string } | undefined;
+  if (box.messages.some((m) => m.id === message.id)) {
+    for (const h of [...box.handles].reverse()) {
+      try {
+        result = await citizenRequest({ op: 'report.ack', id: message.id }, h.owner);
+        break;
+      } catch (e) {
+        if (!(e instanceof CitizenLinkError && e.unavailable)) throw e;
+      }
+    }
+  }
+  if (!result && link && message.ack)
+    result = await citizenRequest(
+      { op: 'report.linkAck', id: message.id, ...message.ack },
+      link.reader,
+    );
+  if (!result || !Number.isFinite(Date.parse(result.readAt)))
+    throw Error(
+      'Abra esta orientação no aparelho que compartilhou o relatório para confirmar a leitura.',
+    );
+  await rememberGuidanceRead(scope, message.id, result.readAt);
+  return result.readAt;
+}
+export async function syncReadReceipts(
+  repo: CareRepository,
+  c: Context,
+  encounterId: string,
+  changed: RevisionChange,
+) {
+  if (c.role !== 'clinical') return;
+  const rows = repo
+    .snapshot(c)
+    .reportReviews.filter((r) => r.encounterId === encounterId && r.unitId === c.unitId);
+  for (const r of rows)
+    for (const m of r.messages) {
+      if (m.readAt || !m.sentAt) continue;
+      const { readAt } = m.tracking
+        ? await citizenRequest(
+            { op: 'report.status', id: m.id, box: m.tracking.box },
+            m.tracking.token,
+          )
+        : await citizenRequest(
+            { op: 'report.legacyStatus', id: m.id },
+            await legacyReceiptToken(r.reportRef, m.id),
+          );
+      if (readAt)
+        await commit(
+          repo,
+          c,
+          { type: 'report.confirmed', reviewId: r.id, messageId: m.id, readAt },
+          changed,
+        );
+    }
 }

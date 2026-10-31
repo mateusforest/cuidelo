@@ -6,3 +6,5 @@ export function reportBinding(org: string, subject: string, legacy?: boolean): P
 
 export function reportReference(code: string): Promise<string>;
 export function replyProof(code: string): Promise<string>;
+
+export function legacyReceiptToken(ref: string, id: string): Promise<string>;

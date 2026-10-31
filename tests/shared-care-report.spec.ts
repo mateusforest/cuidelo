@@ -156,6 +156,16 @@ test('celular compartilha cinco tipos de registro com outro navegador, confere p
     await expect(
       phone.getByText('Levar o diário à próxima consulta de demonstração.', { exact: true }),
     ).toBeVisible({ timeout: 20000 });
+    await expect(
+      page.getByText('Aguardando confirmação de leitura', { exact: true }),
+    ).toBeVisible();
+    await phone.getByRole('button', { name: 'Confirmar que li', exact: true }).click();
+    await expect(page.locator('.report-history').getByText(/Leitura confirmada em/)).toHaveCount(
+      1,
+      { timeout: 20000 },
+    );
+    await phone.reload();
+    await expect(phone.getByText(/Leitura confirmada em/)).toBeVisible();
     // Perde só a resposta: o servidor recebeu, mas a estação deve manter o envio pendente até conferir.
     await page.evaluate(() => {
       const original = window.fetch.bind(window);
@@ -194,6 +204,16 @@ test('celular compartilha cinco tipos de registro com outro navegador, confere p
     await expect(
       phone.getByText('Segunda orientação fictícia para o retorno.', { exact: true }),
     ).toHaveCount(1, { timeout: 25000 });
+    await expect(
+      page
+        .locator('.report-history')
+        .getByText('Aguardando confirmação de leitura', { exact: true }),
+    ).toHaveCount(1);
+    await phone.getByRole('button', { name: 'Confirmar que li', exact: true }).click();
+    await expect(page.locator('.report-history').getByText(/Leitura confirmada em/)).toHaveCount(
+      2,
+      { timeout: 20000 },
+    );
     await phone.getByRole('button', { name: 'Sair do app do cidadão' }).click();
     await phone.getByRole('button', { name: /João Pedro/ }).click();
     await phone.goto(origin + '/cidadao/dia-a-dia/orientacoes');

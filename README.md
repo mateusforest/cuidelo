@@ -6,7 +6,7 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.22.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.23.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 A [auditoria da versão 0.13](docs/auditoria-0.13.md) reúne os percursos verificados e as pendências para a operação real. A recepção concilia as senhas do totem com a agenda e revisa chegadas antigas. O hospital permite transferir de leito com histórico dentro da mesma internação.
 

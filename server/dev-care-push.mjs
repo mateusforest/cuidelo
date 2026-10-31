@@ -46,4 +46,5 @@ export function developmentPush(server) {
   server.httpServer?.on('close', () => {
     for (const t of timers.values()) clearTimeout(t);
   });
+  return localOnly;
 }

@@ -178,6 +178,8 @@ export interface GuidanceMessage {
   text: string;
   at: string;
   sentAt?: string;
+  readAt?: string;
+  tracking?: { box: string; token: string; permit?: string };
 }
 export interface ReportReview extends Scoped {
   unitId: string;
@@ -598,7 +600,14 @@ export type Command =
       to: string;
     }
   | { type: 'report.guidance'; reviewId: string; messageId: string; text: string }
-  | { type: 'report.sent'; reviewId: string; messageId: string; sentAt: string }
+  | {
+      type: 'report.sent';
+      reviewId: string;
+      messageId: string;
+      sentAt: string;
+      tracking?: GuidanceMessage['tracking'];
+    }
+  | { type: 'report.confirmed'; reviewId: string; messageId: string; readAt: string }
   | { type: 'note.addendum'; noteId: string; text: string; reason: string }
   | { type: 'queue.call'; encounterId: string; roomId: string }
   | { type: 'queue.recall'; callId: string }

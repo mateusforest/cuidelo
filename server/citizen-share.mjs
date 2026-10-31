@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { reportReader, reportCode, replyProof, reportBinding } from '../src/domain/report-code.mjs';
 
+import { deviceKey, receipt, tracking } from './guidance-notices.mjs';
 const hash = (v) => createHash('sha256').update(v).digest('hex');
 const readKey = (writer) => hash('cuidelo-cidadao-v1:' + writer);
 const lifetime = 30 * 60;
@@ -12,7 +13,21 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
   const report = typeof op === 'string' && op.startsWith('report.');
   if (report) {
     op = op.slice(7);
-    if (!['create', 'read', 'stop', 'reply', 'inbox'].includes(op) || !/^[a-f0-9]{64}$/.test(token))
+    if (
+      ![
+        'create',
+        'read',
+        'stop',
+        'reply',
+        'inbox',
+        'device',
+        'ack',
+        'linkAck',
+        'status',
+        'legacyStatus',
+      ].includes(op) ||
+      !/^[a-f0-9]{64}$/.test(token)
+    )
       return failure(404, 'Acesso ao relatório indisponível.');
     if (
       op === 'create' &&
@@ -27,6 +42,16 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
     )
       return failure(400, 'Vínculo inválido.');
   }
+  if (report && ['ack', 'linkAck', 'status', 'legacyStatus'].includes(op))
+    return receipt(
+      op,
+      token,
+      body,
+      cache,
+      mailbox,
+      async (owner) => hash(await reportReader(await reportCode(owner))),
+      now,
+    );
   const prefix = report ? 'report:' : 'view:';
   const readerFor = report ? async (w) => reportReader(await reportCode(w)) : readKey;
   if (
@@ -36,6 +61,18 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
     (typeof body.network !== 'string' || !/^[a-f0-9]{64}$/.test(body.network))
   )
     return failure(400, 'Rede inválida.');
+  if (report && op === 'device') {
+    const key = prefix + hash(await readerFor(token)),
+      item = await cache.get(key);
+    if (!item || item.expires <= now || (await cache.get('revoked:' + key)))
+      return failure(410, 'Compartilhamento encerrado.');
+    const device = deviceKey(body.device);
+    if (!device) return failure(400, 'Aparelho inválido.');
+    await cache.set('device:' + key, device, {
+      ttl: Math.max(1, Math.ceil((item.expires - now) / 1000)),
+    });
+    return { status: 200, body: { linked: true } };
+  }
   if (op === 'create' || op === 'update') {
     if (
       typeof body.payload !== 'string' ||
@@ -70,9 +107,13 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
         payload: body.payload,
         expires,
         revision: 0,
+        ...(!report && typeof body.binding === 'string' && /^[a-f0-9]{64}$/.test(body.binding)
+          ? { binding: body.binding }
+          : {}),
         ...(report
           ? {
               binding: body.binding,
+              device: deviceKey(body.device),
               ...(body.network
                 ? {
                     network: body.network,
@@ -93,7 +134,12 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
       status: 200,
       body: {
         checkedAt: now,
-        messages: box.messages.map(({ id, payload, sentAt }) => ({ id, payload, sentAt })),
+        messages: box.messages.map(({ id, payload, sentAt, readAt }) => ({
+          id,
+          payload,
+          sentAt,
+          readAt,
+        })),
       },
     };
   }
@@ -135,7 +181,7 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
           prior.proof === proof &&
           prior.digest === body.digest &&
           prior.binding === body.binding
-          ? { status: 200, body: { sentAt: prior.sentAt } }
+          ? { status: 200, body: { sentAt: prior.sentAt, tracking: tracking(key, prior) } }
           : failure(409, 'A orientação já foi registrada com outro conteúdo.');
       const item = await cache.get(grantKey);
       if (
@@ -149,24 +195,23 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
       if (box.messages.length >= 40)
         return failure(409, 'Limite de orientações deste relatório atingido.');
       const sentAt = new Date(now).toISOString();
+      const device = (await cache.get('device:' + grantKey)) || item.device;
+      const saved = {
+        id: body.id,
+        payload: body.payload,
+        digest: body.digest,
+        binding: body.binding,
+        station,
+        proof,
+        sentAt,
+        linkPermit: randomBytes(32).toString('hex'),
+        ...(device ? { device } : {}),
+      };
+      if (device) await mailbox.enqueue({ kind: 'guidance', box: key, id: body.id, at: now });
+
       try {
-        await mailbox.save(
-          key,
-          [
-            ...box.messages,
-            {
-              id: body.id,
-              payload: body.payload,
-              digest: body.digest,
-              binding: body.binding,
-              station,
-              proof,
-              sentAt,
-            },
-          ],
-          box.etag,
-        );
-        return { status: 201, body: { sentAt } };
+        await mailbox.save(key, [...box.messages, saved], box.etag);
+        return { status: 201, body: { sentAt, tracking: tracking(key, saved) } };
       } catch (e) {
         if (attempt === 2) throw e;
       }
@@ -192,7 +237,17 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
     if (body.revision >= item.revision)
       await cache.set(
         key,
-        { payload: body.payload, expires: item.expires, revision: body.revision },
+        {
+          ...item,
+          ...(!item.binding &&
+          typeof body.binding === 'string' &&
+          /^[a-f0-9]{64}$/.test(body.binding)
+            ? { binding: body.binding }
+            : {}),
+          payload: body.payload,
+          expires: item.expires,
+          revision: body.revision,
+        },
         { ttl: Math.max(1, Math.ceil((item.expires - now) / 1000)) },
       );
     return { status: 200, body: { expires: item.expires } };
@@ -245,15 +300,19 @@ export async function citizenRelay(req, res, cache, mailbox) {
       typeof b !== 'object' ||
       !Object.hasOwn(b, 'op') ||
       Object.keys(b).length !==
-        (b.op === 'report.reply'
-          ? 7
-          : b.op === 'report.create' && Object.hasOwn(b, 'network')
-            ? 4
-            : ['create', 'report.read'].includes(b.op)
-              ? 2
-              : ['update', 'report.create'].includes(b.op)
-                ? 3
-                : 1) ||
+        ({
+          'report.reply': 7,
+          'report.linkAck': 4,
+          'report.status': 3,
+          'report.legacyStatus': 2,
+          'report.ack': 2,
+          'report.device': 2,
+          'report.read': 2,
+          update: 3 + Number(Object.hasOwn(b, 'binding')),
+          create: 2 + Number(Object.hasOwn(b, 'binding')),
+          'report.create':
+            3 + Number(Object.hasOwn(b, 'network')) + Number(Object.hasOwn(b, 'device')),
+        }[b.op] ?? 1) ||
       JSON.stringify(b).length > 161000
     )
       throw Error();

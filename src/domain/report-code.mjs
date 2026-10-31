@@ -19,3 +19,6 @@ export const reportBinding = async (org, subject, legacy = false) =>
 
 export const reportReference = async (code) => hex(await digest('cuidelo-review-ref-v1:' + code));
 export const replyProof = async (code) => hex(await digest('cuidelo-guidance-write-v1:' + code));
+
+export const legacyReceiptToken = async (ref, id) =>
+  hex(await digest('cuidelo-legacy-read-v1:' + ref + ':' + id));

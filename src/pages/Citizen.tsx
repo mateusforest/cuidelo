@@ -23,6 +23,7 @@ import { dateKey, clockTime, shortDate } from '../domain/dates';
 import { type CitizenAppointment, type CitizenDocument, type CitizenView } from '../domain/citizen';
 import { citizenExamples, readCitizenExample, type ExampleId } from '../data/citizen-examples';
 import { openCitizenLink, parseCitizenLink, CitizenLinkError } from '../data/citizen-links';
+import { GuidanceNoticeEntry } from '../components/ReportFollowUp';
 import { CitizenDaily } from '../components/CitizenDaily';
 import '../styles/citizen.css';
 import '../styles/citizen-care.css';
@@ -466,7 +467,8 @@ export function Citizen() {
     remember(link ? { link } : null);
     navigate(base, { replace: true });
   }, [loc.hash, navigate]);
-  const fromNotice = path.startsWith('dia-a-dia/aviso/');
+  const guidanceNotice = path.startsWith('dia-a-dia/orientacao/');
+  const fromNotice = guidanceNotice || path.startsWith('dia-a-dia/aviso/');
   const active = loc.hash ? null : session;
   const leave = async () => {
     if (active) await forgetNoticeAccess(active).catch(() => {});
@@ -508,6 +510,8 @@ export function Citizen() {
       >
         {loc.hash ? (
           <p role="status">Abrindo link…</p>
+        ) : guidanceNotice ? (
+          <GuidanceNoticeEntry key={path} channel={path.split('/')[2]} id={path.split('/')[3]} />
         ) : fromNotice ? (
           <NoticeEntry
             key={path}

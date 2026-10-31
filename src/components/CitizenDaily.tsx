@@ -894,7 +894,27 @@ export function CitizenDaily({
           ) : tab === 'relatorio' ? (
             <CareReport diary={diary} view={view} scope={scope} />
           ) : tab === 'orientacoes' ? (
-            <CitizenGuidance scope={scope} view={view} />
+            <CitizenGuidance
+              scope={scope}
+              view={view}
+              link={link}
+              notifications={
+                <div className="care-actions">
+                  <Button disabled={busy} variant="secondary" onClick={toggle}>
+                    {push.wanted
+                      ? 'Desativar avisos do aparelho'
+                      : push.pending
+                        ? 'Confirmar desativação'
+                        : 'Ativar avisos do aparelho'}
+                  </Button>
+                  <small>
+                    {push.wanted
+                      ? 'Os avisos incluem novas orientações e lembretes pessoais.'
+                      : 'Permita avisos para receber orientações mesmo com o app fechado.'}
+                  </small>
+                </div>
+              }
+            />
           ) : tab === 'diario' ? (
             <Journal d={diary} now={now} run={run} busy={busy} />
           ) : tab === 'medicacao' ? (

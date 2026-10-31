@@ -1,3 +1,4 @@
+import { guidanceDevice } from './device-push';
 import { trackGuidance } from './citizen-care';
 import type { CareRepository } from './repository';
 import type { Context } from '../domain/model';
@@ -76,6 +77,7 @@ export async function shareReport(scope: CareScope, view: CitizenView, report: S
     const { expires } = await citizenRequest(
       {
         op: 'report.create',
+        device: guidanceDevice(scope),
         binding,
         network: await reportBinding(scope.organization, 'guidance-network'),
         payload,

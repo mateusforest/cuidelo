@@ -1,6 +1,14 @@
+import { queue } from './care-push-runtime.mjs';
 import { get, put } from '@vercel/blob';
 // Apenas envelopes cifrados. A versão original do objeto é necessária para gravar sem perder envios concorrentes.
 export const blobMailbox = {
+  async enqueue(job) {
+    await queue.send('cuidelo-care-alarms', job, {
+      delaySeconds: 2,
+      retentionSeconds: 86400,
+      idempotencyKey: 'guidance-' + job.box + '-' + job.id + '-' + Math.floor(job.at / 300000),
+    });
+  },
   async read(key) {
     const r = await get('report-replies/v1/' + key + '.json', {
       access: 'private',

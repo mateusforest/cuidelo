@@ -104,7 +104,11 @@ export async function decryptCitizenPayload(
 export async function publishCitizenLink(view: CitizenView): Promise<SharedCitizenLink> {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   const payload = await encryptCitizenPayload(view, bytes);
-  const { writer, reader, expires } = await citizenRequest({ op: 'create', payload });
+  const { writer, reader, expires } = await citizenRequest({
+    op: 'create',
+    payload,
+    binding: view.reportBinding,
+  });
   if (
     !/^[a-f0-9]{64}$/.test(reader) ||
     !/^[a-f0-9]{64}$/.test(writer) ||
@@ -235,7 +239,10 @@ export function startCitizenUpdates(repo: CareRepository, c: Context) {
         const payload = await encryptCitizenPayload(view, decode(share.key));
         if (disposed) return;
         try {
-          await citizenRequest({ op: 'update', revision, payload }, share.writer);
+          await citizenRequest(
+            { op: 'update', revision, payload, binding: view.reportBinding },
+            share.writer,
+          );
           sent.set(share.writer, revision);
         } catch (e) {
           if (e instanceof CitizenLinkError && e.unavailable) sessionStorage.removeItem(handle);

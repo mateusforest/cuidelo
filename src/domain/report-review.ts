@@ -6,7 +6,7 @@ import type { Command, Context, Database, ReportReview, GuidanceMessage } from '
 
 type ReviewCommand = Extract<
   Command,
-  { type: 'report.review' | 'report.guidance' | 'report.sent' }
+  { type: 'report.review' | 'report.guidance' | 'report.sent' | 'report.confirmed' }
 >;
 const validPeriod = (from: string, to: string) => validDay(from) && validDay(to) && from <= to;
 const validRef = (v: string) => /^[a-f0-9]{64}$/.test(v);
@@ -32,7 +32,7 @@ export function applyReportReview(
             r.id === cmd.reviewId &&
             r.organizationId === c.organizationId &&
             r.unitId === c.unitId &&
-            r.actorId === c.sessionId,
+            (cmd.type === 'report.confirmed' || r.actorId === c.sessionId),
         );
   const eid = cmd.type === 'report.review' ? cmd.encounterId : review?.encounterId;
   const e = db.encounters.find(
@@ -87,9 +87,24 @@ export function applyReportReview(
     review.messages.push({ id: cmd.messageId, text: cmd.text.trim(), at });
     return { id: cmd.messageId, action: 'Orientação ao cidadão registrada no prontuário' };
   }
+  if (cmd.type === 'report.confirmed') {
+    if (!m?.sentAt || !date(cmd.readAt) || Date.parse(cmd.readAt) < Date.parse(m.sentAt))
+      throw new DomainError('Confirmação de leitura inválida.');
+    if (m.readAt) return { id: m.id, action: '' };
+    m.readAt = cmd.readAt;
+    return { id: m.id, action: 'Confirmação de leitura do cidadão registrada' };
+  }
+  if (
+    cmd.tracking &&
+    (!validRef(cmd.tracking.box) ||
+      !validRef(cmd.tracking.token) ||
+      (cmd.tracking.permit !== undefined && !validRef(cmd.tracking.permit)))
+  )
+    throw new DomainError('Comprovante inválido.');
   if (!m || !date(cmd.sentAt)) throw new DomainError('Confirmação de envio inválida.');
   if (m.sentAt) return { id: m.id, action: '' };
   m.sentAt = cmd.sentAt;
+  if (cmd.tracking) m.tracking = { ...cmd.tracking };
   return { id: m.id, action: 'Envio da orientação ao app confirmado' };
 }
 export function validateReviews(db: Database) {
@@ -120,7 +135,13 @@ export function validateReviews(db: Database) {
           !messageId(m.id) ||
           !guidanceText(m.text) ||
           !date(m.at) ||
-          (m.sentAt !== undefined && !date(m.sentAt)),
+          (m.sentAt !== undefined && !date(m.sentAt)) ||
+          (m.readAt !== undefined &&
+            (!m.sentAt || !date(m.readAt) || Date.parse(m.readAt) < Date.parse(m.sentAt))) ||
+          (m.tracking !== undefined &&
+            (!validRef(m.tracking.box) ||
+              !validRef(m.tracking.token) ||
+              (m.tracking.permit !== undefined && !validRef(m.tracking.permit)))),
       )
     )
       throw Error('Registro de revisão do relatório inválido.');
@@ -135,6 +156,8 @@ export function patientGuidance(r: ReportReview, m: GuidanceMessage) {
   return {
     id: m.id,
     text: m.text,
+    ...(m.readAt ? { readAt: m.readAt } : {}),
+    ...(m.tracking?.permit ? { ack: { box: m.tracking.box, permit: m.tracking.permit } } : {}),
     at: m.at,
     author: r.author,
     unit: r.unit,
@@ -147,6 +170,8 @@ export function validGuidance(g: PatientGuidance) {
   return (
     !!g &&
     messageId(g.id) &&
+    (g.readAt === undefined || date(g.readAt)) &&
+    (g.ack === undefined || (validRef(g.ack.box) && validRef(g.ack.permit))) &&
     guidanceText(g.text) &&
     date(g.at) &&
     typeof g.author === 'string' &&

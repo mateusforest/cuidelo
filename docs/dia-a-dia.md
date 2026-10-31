@@ -1,4 +1,4 @@
-# Dia a dia no Cuidelo Cidadão · versão 0.22
+# Dia a dia no Cuidelo Cidadão · versão 0.23
 
 Abra [o app do cidadão](https://cuidelo.vercel.app/cidadao), escolha Ana Clara e toque em **Dia a dia**. Use dados fictícios.
 
@@ -45,13 +45,19 @@ No perfil **Equipe médica**, abra o atendimento da mesma pessoa, localize **Rel
 1. Inicie o atendimento da pessoa no **Consultório**. Após conferir o relatório compartilhado, escolha **Registrar revisão no prontuário**. A revisão informa profissional, unidade, data e período da cópia.
 2. Em **Orientação para a pessoa**, escreva um texto fictício e toque em **Registrar e enviar orientação**. A estação salva primeiro o registro clínico. Se o envio não for confirmado, use **Tentar enviar novamente**. O prontuário da pessoa reúne as revisões e orientações da rede.
 3. No app, abra **Dia a dia → Orientações**. A caixa busca mensagens com internet, inclusive depois de encerrar o código de leitura. As orientações recebidas ficam neste navegador, associadas à pessoa que compartilhou. Um link válido emitido pela estação médica também inclui as orientações com envio confirmado que constam na cópia da pessoa.
-4. Um código ativo autoriza novos envios. Encerrar o código bloqueia novos envios e preserva orientações já aceitas. “Envio confirmado” indica que o serviço recebeu a orientação. A demonstração não emite comprovante de leitura pelo paciente. A caixa de retorno utiliza envelopes cifrados no armazenamento privado da Vercel, separados por compartilhamento.
+4. Um código ativo autoriza novos envios. Encerrar o código bloqueia novos envios e preserva orientações já aceitas. “Envio confirmado” indica que o serviço recebeu a orientação. A confirmação de leitura tem data própria e depende do toque da pessoa em **Confirmar que li**. A caixa de retorno utiliza envelopes cifrados no armazenamento privado da Vercel, separados por compartilhamento.
 
 A cópia é cifrada e o serviço temporário verifica o código, o vínculo e o prazo. Fechar o relatório retira o código da sessão médica. **Encerrar compartilhamento** no app bloqueia novas leituras, e a tela aberta confere o acesso a cada cinco segundos enquanto estiver ativa. O compartilhamento precisa de internet no endereço publicado. Versões antigas do link da unidade sem o vínculo estável podem ser conferidas na estação que emitiu o link.
 
 Apagar os dados do site ou trocar de navegador pode retirar o acesso aos registros locais. O acompanhamento demonstra registros feitos pela pessoa e lembretes informativos. A operação clínica requer identidade verificada, armazenamento protegido, autorização e validação assistencial.
 
 Para verificar a implementação dos alarmes de calendário e das notificações do navegador, consulte o [padrão iCalendar](https://www.rfc-editor.org/rfc/rfc5545) e a [documentação de notificações do navegador](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration/showNotification).
+
+## Nova orientação no celular
+
+Em **Dia a dia → Orientações**, ative os avisos do aparelho e permita as notificações. Quem já ativou os avisos dos medicamentos usa a mesma inscrição. No iPhone, abra pelo ícone da Tela de Início. Reabra a versão atualizada do app e compartilhe o relatório. Com avisos desativados, a caixa continua recebendo as mensagens.
+
+O consultório registra e envia a orientação durante o compartilhamento. A fila da Vercel aciona o navegador mesmo com o app fechado. A tela bloqueada exibe um aviso discreto. Ao tocar, o aparelho que compartilhou abre aquela orientação. A pessoa pode tocar em **Confirmar que li**. O serviço registra o primeiro horário de confirmação, inclusive após o encerramento do código. O consultório atualiza a situação enquanto está aberto e preserva o horário no prontuário. Uma cópia nova emitida pela unidade também permite confirmar mensagens quando o vínculo está válido.
 
 ## Operação da demonstração
 

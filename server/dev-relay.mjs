@@ -1,3 +1,4 @@
+import { deliverGuidance } from './guidance-notices.mjs';
 import { memoryMailbox } from './report-mailbox.mjs';
 import { developmentPush } from './dev-care-push.mjs';
 import { citizenRelay } from './citizen-share.mjs';
@@ -21,7 +22,15 @@ export function tvDevelopmentRelay() {
   return {
     name: 'cuidelo-local-tv-relay',
     configureServer(server) {
-      developmentPush(server);
+      const push = developmentPush(server);
+      mailbox.enqueue = async (job) => {
+        const attempt = () =>
+          deliverGuidance(job, mailbox, push).catch(() => {
+            if (Date.now() - job.at < 300000) setTimeout(attempt, 30000).unref();
+          });
+        setTimeout(attempt, 1000).unref();
+      };
+
       server.middlewares.use('/api/cidadao', (req, res) => citizenRelay(req, res, cache, mailbox));
       server.middlewares.use('/api/tv', (req, res) => tvRelay(req, res, cache));
     },

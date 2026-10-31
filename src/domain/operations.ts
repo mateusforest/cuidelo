@@ -329,6 +329,7 @@ export function applyCommand(
     }
     case 'report.review':
     case 'report.guidance':
+    case 'report.confirmed':
     case 'report.sent': {
       const result = applyReportReview(db, c, command, at, newId);
       if (!result.action) return result.id;

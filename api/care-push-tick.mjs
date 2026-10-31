@@ -1,8 +1,11 @@
+import { deliverGuidance } from '../server/guidance-notices.mjs';
+import { blobMailbox } from '../server/report-mailbox.mjs';
 import { consume } from '../server/care-push.mjs';
 import { queue, pushRuntime } from '../server/care-push-runtime.mjs';
 export default queue.handleNodeCallback(
   async (job) => {
-    await consume(pushRuntime(), job);
+    if (job?.kind === 'guidance') await deliverGuidance(job, blobMailbox, pushRuntime());
+    else await consume(pushRuntime(), job);
   },
   {
     visibilityTimeoutSeconds: 45,

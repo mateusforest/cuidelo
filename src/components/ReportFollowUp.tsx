@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Field } from './ui';
 import { useApp } from '../app/context';
 import type { ReportReview } from '../domain/model';
+import { guidanceNoticeScope } from '../data/device-push';
+import type { CitizenLink } from '../data/citizen-links';
 import type { CitizenView } from '../domain/citizen';
 import { careKey, type CareScope } from '../domain/citizen-care';
 import type { PatientGuidance } from '../domain/report-review';
@@ -12,6 +14,8 @@ import {
   recordGuidance,
   sendGuidance,
   syncGuidance,
+  confirmGuidanceRead,
+  syncReadReceipts,
   type RevisionChange,
 } from '../data/report-guidance';
 
@@ -47,6 +51,15 @@ export function ReviewHistory({
                   ? 'Envio confirmado em ' + stamp(m.sentAt)
                   : 'Registrada no prontuário · envio sem confirmação'}
               </small>
+              {m.sentAt && (
+                <p>
+                  <small>
+                    {m.readAt
+                      ? 'Leitura confirmada em ' + stamp(m.readAt)
+                      : 'Aguardando confirmação de leitura'}
+                  </small>
+                </p>
+              )}
               {!m.sentAt && retry && r.actorId === actorId && (
                 <Button variant="secondary" disabled={busy} onClick={() => retry(r, m.id)}>
                   Tentar enviar novamente
@@ -79,6 +92,38 @@ export function ClinicalFollowUp({
   const [text, setText] = useState(''),
     [status, setStatus] = useState(''),
     [busy, setBusy] = useState(false);
+  const revisionCallback = useRef(changed);
+  revisionCallback.current = changed;
+  const waiting = rows.some((r) => r.messages.some((m) => m.sentAt && !m.readAt));
+  const [receiptError, setReceiptError] = useState('');
+  useEffect(() => {
+    if (!waiting) return;
+    let live = true,
+      running = false;
+    const refresh = async () => {
+      if (!live || running) return;
+      running = true;
+      try {
+        await syncReadReceipts(repository, context, encounterId, (a, b) => {
+          if (live) revisionCallback.current(a, b);
+        });
+        if (live) setReceiptError('');
+      } catch {
+        if (live)
+          setReceiptError('Sem atualização das confirmações de leitura. Tentando novamente.');
+      } finally {
+        running = false;
+      }
+    };
+    void refresh();
+    const t = setInterval(refresh, 6000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      live = false;
+      clearInterval(t);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [waiting, repository, context, encounterId]);
   const lock = useRef(false),
     request = useRef(crypto.randomUUID());
   const lastRef = useRef(refId);
@@ -173,6 +218,7 @@ export function ClinicalFollowUp({
           </form>
         ))}
       {status && <p role="status">{status}</p>}
+      {waiting && receiptError && <p role="status">{receiptError}</p>}
       {!!rows.length && (
         <>
           <h3>Registro no prontuário</h3>
@@ -187,7 +233,38 @@ export function ClinicalFollowUp({
     </section>
   );
 }
-export function CitizenGuidance({ scope, view }: { scope: CareScope; view: CitizenView }) {
+export function CitizenGuidance({
+  scope,
+  view,
+  link,
+  target,
+  channel,
+  notifications,
+}: {
+  scope: CareScope;
+  view?: CitizenView;
+  link?: CitizenLink;
+  target?: string;
+  channel?: string;
+  notifications?: React.ReactNode;
+}) {
+  const [ack, setAck] = useState<Record<string, string>>({}),
+    [sending, setSending] = useState(''),
+    [ackError, setAckError] = useState('');
+  const confirm = async (m: PatientGuidance) => {
+    setSending(m.id);
+    setAckError('');
+    try {
+      if (channel && careKey(await guidanceNoticeScope(channel)) !== careKey(scope))
+        throw Error('Acesso ao aviso indisponível.');
+      const at = await confirmGuidanceRead(scope, m, link);
+      setAck((v) => ({ ...v, [m.id]: at }));
+    } catch (e) {
+      setAckError((e as Error).message);
+    } finally {
+      setSending('');
+    }
+  };
   const [rows, setRows] = useState<PatientGuidance[]>([]),
     [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
@@ -198,7 +275,10 @@ export function CitizenGuidance({ scope, view }: { scope: CareScope; view: Citiz
       running = false;
     const cached = async () => {
       const box = await guidanceInbox(scope);
-      if (live) setRows(box.messages);
+      if (live) {
+        setRows(box.messages);
+        setAck((v) => ({ ...v, ...box.acknowledged }));
+      }
     };
     const update = async () => {
       if (running) return;
@@ -226,13 +306,15 @@ export function CitizenGuidance({ scope, view }: { scope: CareScope; view: Citiz
       window.removeEventListener('focus', update);
     };
   }, [key, tick]);
-  const messages = [
-    ...new Map([...(view.guidance ?? []), ...rows].map((m) => [m.id, m])).values(),
-  ].sort((a, b) => b.at.localeCompare(a.at));
+  const messages = [...new Map([...(view?.guidance ?? []), ...rows].map((m) => [m.id, m])).values()]
+    .filter((m) => !target || target === m.id)
+    .sort((a, b) => b.at.localeCompare(a.at));
   return (
     <section className="cit-sheet">
       <span className="cit-kicker">Retorno da consulta</span>
-      <h2>Orientações da equipe</h2>
+      <h2>{target ? 'Orientação da equipe' : 'Orientações da equipe'}</h2>
+      {notifications}
+      {ackError && <p role="alert">{ackError}</p>}
       <p>
         Confira as orientações recebidas sobre seu relatório, com a data e a unidade do atendimento.
       </p>
@@ -253,6 +335,13 @@ export function CitizenGuidance({ scope, view }: { scope: CareScope; view: Citiz
               <small>
                 Relatório de {shortDate(m.from)} a {shortDate(m.to)}
               </small>
+              {ack[m.id] || m.readAt ? (
+                <p role="status">Leitura confirmada em {stamp(ack[m.id] ?? m.readAt!)}</p>
+              ) : (
+                <Button disabled={!!sending} onClick={() => confirm(m)}>
+                  {sending === m.id ? 'Confirmando…' : 'Confirmar que li'}
+                </Button>
+              )}
             </article>
           ))}
         </div>
@@ -276,5 +365,45 @@ export function CitizenGuidance({ scope, view }: { scope: CareScope; view: Citiz
         Atualizar orientações
       </Button>
     </section>
+  );
+}
+
+export function GuidanceNoticeEntry({ channel, id }: { channel: string; id: string }) {
+  const [scope, setScope] = useState<CareScope | null>(null),
+    [error, setError] = useState('');
+  useEffect(() => {
+    let live = true;
+    if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id)) {
+      setError('Aviso inválido.');
+      return;
+    }
+    const resolve = () => {
+      void guidanceNoticeScope(channel)
+        .then((s) => {
+          if (live) {
+            setScope(s);
+            setError('');
+          }
+        })
+        .catch((e) => {
+          if (live) {
+            setScope(null);
+            setError((e as Error).message);
+          }
+        });
+    };
+    resolve();
+    window.addEventListener('storage', resolve);
+    window.addEventListener('focus', resolve);
+    return () => {
+      live = false;
+      window.removeEventListener('storage', resolve);
+      window.removeEventListener('focus', resolve);
+    };
+  }, [channel, id]);
+  return scope ? (
+    <CitizenGuidance scope={scope} target={id} channel={channel} />
+  ) : (
+    <p role="status">{error || 'Abrindo a orientação…'}</p>
   );
 }
