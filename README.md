@@ -6,11 +6,13 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.17.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.18.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
 
 A [auditoria da versão 0.13](docs/auditoria-0.13.md) reúne os percursos verificados e as pendências para a operação real. A recepção concilia as senhas do totem com a agenda e revisa chegadas antigas. O hospital permite transferir de leito com histórico dentro da mesma internação.
 
 A [primeira entrega dos 44 percursos](docs/escuta-fila-salas.md) liga a avaliação da enfermagem à fila, à TV e ao consultório. O mapa **Comparar com Pulso** permite consultar os recursos parciais na ordem de desenvolvimento.
+
+A área **Dia a dia** reúne condições informadas pela pessoa, diário de crises e sintomas, horários de medicação, retirada, renovação e relatório por período. [Roteiro para testar o acompanhamento](docs/dia-a-dia.md).
 
 O [app do cidadão](https://cuidelo.vercel.app/cidadao) permite consultar os próprios agendamentos, receitas, pedidos de exames e atestados no celular. A demonstração tem exemplos prontos e acesso temporário por pessoa a partir da estação assistencial. [Roteiro de teste](docs/app-do-cidadao.md).
 

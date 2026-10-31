@@ -28,7 +28,9 @@ import {
   CitizenLinkError,
   type CitizenLink,
 } from '../data/citizen-links';
+import { CitizenDaily } from '../components/CitizenDaily';
 import '../styles/citizen.css';
+import '../styles/citizen-care.css';
 
 type Session = { example: ExampleId } | { link: CitizenLink };
 const sessionKey = 'cuidelo.citizen.tab.v1',
@@ -222,6 +224,14 @@ function Pages({ view, path }: { view: CitizenView; path: string }) {
           Ver minha agenda <ArrowRight size={16} />
         </Link>
       </section>
+      <Link className="care-home" to={base + '/dia-a-dia'}>
+        <HeartPulse />
+        <span>
+          <strong>Meu dia a dia</strong>
+          <small>Relatos, medicação e datas da farmácia</small>
+        </span>
+        <ChevronRight size={18} />
+      </Link>
       <div className="cit-section-title">
         <h2>Documentos recentes</h2>
         <Link to={base + '/documentos'}>Ver todos</Link>
@@ -299,7 +309,31 @@ function Reader({ session, path }: { session: Session; path: string }) {
     );
   return (
     <>
-      <Pages view={data} path={path} />
+      {data.careScope ? (
+        <CitizenDaily
+          key={data.careScope.organization + ':' + data.careScope.subject}
+          scope={{
+            role: 'citizen',
+            unit: 'personal',
+            organization: data.careScope.organization,
+            subject: data.careScope.subject,
+          }}
+          view={data}
+          path={path}
+        >
+          <Pages view={data} path={path} />
+        </CitizenDaily>
+      ) : path.split('/')[0] === 'dia-a-dia' ? (
+        <section className="cit-sheet">
+          <h1>Meu dia a dia</h1>
+          <p>
+            Esta cópia não possui vínculo com o diário. Peça um novo link à equipe ou explore os
+            exemplos de demonstração.
+          </p>
+        </section>
+      ) : (
+        <Pages view={data} path={path} />
+      )}
       <aside className="cit-source">
         <strong>
           {data.person} · {data.organization}
@@ -328,6 +362,9 @@ export function Citizen() {
       document.title = previous;
     };
   }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [loc.pathname]);
   const [session, setSession] = useState<Session | null>(previous),
     [invalid, setInvalid] = useState(false);
   const remember = (s: Session | null) => {
@@ -358,6 +395,7 @@ export function Citizen() {
   };
   const tabs = [
     { to: '', label: 'Início', Icon: Home },
+    { to: 'dia-a-dia', label: 'Dia a dia', Icon: HeartPulse },
     { to: 'agenda', label: 'Agenda', Icon: CalendarDays },
     { to: 'documentos', label: 'Documentos', Icon: FolderOpen },
   ];

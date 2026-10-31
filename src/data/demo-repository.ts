@@ -1,4 +1,5 @@
 import { assessmentCoding } from '../domain/consultation';
+import { subjectFor } from './citizen-care';
 import { citizenView } from '../domain/citizen';
 import { validateUnitQueue } from '../domain/unit-queue';
 import { validateAdmissions } from '../domain/hospital';
@@ -574,8 +575,17 @@ export class DemoRepository implements CareRepository {
     assertContext(this.db, context);
     return performance(this.db, context, from, to, this.now());
   };
-  citizenView(context: Context, patientId: string) {
-    return citizenView(this.sync(), context, patientId, this.now());
+  async citizenView(context: Context, patientId: string) {
+    const view = citizenView(this.sync(), context, patientId, this.now());
+    try {
+      view.careScope = {
+        organization: context.organizationId,
+        subject: await subjectFor(context.organizationId, patientId),
+      };
+    } catch {
+      /* O link continua disponível para sua finalidade de leitura. */
+    }
+    return view;
   }
   async issueTicket(request: KioskRequest) {
     return this.locked(() => {

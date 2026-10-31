@@ -46,7 +46,7 @@ export function CitizenShare({ patientId, name }: { patientId: string; name: str
         await stopCitizenLink(link.writer);
         setLink(null);
         setFeedback('Acesso encerrado.');
-      } else setLink(await publishCitizenLink(repository.citizenView(context, patientId)));
+      } else setLink(await publishCitizenLink(await repository.citizenView(context, patientId)));
     } catch (e) {
       setFeedback((e as Error).message);
     } finally {

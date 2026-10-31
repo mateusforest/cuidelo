@@ -111,5 +111,8 @@ export function readCitizenExample(example: ExampleId, now = new Date()) {
       coding: { codes: [], reason: 'Exemplo de navegação' },
     },
   });
-  return citizenView(db, doctor, patientId, now);
+  return {
+    ...citizenView(db, doctor, patientId, now),
+    careScope: { organization: doctor.organizationId, subject: 'example:' + example },
+  };
 }

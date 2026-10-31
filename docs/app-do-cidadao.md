@@ -1,4 +1,4 @@
-# Cuidelo Cidadão · demonstração 0.17
+# Cuidelo Cidadão · demonstração 0.18
 
 ## Experimentar no celular
 
@@ -21,3 +21,7 @@ A visualização tem acesso de leitura a uma pessoa por link. A projeção inclu
 A estação cifra a cópia com AES-GCM antes de enviá-la. O serviço temporário guarda o conteúdo cifrado com expiração, separado do canal público da TV. A chave vai no fragmento do link, e a aplicação a remove da barra de endereços após a abertura. O identificador de leitura permanece na sessão da aba para permitir recarregar. O documento lido permanece em memória. O link do consultório requer internet e o limite desta versão é de aproximadamente 119 KB por cópia em texto. Os exemplos locais podem ser explorados no HTML portátil.
 
 Para uma implantação com cidadãos reais, continuam pendentes identidade verificada, representação de dependentes, autorização e auditoria no servidor, persistência protegida e validação dos documentos.
+
+## Acompanhamento pessoal
+
+A área Dia a dia tem armazenamento próprio no aparelho e reúne os registros feitos pelo cidadão. [Relatos, lembretes e relatório](dia-a-dia.md).

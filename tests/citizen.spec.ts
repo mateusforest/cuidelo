@@ -83,6 +83,12 @@ test('a unidade disponibiliza uma cópia cifrada e o celular recebe e retira o a
     await expect(mobile.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible({ timeout: 15000 });
     await expect(mobile.locator('.cit-next')).toContainText('14:10');
     await expect(mobile).toHaveURL(origin + '/cidadao');
+    await mobile.goto(origin + '/cidadao/dia-a-dia/diario');
+    await mobile
+      .getByLabel('Meu relato')
+      .fill('Relato local do titular para testar a continuidade.');
+    await mobile.getByRole('button', { name: 'Salvar relato' }).click();
+    await expect(mobile.locator('.care-timeline')).toContainText('Relato local do titular');
     await mobile.getByRole('link', { name: 'Documentos', exact: true }).click();
     await expect(mobile.locator('.cit-empty')).toBeVisible();
     await page.goto(origin + '/atendimento/aurora-centro-e0');
@@ -111,6 +117,19 @@ test('a unidade disponibiliza uma cópia cifrada e o celular recebe e retira o a
     await mobile.reload();
     await expect(mobile.getByRole('heading', { name: 'Acesso indisponível' })).toBeVisible();
     await expect(mobile.locator('body')).not.toContainText('Ana Clara');
+    await mobile.goto(origin + '/cidadao/dia-a-dia/diario');
+    await expect(mobile.getByRole('heading', { name: 'Acesso indisponível' })).toBeVisible();
+    await expect(mobile.locator('body')).not.toContainText('Relato local do titular');
+    await page.getByRole('button', { name: 'Gerar link de demonstração' }).click();
+    await expect(field).toBeVisible({ timeout: 20000 });
+    created = true;
+    await mobile.goto(await field.inputValue());
+    await expect(mobile.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible();
+    await mobile.goto(origin + '/cidadao/dia-a-dia/diario');
+    await expect(mobile.locator('.care-timeline')).toContainText('Relato local do titular');
+    await page.getByRole('button', { name: 'Encerrar link' }).click();
+    await expect(page.getByRole('button', { name: 'Gerar link de demonstração' })).toBeVisible();
+    created = false;
   } finally {
     if (created) {
       await page.goto(patient);

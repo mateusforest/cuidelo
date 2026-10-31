@@ -593,4 +593,6 @@ Cada conector e documento clínico deverá manter sua referência normativa ou t
 
 A versão 0.17 entrega a primeira experiência móvel de demonstração. O cidadão pode consultar a agenda e os documentos emitidos para ele, com acesso temporário disponibilizado pela equipe. Receitas, pedidos de exames e atestados são os primeiros tipos disponíveis. A experiência possui entrada própria e permite testar em dois equipamentos com dados fictícios. [Escopo e roteiro](app-do-cidadao.md).
 
+A versão 0.18 acrescenta o diário pessoal de crises e sintomas, os lembretes de medicação, as datas de retirada e renovação e o relatório por período. [Roteiro do acompanhamento](dia-a-dia.md).
+
 A implantação operacional precisa definir identificação verificada, representação de dependentes, política de liberação, autorização no servidor e auditoria de acesso e revogação. As próximas jornadas devem ser priorizadas com as prefeituras e os cidadãos.

@@ -5,7 +5,10 @@ import type { KioskRequest, TicketReceipt, PerformanceReport } from '../domain/p
 // Este contrato separa a interface do adaptador de demonstração. O futuro
 // adaptador remoto deverá validar identidade e autorização no servidor.
 export interface CareRepository {
-  citizenView(context: Context, patientId: string): import('../domain/citizen').CitizenView;
+  citizenView(
+    context: Context,
+    patientId: string,
+  ): Promise<import('../domain/citizen').CitizenView>;
   workMetrics(
     context: Context,
   ): { unit: string; prenatal: number; consultations: number; families: number; visits: number }[];

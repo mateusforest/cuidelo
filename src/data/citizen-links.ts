@@ -132,6 +132,11 @@ export async function openCitizenLink(
       !Array.isArray(v.appointments)
     )
       throw Error();
+    if (
+      v.careScope &&
+      (!string(v.careScope.organization) || !/^share:[a-f0-9-]{36}$/.test(v.careScope.subject))
+    )
+      throw Error();
     for (const a of v.appointments)
       if (
         ![a.id, a.service, a.unit, a.professional].every(string) ||
@@ -205,7 +210,7 @@ export function startCitizenUpdates(repo: CareRepository, c: Context) {
         }
         const revision = repo.getRevision();
         if (sent.get(share.writer) === revision) continue;
-        const view = repo.citizenView(c, handle.slice(prefix.length));
+        const view = await repo.citizenView(c, handle.slice(prefix.length));
         const payload = await encryptView(view, decode(share.key));
         if (disposed) return;
         try {
