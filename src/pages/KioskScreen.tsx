@@ -69,7 +69,7 @@ export function Kiosk() {
     unitId = params.get('unidade') ?? '';
   const unit = repository
     .directory()
-    .units.find((u) => u.id === unitId && u.organizationId === org);
+    .units.find((u) => u.id === unitId && u.organizationId === org && u.kind !== 'central');
   const [mode, setMode] = useState<Mode>('start'),
     [step, setStep] = useState(0),
     [receipt, setReceipt] = useState<TicketReceipt | null>(null),

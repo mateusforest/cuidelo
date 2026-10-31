@@ -3,6 +3,7 @@ import { useApp } from '../app/context';
 import { clockTime, dateKey, shortDate } from '../domain/dates';
 import {
   allocationBalance,
+  reversalInventoryCredits,
   type Dispensation,
   type DispensationAdjustment,
 } from '../domain/pharmacy';
@@ -25,6 +26,8 @@ export function AdjustmentHistory({
       <ol>
         {[...adjustments].reverse().map((entry) => {
           const line = delivery.allocations.find((a) => a.movementId === entry.originalMovementId)!;
+          const counted =
+            entry.inventoryCredits?.reduce((sum, credit) => sum + credit.quantity, 0) ?? 0;
           return (
             <li key={entry.id}>
               <strong>
@@ -37,9 +40,25 @@ export function AdjustmentHistory({
               <span>
                 {entry.destination === 'segregated'
                   ? 'Entrada em estoque segregado'
-                  : 'Reposição no saldo do lote'}{' '}
+                  : counted === entry.quantity
+                    ? 'Saldo do lote preservado'
+                    : counted > 0
+                      ? 'Reposição complementar no saldo do lote'
+                      : 'Reposição no saldo do lote'}{' '}
                 · de {entry.balanceBefore} para {entry.balanceAfter} {line.quantityUnit}
               </span>
+              {entry.inventoryCredits?.map((credit) => (
+                <span key={credit.inventoryId}>
+                  Inventário {credit.reference} · {credit.quantity} {line.quantityUnit} já incluídas
+                  e atribuídas a esta saída.
+                </span>
+              ))}
+              {counted > 0 && entry.destination === 'segregated' && (
+                <span>
+                  Da quantidade segregada, {counted} {line.quantityUnit} vieram do saldo vencido já
+                  contabilizado.
+                </span>
+              )}
               <p>{entry.reason}</p>
               <small>
                 {shortDate(entry.at)} às {clockTime(entry.at)} · {entry.author}
@@ -75,13 +94,38 @@ export function AdjustmentEditor({
       expectedAdjustments: history.length,
       requestId: crypto.randomUUID(),
       lines: delivery.allocations
-        .map((line) => ({ line, balance: allocationBalance(line, history) }))
+        .map((line) => ({
+          line,
+          balance: allocationBalance(line, history),
+          credits:
+            kind === 'reversal'
+              ? reversalInventoryCredits(
+                  line.movementId,
+                  line.lotId,
+                  data.movements,
+                  data.stockLogistics,
+                  data.dispensationAdjustments,
+                )
+              : [],
+        }))
         .filter((r) => r.balance.remaining > 0),
     };
   });
   const [movementId, setMovementId] = useState(initial.lines[0]?.line.movementId ?? '');
   const [confirmed, setConfirmed] = useState(false);
+  const [quantity, setQuantity] = useState('');
+  const [creditQuantities, setCreditQuantities] = useState<Record<string, string>>({});
   const selection = initial.lines.find((r) => r.line.movementId === movementId);
+  const credits = selection?.credits ?? [];
+  const counted = credits.reduce(
+    (sum, credit) => sum + Number(creditQuantities[credit.inventoryId] || 0),
+    0,
+  );
+  const allCreditsEntered = credits.every(
+    (credit) =>
+      creditQuantities[credit.inventoryId] !== undefined &&
+      creditQuantities[credit.inventoryId] !== '',
+  );
   const physicalReturn = kind === 'return';
   const expired = selection && selection.line.expiresAt < dateKey();
   return (
@@ -94,6 +138,10 @@ export function AdjustmentEditor({
         onClose={onClose}
         submitLabel={physicalReturn ? 'Confirmar devolução' : 'Confirmar estorno'}
         onSubmit={async (form) => {
+          if (!allCreditsEntered || counted > Number(quantity))
+            throw new Error(
+              'Confira a parcela atribuída a cada inventário. A soma deve caber na quantidade do estorno.',
+            );
           await repository.execute(
             context,
             {
@@ -102,6 +150,14 @@ export function AdjustmentEditor({
               originalMovementId: movementId,
               kind,
               quantity: Number(valueOf(form, 'quantity')),
+              ...(credits.length
+                ? {
+                    inventoryCredits: credits.map((credit) => ({
+                      inventoryId: credit.inventoryId,
+                      quantity: Number(creditQuantities[credit.inventoryId]),
+                    })),
+                  }
+                : {}),
               reason: valueOf(form, 'reason'),
               confirmed,
               expectedAdjustments: initial.expectedAdjustments,
@@ -132,6 +188,8 @@ export function AdjustmentEditor({
             value={movementId}
             onChange={(e) => {
               setMovementId(e.target.value);
+              setQuantity('');
+              setCreditQuantities({});
               setConfirmed(false);
             }}
           >
@@ -156,9 +214,11 @@ export function AdjustmentEditor({
             </span>
             {!physicalReturn && (
               <span>
-                {expired
-                  ? 'Lote vencido. A quantidade corrigida irá para o estoque segregado.'
-                  : 'A quantidade corrigida voltará ao saldo do lote.'}{' '}
+                {credits.length
+                  ? 'Confira a parcela já contabilizada nas contagens deste lote.'
+                  : expired
+                    ? 'Lote vencido. A quantidade corrigida irá para o estoque segregado.'
+                    : 'A quantidade corrigida voltará ao saldo do lote.'}{' '}
                 {cancelled
                   ? 'A receita cancelada continuará bloqueada para entrega.'
                   : 'A receita voltará a apresentar a quantidade estornada como pendente.'}
@@ -178,9 +238,74 @@ export function AdjustmentEditor({
             min={1}
             max={selection?.balance.remaining}
             step={1}
-            onChange={() => setConfirmed(false)}
+            value={quantity}
+            onChange={(e) => {
+              setQuantity(e.target.value);
+              setConfirmed(false);
+            }}
           />
         </Field>
+        {credits.length > 0 && selection && (
+          <section className="pharmacy-credit-review" aria-label="Conciliação com o inventário">
+            <h3>Conciliação com o inventário</h3>
+            <p>
+              O inventário acrescentou unidades deste lote depois da saída original. Informe quantas
+              unidades deste estorno já foram incluídas em cada contagem. Digite zero quando a
+              diferença tiver outra origem.
+            </p>
+            {credits.map((credit) => (
+              <Field
+                key={credit.inventoryId}
+                label={'Quantidade já contada · ' + credit.reference}
+                hint={
+                  shortDate(credit.at) +
+                  ' às ' +
+                  clockTime(credit.at) +
+                  ' · até ' +
+                  credit.remaining +
+                  ' ' +
+                  selection.line.quantityUnit +
+                  ' desta contagem.'
+                }
+              >
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  max={Math.min(
+                    credit.remaining,
+                    quantity === '' ? credit.remaining : Number(quantity),
+                  )}
+                  required
+                  value={creditQuantities[credit.inventoryId] ?? ''}
+                  onChange={(e) => {
+                    setCreditQuantities({
+                      ...creditQuantities,
+                      [credit.inventoryId]: e.target.value,
+                    });
+                    setConfirmed(false);
+                  }}
+                />
+              </Field>
+            ))}
+            {allCreditsEntered &&
+              quantity !== '' &&
+              (counted > Number(quantity) ? (
+                <Notice tone="amber">A soma atribuída aos inventários ultrapassa o estorno.</Notice>
+              ) : (
+                <Notice>
+                  {counted} {selection.line.quantityUnit} já contabilizadas.{' '}
+                  {expired
+                    ? 'O lote venceu. O ajuste transfere a parcela já contada do saldo bloqueado para o segregado e registra o restante em segregação.'
+                    : 'O estorno acrescentará ' +
+                      (Number(quantity) - counted) +
+                      ' ' +
+                      selection.line.quantityUnit +
+                      ' ao saldo do lote.'}
+                </Notice>
+              ))}
+          </section>
+        )}
         <Field label="Motivo do ajuste">
           <textarea required name="reason" rows={3} maxLength={500} />
         </Field>
@@ -193,7 +318,9 @@ export function AdjustmentEditor({
           />
           {physicalReturn
             ? 'Conferi o lote e a quantidade recebida para segregação.'
-            : 'Conferi que a quantidade permaneceu na unidade e a baixa foi lançada por engano.'}
+            : credits.length
+              ? 'Conferi a baixa por engano e a parcela já contabilizada em cada inventário.'
+              : 'Conferi que a quantidade permaneceu na unidade, a baixa foi lançada por engano e a quantidade ainda precisa ser reposta no registro.'}
         </label>
       </ActionForm>
     </Modal>

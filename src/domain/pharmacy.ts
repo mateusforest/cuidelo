@@ -1,5 +1,10 @@
+import {
+  checkIncomingIdentity,
+  validateStockLogistics,
+  type StockLogisticsEvent,
+} from './pharmacy-logistics';
 import type { ClinicalDocument, DocumentIdentity, MedicationLine } from './clinical-documents';
-import type { Context, Database, Scoped, StockLot } from './model';
+import type { Context, Database, Scoped, StockLot, StockMovement } from './model';
 import { can } from './model';
 import { demoIdentities, identityFor } from './access';
 import { addDays, dateKey, validDay } from './dates';
@@ -64,6 +69,8 @@ export interface DispensationAdjustment extends Scoped {
   originalMovementId: string;
   requestId: string;
   sequence: number;
+  inventoryCredits?: { inventoryId: string; quantity: number; reference: string }[];
+  reclassificationMovementId?: string;
   balanceBefore: number;
   balanceAfter: number;
   kind: AdjustmentKind;
@@ -84,6 +91,7 @@ export type PharmacyCommand =
       reason: string;
       confirmed: boolean;
       expectedAdjustments: number;
+      inventoryCredits?: { inventoryId: string; quantity: number }[];
       requestId: string;
     }
   | {
@@ -258,6 +266,12 @@ export function applyPharmacyCommand(
       ),
       'Este produto e lote já estão cadastrados. Use Entrada no lote existente.',
     );
+    checkIncomingIdentity(db, c.organizationId, c.unitId, {
+      product,
+      medication: m,
+      lot,
+      expiresAt: cmd.expiresAt,
+    });
     const id = newId();
     db.lots.push({
       id,
@@ -486,6 +500,88 @@ export function applyPharmacyCommand(
   };
 }
 
+interface InventoryCreditOption {
+  inventoryId: string;
+  reference: string;
+  at: string;
+  remaining: number;
+}
+type CreditChoice = { inventoryId: string; quantity: number };
+function creditOptions(
+  originalMovementId: string,
+  lotId: string,
+  movements: StockMovement[],
+  events: StockLogisticsEvent[],
+  used: Map<string, number>,
+  until = movements.length,
+): InventoryCreditOption[] {
+  const start = movements.findIndex((m) => m.id === originalMovementId);
+  if (start < 0) return [];
+  const inventories = new Map(
+    events.filter((e) => e.kind === 'inventory' && e.lotId === lotId).map((e) => [e.id, e]),
+  );
+  const options: InventoryCreditOption[] = [];
+  for (let i = start + 1; i < until; i++) {
+    const m = movements[i];
+    if (m.lotId !== lotId || m.logisticsKind !== 'inventory' || m.kind !== 'entry') continue;
+    const count = inventories.get(m.id),
+      remaining = m.quantity - (used.get(m.id) ?? 0);
+    if (count && remaining > 0)
+      options.push({ inventoryId: m.id, reference: count.reference, at: count.at, remaining });
+  }
+  return options;
+}
+export function reversalInventoryCredits(
+  originalMovementId: string,
+  lotId: string,
+  movements: StockMovement[],
+  events: StockLogisticsEvent[],
+  adjustments: DispensationAdjustment[],
+) {
+  const used = new Map<string, number>();
+  for (const a of adjustments) {
+    if (a.lotId !== lotId) continue;
+    for (const credit of a.inventoryCredits ?? [])
+      used.set(credit.inventoryId, (used.get(credit.inventoryId) ?? 0) + credit.quantity);
+  }
+  return creditOptions(originalMovementId, lotId, movements, events, used);
+}
+function reconcileReversal(
+  choices: CreditChoice[] | undefined,
+  options: InventoryCreditOption[],
+  quantity: number,
+  at: string,
+) {
+  ensure(
+    (choices === undefined || Array.isArray(choices)) && (choices?.length ?? 0) === options.length,
+    'Confira os créditos de inventário posteriores à saída e informe a quantidade já contada para cada um.',
+  );
+  const credits = options.map((option) => {
+    const choice = choices?.find((c) => c?.inventoryId === option.inventoryId);
+    ensure(
+      choice && integer(choice.quantity, 0) && choice.quantity <= option.remaining,
+      'A parcela já contada supera o crédito disponível do inventário.',
+    );
+    ensure(option.at <= at, 'O estorno não pode anteceder o inventário conferido.');
+    return {
+      inventoryId: option.inventoryId,
+      reference: option.reference,
+      quantity: choice.quantity,
+    };
+  });
+  const credited = credits.reduce((sum, c) => sum + c.quantity, 0);
+  ensure(credited <= quantity, 'A soma já contada supera a quantidade estornada.');
+  return { credits, credited };
+}
+function sameCredits(stored: CreditChoice[] | undefined, submitted: CreditChoice[] | undefined) {
+  return (
+    (submitted === undefined || Array.isArray(submitted)) &&
+    (stored?.length ?? 0) === (submitted?.length ?? 0) &&
+    (stored ?? []).every((c) =>
+      submitted?.some((s) => s?.inventoryId === c.inventoryId && s.quantity === c.quantity),
+    )
+  );
+}
 function adjustDispensation(
   db: Database,
   c: Context,
@@ -518,6 +614,7 @@ function adjustDispensation(
         prior.originalMovementId === original.movementId &&
         prior.quantity === cmd.quantity &&
         prior.kind === cmd.kind &&
+        sameCredits(prior.inventoryCredits, cmd.inventoryCredits) &&
         prior.reason === reason &&
         prior.sequence === cmd.expectedAdjustments + 1,
       'Identificação já utilizada em outro ajuste. Reabra a conferência.',
@@ -547,8 +644,26 @@ function adjustDispensation(
   ensure(lot, 'Lote original não encontrado nesta unidade.', 'scope');
   const destination =
     cmd.kind === 'return' || lot.expiresAt < dateKey(now) ? 'segregated' : 'stock';
+  const options =
+    cmd.kind === 'reversal'
+      ? reversalInventoryCredits(
+          original.movementId,
+          lot.id,
+          db.movements,
+          db.stockLogistics,
+          db.dispensationAdjustments,
+        )
+      : [];
+  const { credits, credited } = reconcileReversal(cmd.inventoryCredits, options, cmd.quantity, at);
+  // O saldo contado está no compartimento disponível, mesmo quando o lote vence depois da contagem.
+  const reclassified = destination === 'segregated' ? credited : 0;
+  ensure(
+    lot.quantity >= reclassified,
+    'A quantidade atribuída ao inventário já não está no saldo do lote. Confira as movimentações antes de estornar.',
+  );
+  const increment = destination === 'stock' ? cmd.quantity - credited : cmd.quantity;
   const balanceBefore = destination === 'stock' ? lot.quantity : (lot.segregatedQuantity ?? 0);
-  const balance = balanceBefore + cmd.quantity;
+  const balance = balanceBefore + increment;
   ensure(Number.isSafeInteger(balance), 'Quantidade acima do limite permitido.');
   const id = newId();
   const record: DispensationAdjustment = {
@@ -571,7 +686,29 @@ function adjustDispensation(
     at,
     authorId: c.sessionId,
     author: identityFor(db, c).name,
+    ...(credits.length ? { inventoryCredits: credits } : {}),
   };
+  if (reclassified) {
+    record.reclassificationMovementId = newId();
+    lot.quantity -= reclassified;
+    db.movements.push({
+      id: record.reclassificationMovementId,
+      organizationId: c.organizationId,
+      unitId: c.unitId,
+      kind: 'exit',
+      destination: 'stock',
+      adjustmentKind: 'reversal',
+      quantity: reclassified,
+      lotId: lot.id,
+      at,
+      dispensationId: delivery.id,
+      documentId: delivery.documentId,
+      itemId: original.itemId,
+      originalMovementId: original.movementId,
+      reason:
+        'Reclassificação do saldo contado para segregação por vencimento · ' + delivery.number,
+    });
+  }
   if (destination === 'stock') lot.quantity = balance;
   else lot.segregatedQuantity = balance;
   db.dispensationAdjustments.push(record);
@@ -582,7 +719,7 @@ function adjustDispensation(
     kind: 'entry',
     adjustmentKind: cmd.kind,
     destination,
-    quantity: cmd.quantity,
+    quantity: increment,
     lotId: lot.id,
     at,
     dispensationId: delivery.id,
@@ -590,7 +727,9 @@ function adjustDispensation(
     itemId: original.itemId,
     originalMovementId: original.movementId,
     reason:
-      (cmd.kind === 'return' ? 'Devolução da entrega ' : 'Estorno da entrega ') + delivery.number,
+      (cmd.kind === 'return' ? 'Devolução da entrega ' : 'Estorno da entrega ') +
+      delivery.number +
+      (credited ? ' · ' + credited + ' já em inventário' : ''),
   });
   return {
     entityId: id,
@@ -609,13 +748,11 @@ function validateAdjustments(
   const deliveries = new Map(db.dispensations.map((d) => [d.id, d]));
   const lots = new Map(db.lots.map((l) => [l.id, l]));
   const actors = new Map(demoIdentities(db).map((a) => [a.sessionId, a]));
-  const adjusted = new Map<string, number>(),
-    segregated = new Map<string, number>();
+  const adjusted = new Map<string, number>();
+  const usedCredits = new Map<string, number>();
   const priorByDelivery = new Map<string, DispensationAdjustment>(),
     requests = new Set<string>();
   const reversals = new Map<string, { position: number; quantity: number }[]>();
-  const stockBalances = new Map<string, number>(),
-    byMovement = new Map<string, DispensationAdjustment>();
   for (const a of db.dispensationAdjustments) {
     const delivery = deliveries.get(a.dispensationId),
       lot = lots.get(a.lotId);
@@ -666,15 +803,6 @@ function validateAdjustments(
     const destination =
       a.kind === 'return' || lot.expiresAt < dateKey(new Date(a.at)) ? 'segregated' : 'stock';
     ensure(a.destination === destination, 'Invalid adjustment destination');
-    ensure(
-      Number.isSafeInteger(a.balanceBefore) &&
-        a.balanceBefore >= 0 &&
-        Number.isSafeInteger(a.balanceAfter) &&
-        a.balanceAfter === a.balanceBefore + a.quantity,
-      'Invalid adjustment balance',
-    );
-    const total = (adjusted.get(original.movementId) ?? 0) + a.quantity;
-    ensure(total <= original.quantity, 'Adjustment exceeds original allocation');
     const position = positions.get(a.id),
       initialPosition = positions.get(original.movementId);
     ensure(
@@ -684,6 +812,69 @@ function validateAdjustments(
         !linkedMovements.has(a.id),
       'Missing adjustment movement',
     );
+    const options =
+      a.kind === 'reversal'
+        ? creditOptions(
+            original.movementId,
+            lot.id,
+            db.movements,
+            db.stockLogistics,
+            usedCredits,
+            position,
+          )
+        : [];
+    const { credits, credited } = reconcileReversal(a.inventoryCredits, options, a.quantity, a.at);
+    for (const credit of credits) {
+      ensure(
+        a.inventoryCredits?.find((c) => c.inventoryId === credit.inventoryId)?.reference ===
+          credit.reference,
+        'Referência de inventário incompatível com o estorno.',
+      );
+      usedCredits.set(
+        credit.inventoryId,
+        (usedCredits.get(credit.inventoryId) ?? 0) + credit.quantity,
+      );
+    }
+    const increment = destination === 'stock' ? a.quantity - credited : a.quantity;
+    if (credited && destination === 'segregated') {
+      const reclassification =
+        a.reclassificationMovementId && positions.get(a.reclassificationMovementId);
+      ensure(
+        typeof reclassification === 'number' &&
+          reclassification === position - 1 &&
+          reclassification > initialPosition,
+        'Movimento de reclassificação ausente.',
+      );
+      const exit = db.movements[reclassification];
+      ensure(
+        !linkedMovements.has(exit.id) &&
+          exit.kind === 'exit' &&
+          exit.destination === 'stock' &&
+          !exit.logisticsKind &&
+          exit.quantity === credited &&
+          exit.adjustmentKind === 'reversal' &&
+          exit.lotId === lot.id &&
+          exit.unitId === a.unitId &&
+          exit.organizationId === a.organizationId &&
+          exit.dispensationId === a.dispensationId &&
+          exit.documentId === a.documentId &&
+          exit.itemId === a.itemId &&
+          exit.originalMovementId === original.movementId &&
+          exit.at === a.at,
+        'Reclassificação de inventário inválida.',
+      );
+      linkedMovements.add(exit.id);
+    } else
+      ensure(a.reclassificationMovementId === undefined, 'Reclassificação de inventário indevida.');
+    ensure(
+      Number.isSafeInteger(a.balanceBefore) &&
+        a.balanceBefore >= 0 &&
+        Number.isSafeInteger(a.balanceAfter) &&
+        a.balanceAfter === a.balanceBefore + increment,
+      'Invalid adjustment balance',
+    );
+    const total = (adjusted.get(original.movementId) ?? 0) + a.quantity;
+    ensure(total <= original.quantity, 'Adjustment exceeds original allocation');
     const m = db.movements[position];
     ensure(
       m.kind === 'entry' &&
@@ -696,7 +887,7 @@ function validateAdjustments(
         m.lotId === lot.id &&
         m.organizationId === a.organizationId &&
         m.unitId === a.unitId &&
-        m.quantity === a.quantity &&
+        m.quantity === increment &&
         m.at === a.at,
       'Invalid adjustment movement',
     );
@@ -704,36 +895,11 @@ function validateAdjustments(
     requests.add(request);
     linkedMovements.add(a.id);
     adjusted.set(original.movementId, total);
-    if (destination === 'segregated') {
-      ensure(
-        a.balanceBefore === (segregated.get(lot.id) ?? 0),
-        'Invalid segregated movement balance',
-      );
-      segregated.set(lot.id, a.balanceAfter);
-    } else {
-      stockBalances.set(lot.id, lot.quantity);
-      byMovement.set(a.id, a);
-    }
     if (a.kind === 'reversal') {
       const key = a.documentId + ':' + a.itemId;
       if (!reversals.has(key)) reversals.set(key, []);
       reversals.get(key)!.push({ position, quantity: a.quantity });
     }
-  }
-  for (const lot of db.lots)
-    ensure(
-      (lot.segregatedQuantity === undefined || Number.isSafeInteger(lot.segregatedQuantity)) &&
-        (lot.segregatedQuantity ?? 0) === (segregated.get(lot.id) ?? 0),
-      'Invalid segregated balance',
-    );
-  // Os lotes antigos podem ter saldo inicial sem uma entrada. Reconcilia a partir do saldo atual.
-  for (let i = db.movements.length - 1; i >= 0 && stockBalances.size; i--) {
-    const m = db.movements[i],
-      balance = stockBalances.get(m.lotId);
-    if (balance === undefined || m.destination === 'segregated') continue;
-    const entry = byMovement.get(m.id);
-    if (entry) ensure(entry.balanceAfter === balance, 'Reversal does not reconcile with stock');
-    stockBalances.set(m.lotId, balance + (m.kind === 'exit' ? m.quantity : -m.quantity));
   }
   return reversals;
 }
@@ -746,6 +912,7 @@ export function validatePharmacy(db: Database) {
     delivered = new Map<string, number>();
   const movementPositions = new Map(db.movements.map((m, index) => [m.id, index]));
   const reversals = validateAdjustments(db, movementPositions, movementIds);
+  validateStockLogistics(db);
   for (const lot of db.lots) if (lot.medication) medication(lot.medication);
   for (const d of db.dispensations) {
     const doc = db.clinicalDocuments.find(
@@ -892,7 +1059,7 @@ export function validatePharmacy(db: Database) {
       m.itemId ||
       m.originalMovementId ||
       m.adjustmentKind ||
-      m.destination
+      (m.destination && !m.logisticsKind)
     )
       ensure(movementIds.has(m.id), 'Orphan dispensation movement');
 }

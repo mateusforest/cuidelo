@@ -356,8 +356,8 @@ const scope = [
   [
     'Farmácia e suprimentos',
     'Fluxo local',
-    'Receita, entrega parcial ou total por lote, devolução segregada e estorno rastreável no comprovante original.',
-    'Destinação de devolvidos, inventário, transferências, perdas, controlados e integração nacional.',
+    'Entrega e ajustes por lote, destinação do segregado, inventário e transferência em duas etapas entre unidades da mesma rede.',
+    'Recolhimentos, perdas, avarias em trânsito, controlados, validação farmacêutica, sincronização entre equipamentos e integração nacional.',
   ],
   [
     'Regulação e transporte',

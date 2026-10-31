@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
   Stethoscope,
@@ -103,25 +103,36 @@ export function Access({ resume = false }: { resume?: boolean }) {
   const { repository, chooseSession, context, demoEntered } = useApp();
   const navigate = useNavigate();
   const directory = repository.directory();
-  const initialOrg = context.role === 'business' ? 'aurora' : context.organizationId;
+  const [params] = useSearchParams();
+  const identitiesList = demoIdentities(directory);
+  const suggested = resume
+    ? undefined
+    : identitiesList.find((i) => i.sessionId === params.get('sessao'));
+  const initial = suggested ?? context;
+  const initialOrg = initial.role === 'business' ? 'aurora' : initial.organizationId;
   const [org, setOrg] = useState(initialOrg);
   const [unit, setUnit] = useState(
-    context.unitId === 'all' || context.role === 'business'
+    initial.unitId === 'all' || initial.role === 'business'
       ? directory.units.find((u) => u.organizationId === initialOrg)!.id
-      : context.unitId,
+      : initial.unitId,
   );
-  const [role, setRole] = useState<Role>(demoEntered ? context.role : 'reception');
-  const [second, setSecond] = useState(context.sessionId.endsWith(':2'));
+  const [role, setRole] = useState<Role>(
+    suggested?.role ?? (demoEntered ? context.role : 'reception'),
+  );
+  const [second, setSecond] = useState(initial.sessionId.endsWith(':2'));
   const roleInfo = accessRoles.find((r) => r.role === role)!;
-  const identities = demoIdentities(directory).filter(
+  const unitChoices = directory.units.filter(
+    (u) => u.organizationId === org && (role === 'pharmacy' || u.kind !== 'central'),
+  );
+  const selectedUnit = unitChoices.find((u) => u.id === unit) ?? unitChoices[0];
+  const identities = identitiesList.filter(
     (i) =>
       i.role === role &&
       (role === 'business' ||
-        (i.organizationId === org && (role === 'manager' || i.unitId === unit))),
+        (i.organizationId === org && (role === 'manager' || i.unitId === selectedUnit.id))),
   );
   const selected = identities[role === 'clinical' && second ? 1 : 0];
   const organization = directory.organizations.find((o) => o.id === org)!;
-  const selectedUnit = directory.units.find((u) => u.id === unit)!;
   const scope =
     role === 'business'
       ? 'Operação comercial Cuidelo'
@@ -256,7 +267,9 @@ export function Access({ resume = false }: { resume?: boolean }) {
                 </Field>
                 <Field label="Unidade da sessão">
                   <select
-                    value={role === 'manager' ? 'all' : role === 'business' ? 'office' : unit}
+                    value={
+                      role === 'manager' ? 'all' : role === 'business' ? 'office' : selectedUnit.id
+                    }
                     disabled={role === 'business' || role === 'manager'}
                     onChange={(e) => setUnit(e.target.value)}
                   >
@@ -265,13 +278,11 @@ export function Access({ resume = false }: { resume?: boolean }) {
                     ) : role === 'business' ? (
                       <option value="office">Sem unidade assistencial</option>
                     ) : (
-                      directory.units
-                        .filter((u) => u.organizationId === org)
-                        .map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name}
-                          </option>
-                        ))
+                      unitChoices.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))
                     )}
                   </select>
                 </Field>
@@ -328,17 +339,21 @@ export function Access({ resume = false }: { resume?: boolean }) {
             <Link to="/cidadao">
               <UserRound size={15} /> App do cidadão
             </Link>
-            <Link to={'/totem?' + new URLSearchParams({ rede: org, unidade: unit })}>
-              <UserRound size={15} /> Totem
-            </Link>
-            <Link to={displayRoute(org, unit, true)}>
-              <Monitor size={15} /> Painel da TV
-            </Link>
+            {selectedUnit.kind !== 'central' && (
+              <>
+                <Link to={'/totem?' + new URLSearchParams({ rede: org, unidade: selectedUnit.id })}>
+                  <UserRound size={15} /> Totem
+                </Link>
+                <Link to={displayRoute(org, selectedUnit.id, true)}>
+                  <Monitor size={15} /> Painel da TV
+                </Link>
+              </>
+            )}
           </div>
         </div>
         <footer className="access-entry-footer">
           <span>Cuidelo © {new Date().getFullYear()}</span>
-          <span>Desenvolvimento · 0.23</span>
+          <span>Desenvolvimento · 0.26</span>
         </footer>
       </section>
     </main>
@@ -356,8 +371,17 @@ export function WorkspaceHome() {
       return priority(a.path) - priority(b.path);
     });
   const primary = actions.find((s) => s.path === stations[context.role][0]) ?? actions[0];
-  const metrics =
-    context.role === 'pharmacy'
+  const central = data.units.find((u) => u.id === context.unitId)?.kind === 'central';
+  const metrics = central
+    ? [
+        ['Lotes cadastrados', data.lots.length],
+        [
+          'Lotes com material segregado',
+          data.lots.filter((l) => (l.segregatedQuantity ?? 0) > 0).length,
+        ],
+        ['Lotes em atenção', summary.stockAlerts],
+      ]
+    : context.role === 'pharmacy'
       ? [
           ['Receitas da unidade', data.pharmacyPrescriptions.length],
           ['Dispensações registradas', data.dispensations.length],

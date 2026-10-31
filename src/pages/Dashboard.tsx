@@ -21,7 +21,7 @@ import { dateKey, shortDate } from '../domain/dates';
 import { Badge, Button, PageHeader, Panel, TextLink } from '../components/ui';
 import { displayRoute } from '../app/links';
 
-const kindIcons = { ubs: Stethoscope, upa: HeartPulse, hospital: Building2 };
+const kindIcons = { ubs: Stethoscope, upa: HeartPulse, hospital: Building2, central: PackageCheck };
 export function Dashboard() {
   const { summary, context, changeContext, data } = useApp();
   const navigate = useNavigate();
@@ -175,6 +175,7 @@ export function Dashboard() {
               ['ubs', 'UBS'],
               ['upa', 'UPA'],
               ['hospital', 'Hospital'],
+              ['central', 'Central'],
             ].map(([key, label]) => (
               <button
                 key={key}
@@ -204,14 +205,28 @@ export function Dashboard() {
                     </small>
                   </span>
                   <span className="unit-count">
-                    <strong>{unit.kind === 'hospital' ? `${occupied}/${totalBeds}` : today}</strong>
+                    <strong>
+                      {unit.kind === 'central'
+                        ? 'Central'
+                        : unit.kind === 'hospital'
+                          ? `${occupied}/${totalBeds}`
+                          : today}
+                    </strong>
                     <small>
-                      {unit.kind === 'hospital' ? 'leitos ocupados' : 'atendimentos hoje'}
+                      {unit.kind === 'central'
+                        ? 'de distribuição'
+                        : unit.kind === 'hospital'
+                          ? 'leitos ocupados'
+                          : 'atendimentos hoje'}
                     </small>
                   </span>
                   <span className="unit-state">
                     <Badge tone={waiting ? 'amber' : 'green'}>
-                      {unit.kind === 'hospital' ? 'Internação' : `${waiting} em espera`}
+                      {unit.kind === 'central'
+                        ? 'Logística'
+                        : unit.kind === 'hospital'
+                          ? 'Internação'
+                          : `${waiting} em espera`}
                     </Badge>
                   </span>
                   <ArrowUpRight size={18} className="row-arrow" />
@@ -253,18 +268,53 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+      <Panel
+        title="Distribuição de medicamentos"
+        subtitle="Remessas expedidas e confirmadas por percurso, no contexto selecionado."
+      >
+        {summary.stockRoutes.length ? (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Origem</th>
+                  <th>Destino</th>
+                  <th>Em trânsito</th>
+                  <th>Recebidas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.stockRoutes.map((row) => (
+                  <tr key={row.fromUnitId + ':' + row.toUnitId}>
+                    <td>{data.units.find((u) => u.id === row.fromUnitId)?.name}</td>
+                    <td>{data.units.find((u) => u.id === row.toUnitId)?.name}</td>
+                    <td>
+                      <Badge tone={row.inTransit ? 'amber' : 'neutral'}>{row.inTransit}</Badge>
+                    </td>
+                    <td>{row.received}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="panel-empty">Nenhuma remessa registrada neste contexto.</p>
+        )}
+      </Panel>
       <div className="dashboard-tools">
         <Monitor size={23} />
         <div>
           <strong>Experiência na unidade</strong>
           <p>Explore o painel da sala de espera e os percursos disponíveis.</p>
         </div>
-        <Link
-          className="button secondary"
-          to={displayRoute(context.organizationId, (currentUnit ?? data.units[0]).id, true)}
-        >
-          Ver tela da TV <ArrowUpRight size={15} />
-        </Link>
+        {currentUnit?.kind !== 'central' && (
+          <Link
+            className="button secondary"
+            to={displayRoute(context.organizationId, (currentUnit ?? data.units[0]).id, true)}
+          >
+            Ver tela da TV <ArrowUpRight size={15} />
+          </Link>
+        )}
         <TextLink to="/comparacao">Comparar com Pulso</TextLink>
       </div>
       <Panel title="Continue por aqui" subtitle="Acesso aos fluxos disponíveis para este perfil.">

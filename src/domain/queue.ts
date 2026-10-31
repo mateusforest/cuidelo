@@ -22,6 +22,7 @@ export interface DisplayFeed {
   recent: DisplayCall[];
 }
 export function roomsForUnit(unit: Unit): Room[] {
+  if (unit.kind === 'central') return [];
   return [
     { id: 'recepcao-1', name: 'Guichê 01', direction: 'Recepção · entrada principal' },
     {
@@ -113,7 +114,8 @@ export function readDisplay(
 ): DisplayFeed {
   const org = db.organizations.find((o) => o.id === organizationId);
   const unit = db.units.find((u) => u.id === unitId && u.organizationId === organizationId);
-  if (!org || !unit) throw new DomainError('Painel não encontrado nesta rede.', 'scope');
+  if (!org || !unit || unit.kind === 'central')
+    throw new DomainError('Painel não encontrado nesta rede.', 'scope');
   const rooms = roomsForUnit(unit);
   const list = db.calls
     .filter(

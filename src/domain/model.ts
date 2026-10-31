@@ -28,7 +28,7 @@ export type Permission =
   | 'quality'
   | 'business'
   | 'manage';
-export type UnitKind = 'ubs' | 'upa' | 'hospital';
+export type UnitKind = 'ubs' | 'upa' | 'hospital' | 'central';
 export interface Context {
   sessionId: string;
   organizationId: string;
@@ -275,6 +275,7 @@ export interface StockLot extends Scoped {
   minimum: number;
 }
 export interface StockMovement extends Scoped {
+  logisticsKind?: import('./pharmacy-logistics').StockLogisticsEvent['kind'];
   adjustmentKind?: import('./pharmacy').AdjustmentKind;
   destination?: 'stock' | 'segregated';
   originalMovementId?: string;
@@ -469,12 +470,13 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
+  stockLogistics: import('./pharmacy-logistics').StoredStockLogisticsEvent[];
   queueServiceEvents: QueueServiceEvent[];
   queueAssessments: QueueAssessment[];
   dispensationAdjustments: import('./pharmacy').DispensationAdjustment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 15;
+  schemaVersion: 16;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -509,6 +511,7 @@ export interface SectorSeat {
   legacy: boolean;
 }
 export interface Snapshot {
+  stockLogistics: import('./pharmacy-logistics').StockLogisticsEvent[];
   sectorSeats: SectorSeat[];
   queueServiceEvents: QueueServiceEvent[];
   serviceTickets: ServiceTicket[];
@@ -559,7 +562,14 @@ export interface UnitSummary {
   occupied: number;
   totalBeds: number;
 }
+export interface StockRouteSummary {
+  fromUnitId: string;
+  toUnitId: string;
+  inTransit: number;
+  received: number;
+}
 export interface Summary {
+  stockRoutes: StockRouteSummary[];
   flow: FlowCounts;
   vaccination: VaccinationSummary;
   today: number;
@@ -587,6 +597,7 @@ export type Command =
       reason: string;
       expectedChangeCount: number;
     }
+  | import('./pharmacy-logistics').StockLogisticsCommand
   | import('./pharmacy').PharmacyCommand
   | import('./clinical-documents').ClinicalDocumentCommand
   | { type: 'referral.complete'; id: string; date: string; summary: string }
@@ -737,6 +748,7 @@ export const roleNames: Record<Role, string> = {
 export const unitKindNames: Record<UnitKind, string> = {
   ubs: 'Atenção primária',
   upa: 'Urgência e emergência',
+  central: 'Central de distribuição',
   hospital: 'Hospital',
 };
 export const permissions: Record<Role, readonly Permission[]> = {

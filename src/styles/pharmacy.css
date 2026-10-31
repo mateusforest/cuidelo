@@ -144,6 +144,21 @@
   flex-wrap: wrap;
   margin-top: 12px;
 }
+.pharmacy-credit-review {
+  margin: 12px 0 20px;
+  padding: 14px 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.pharmacy-credit-review h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.pharmacy-credit-review p {
+  font-size: 13px;
+  line-height: 1.5;
+}
 .pharmacy-receipt-link {
   padding: 18px 24px;
   display: flex;
@@ -234,7 +249,122 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.pharmacy-logistics-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+.pharmacy-logistics-tabs button {
+  min-height: 42px;
+  padding: 8px 15px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: white;
+  color: var(--brand-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pharmacy-logistics-tabs button[aria-pressed='true'] {
+  border-color: var(--brand-primary);
+  background: var(--brand-ink);
+  color: white;
+}
+.pharmacy-transit-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 20px 0;
+}
+.pharmacy-transit-summary > div {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--surface-subtle);
+  border-radius: 9px;
+  font-size: 13px;
+}
+.pharmacy-transit-summary strong {
+  font-size: 22px;
+  color: var(--brand-ink);
+}
+.pharmacy-logistics-help {
+  padding: 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.pharmacy-logistics-record {
+  padding: 17px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.pharmacy-logistics-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px 15px;
+}
+.pharmacy-logistics-record small {
+  display: block;
+  color: var(--muted);
+}
+.pharmacy-logistics-record p {
+  margin: 6px 0;
+}
+.pharmacy-logistics-stage {
+  display: grid;
+  gap: 2px;
+  margin: 9px 0;
+  border-left: 3px solid #8bbca8;
+  padding-left: 11px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.pharmacy-logistics-stage strong {
+  color: var(--brand-ink);
+}
+.pharmacy-logistics-stage p {
+  margin: 0;
+}
+.pharmacy-logistics-fields {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.pharmacy-logistics-fields > .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.pharmacy-logistics-fields select {
+  min-width: 0;
+  max-width: 100%;
+}
 @media (max-width: 700px) {
+  .pharmacy-workspace .operations-section-heading > span {
+    flex-shrink: 0;
+  }
+  .pharmacy-logistics-panel .panel-heading {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+  }
+  .pharmacy-workspace .operations-shortcuts {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pharmacy-workspace .operations-shortcuts button {
+    gap: 5px;
+  }
+  .pharmacy-logistics-tabs button {
+    flex: 1;
+    padding: 7px 9px;
+  }
   .pharmacy-stats {
     grid-template-columns: 1fr 1fr;
     gap: 10px;

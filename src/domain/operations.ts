@@ -1,3 +1,4 @@
+import { applyStockLogistics, visibleStockLogistics } from './pharmacy-logistics';
 import { applyReportReview } from './report-review';
 import {
   assessQueue,
@@ -35,6 +36,7 @@ import {
   type Scoped,
   type Snapshot,
   type Summary,
+  type StockRouteSummary,
   type Encounter,
 } from './model';
 import { dateKey, validDay, validTime } from './dates';
@@ -159,6 +161,15 @@ export function applyCommand(
     case 'appointment.reschedule': {
       entityId = rescheduleAppointment(db, c, command, now);
       action = 'Agendamento remarcado com histórico preservado';
+      break;
+    }
+    case 'stock.dispose':
+    case 'stock.inventory':
+    case 'stock.ship':
+    case 'stock.receive': {
+      const result = applyStockLogistics(db, c, command, now, newId);
+      if (result.replayed) return result.entityId;
+      ({ entityId, action } = result);
       break;
     }
     case 'stock.register':
@@ -998,6 +1009,7 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     vaccineRecalls: has('vaccination') ? org(db.vaccineRecalls) : [],
     beds: has('beds') || has('manage') ? unit(db.beds) : [],
     admissions: has('beds') ? unit(db.admissions) : [],
+    stockLogistics: visibleStockLogistics(db, c),
     lots: has('stock') ? unit(db.lots) : [],
     movements: has('stock')
       ? unit(db.movements).map((m) =>
@@ -1036,6 +1048,36 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
     audit: has('manage') ? unit(db.audit).slice(-150).reverse() : [],
   });
 }
+function stockRoutes(db: Database, c: Context): StockRouteSummary[] {
+  if (c.role !== 'manager') return [];
+  const routes = new Map<string, StockRouteSummary>();
+  const received = new Set(
+    db.stockLogistics
+      .filter((e) => e.kind === 'receipt')
+      .filter((e) => e.organizationId === c.organizationId)
+      .map((e) => e.shipmentId),
+  );
+  for (const e of db.stockLogistics) {
+    if (e.kind !== 'shipment' || e.organizationId !== c.organizationId) continue;
+    if (c.unitId !== 'all' && c.unitId !== e.unitId && c.unitId !== e.toUnitId) continue;
+    const key = JSON.stringify([e.unitId, e.toUnitId]);
+    const row = routes.get(key) ?? {
+      fromUnitId: e.unitId,
+      toUnitId: e.toUnitId,
+      inTransit: 0,
+      received: 0,
+    };
+    if (received.has(e.id)) row.received++;
+    else row.inTransit++;
+    routes.set(key, row);
+  }
+  return [...routes.values()].sort(
+    (a, b) =>
+      b.inTransit - a.inTransit ||
+      a.fromUnitId.localeCompare(b.fromUnitId) ||
+      a.toUnitId.localeCompare(b.toUnitId),
+  );
+}
 export function readSummary(db: Database, c: Context, now = new Date()): Summary {
   assertContext(db, c);
   const today = dateKey(now);
@@ -1072,6 +1114,7 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
     };
   };
   return {
+    stockRoutes: stockRoutes(db, c),
     flow: flowFor(),
     vaccination: vaccinationSummary(db, c, now),
     today: encounters.filter((e) => dateKey(new Date(e.arrivedAt)) === today).length,

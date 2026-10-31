@@ -1,5 +1,31 @@
 import { test, expect } from '@playwright/test';
 
+test('o acesso sugerido da central pede entrada e restringe a operação ao estoque', async ({
+  page,
+}) => {
+  await page.goto('/acesso?sessao=aurora-central%3Apharmacy');
+  await expect(page.locator('[data-role="pharmacy"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Unidade da sessão')).toHaveValue('aurora-central');
+  await expect(page.getByRole('link', { name: 'Totem', exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'Central de distribuição', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Entrar na demonstração' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Central de distribuição', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Expedir transferência' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Receitas e entregas' })).toHaveCount(0);
+  await page.goto('/acesso');
+  await page.locator('[data-role="clinical"]').click();
+  await expect(
+    page.getByLabel('Unidade da sessão').locator('option[value="aurora-central"]'),
+  ).toHaveCount(0);
+  await expect(page.getByLabel('Profissional de demonstração')).toBeVisible();
+  await page.goto('/totem?rede=aurora&unidade=aurora-central');
+  await expect(page.getByRole('heading', { name: 'Totem sem unidade configurada' })).toBeVisible();
+});
+
 test('entrada inicial seleciona perfil sem autenticação e só aplica ao entrar', async ({
   page,
 }) => {

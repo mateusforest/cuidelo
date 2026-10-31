@@ -27,7 +27,17 @@ export function demoIdentities(directory: Directory): DemoIdentity[] {
         .filter((u) => u.organizationId === o.id)
         .flatMap((u) => [
           ...(
-            ['reception', 'clinical', 'nursing', 'pharmacy', 'regulation', 'admin', 'acs'] as Role[]
+            (u.kind === 'central'
+              ? ['pharmacy']
+              : [
+                  'reception',
+                  'clinical',
+                  'nursing',
+                  'pharmacy',
+                  'regulation',
+                  'admin',
+                  'acs',
+                ]) as Role[]
           ).map((role) => ({
             ...demoContext(o.id, u.id, role),
             name:
@@ -37,7 +47,9 @@ export function demoIdentities(directory: Directory): DemoIdentity[] {
                   ? 'Enf. Camila · demonstração'
                   : `${roleNames[role]} · demonstração`,
           })),
-          { ...demoContext(o.id, u.id, 'clinical', true), name: 'Dr. André · demonstração' },
+          ...(u.kind === 'central'
+            ? []
+            : [{ ...demoContext(o.id, u.id, 'clinical', true), name: 'Dr. André · demonstração' }]),
         ]),
     ]),
   ];

@@ -388,6 +388,7 @@ export function vaccinationSummary(db: Database, c: Context, now: Date): Vaccina
 
 export function seedVaccineLots(db: Database, now: Date) {
   for (const unit of db.units) {
+    if (unit.kind === 'central') continue;
     for (const [index, count, days] of [
       [0, 20, 180],
       [1, 5, 20],

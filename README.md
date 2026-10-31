@@ -6,7 +6,9 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.25.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.26.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+
+Na versão 0.26, a central e os postos simulam inventário, destinação de material segregado e transferências por lote. A prefeitura vê o número de remessas em trânsito e recebidas por percurso. A [sessão de exemplo da central](https://cuidelo.vercel.app/acesso?sessao=aurora-central%3Apharmacy) tem um lote pronto para o [roteiro de logística](docs/farmacia-dispensacao.md#logística-da-central-ao-posto).
 
 A versão 0.25 registra devoluções e estornos por lote, vinculados à entrega original. O [roteiro da farmácia](docs/farmacia-dispensacao.md) inclui as contas de um exemplo com dois lotes. O [estudo da rede municipal](public/panorama-municipal.html) compara a demonstração com referências públicas, identifica lacunas e propõe critérios de aceite para os postos.
 

@@ -7,6 +7,7 @@ import { validateUnitQueue } from '../domain/unit-queue';
 import { validateAdmissions } from '../domain/hospital';
 import { validateContinuity } from '../domain/continuity';
 import { validateAdministrativeHistory } from '../domain/administrative-records';
+import { previousLogisticsRequest } from '../domain/pharmacy-logistics';
 import { validatePharmacy } from '../domain/pharmacy';
 import type { Command, Context, Database } from '../domain/model';
 import {
@@ -19,7 +20,7 @@ import {
 import { issueKiosk, performance, type KioskRequest } from '../domain/patient-flow';
 import { moduleFor, workMetrics } from '../domain/work-modules';
 import { validDay, dateKey } from '../domain/dates';
-import { createSeed } from './seed';
+import { addDemoDistributionCenter, createSeed } from './seed';
 import type { CareRepository } from './repository';
 import { assignMissingTickets, readDisplay } from '../domain/queue';
 import { validateIntakeContent } from '../domain/intake';
@@ -34,6 +35,7 @@ type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const collections = [
   'dispensations',
   'dispensationAdjustments',
+  'stockLogistics',
   'clinicalDocuments',
   'workRecords',
   'careSegments',
@@ -139,9 +141,14 @@ function parseDatabase(value: string): Database {
     db.schemaVersion = 15;
     db.dispensationAdjustments = [];
   }
+  const addCenter = isRecord(db) && db.schemaVersion === 15;
+  if (addCenter) {
+    db.schemaVersion = 16;
+    db.stockLogistics = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 15 ||
+    db.schemaVersion !== 16 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -154,6 +161,7 @@ function parseDatabase(value: string): Database {
       throw new Error('Duplicate identifiers');
   }
   const typed = db as unknown as Database;
+  if (addCenter) addDemoDistributionCenter(typed);
   const cpfKeys = typed.patients.filter((p) => p.cpf).map((p) => `${p.organizationId}:${p.cpf}`);
   if (
     new Set(cpfKeys).size !== cpfKeys.length ||
@@ -289,7 +297,9 @@ function parseDatabase(value: string): Database {
     }
   if (
     typed.units.some(
-      (r) => !strings(r, ['name', 'district']) || !['ubs', 'upa', 'hospital'].includes(r.kind),
+      (r) =>
+        !strings(r, ['name', 'district']) ||
+        !['ubs', 'upa', 'hospital', 'central'].includes(r.kind),
     )
   )
     throw new Error('Invalid units');
@@ -411,7 +421,8 @@ function parseDatabase(value: string): Database {
         !strings(r, ['unitId', 'lotId', 'reason', 'at']) ||
         !['entry', 'exit'].includes(r.kind) ||
         !Number.isSafeInteger(r.quantity) ||
-        r.quantity <= 0,
+        (r.quantity <= 0 &&
+          !(r.quantity === 0 && r.kind === 'entry' && r.adjustmentKind === 'reversal')),
     )
   )
     throw new Error('Invalid movements');
@@ -632,11 +643,21 @@ export class DemoRepository implements CareRepository {
       if (
         latest.revision !== expectedRevision ||
         (previous !== latest && previous.revision === latest.revision)
-      )
+      ) {
+        if (
+          command.type === 'stock.receive' ||
+          command.type === 'stock.ship' ||
+          command.type === 'stock.inventory' ||
+          command.type === 'stock.dispose'
+        ) {
+          const prior = previousLogisticsRequest(latest, context, command);
+          if (prior) return prior.id;
+        }
         throw new DomainError(
           'Os dados mudaram em outra ação ou aba. Revise a tela e tente novamente.',
           'conflict',
         );
+      }
       const next = structuredClone(this.db);
       const id = applyCommand(next, context, command, this.now());
       if (this.storage) {

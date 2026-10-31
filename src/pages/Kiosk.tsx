@@ -7,6 +7,12 @@ import { displayRoute, externalRoute } from '../app/links';
 export function Devices() {
   const { context, data } = useApp();
   const unit = data.units.find((u) => u.id === context.unitId);
+  if (unit?.kind === 'central')
+    return (
+      <Notice>
+        A central de distribuição atende as unidades da rede pela área de logística da farmácia.
+      </Notice>
+    );
   return (
     <>
       <PageHeader

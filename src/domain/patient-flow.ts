@@ -81,7 +81,8 @@ export function issueKiosk(
   const unit = db.units.find(
     (u) => u.id === request.unitId && u.organizationId === request.organizationId,
   );
-  if (!unit) throw new DomainError('Totem não configurado para esta unidade.', 'scope');
+  if (!unit || unit.kind === 'central')
+    throw new DomainError('Totem não configurado para esta unidade.', 'scope');
   if (
     !servicesForUnit(unit.kind).some((s) => s.value === request.service) ||
     !['routine', 'priority'].includes(request.priority) ||

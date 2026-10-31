@@ -4,6 +4,35 @@ import { assignMissingTickets } from '../domain/queue';
 import { seedVaccineLots } from '../domain/vaccination';
 import { demoCpf } from '../domain/identification';
 
+// Uma unidade logística fictícia independente dos postos e dos seus estoques.
+export function addDemoDistributionCenter(db: Pick<Database, 'units' | 'lots' | 'organizations'>) {
+  const id = 'aurora-central';
+  if (!db.organizations.some((o) => o.id === 'aurora') || db.units.some((u) => u.id === id)) return;
+  db.units.push({
+    id,
+    organizationId: 'aurora',
+    name: 'Central de Distribuição de Medicamentos',
+    kind: 'central',
+    district: 'Rede municipal',
+  });
+  db.lots.push({
+    id: id + '-cd01',
+    organizationId: 'aurora',
+    unitId: id,
+    product: 'Medicamento fictício da central',
+    presentation: 'Concentração de teste · Apresentação de teste',
+    medication: {
+      strength: 'Concentração de teste',
+      form: 'Apresentação de teste',
+      quantityUnit: 'unidade de teste',
+    },
+    lot: 'CD-DEMO-01',
+    expiresAt: '2028-12-31',
+    quantity: 24,
+    minimum: 0,
+  });
+}
+
 export function createSeed(now = new Date()): Database {
   const today = dateKey(now);
   const ago = (minutes: number) => new Date(now.getTime() - minutes * 60000).toISOString();
@@ -64,7 +93,8 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 15,
+    schemaVersion: 16,
+    stockLogistics: [],
     queueAssessments: [],
     queueServiceEvents: [],
     dispensations: [],
@@ -235,5 +265,6 @@ export function createSeed(now = new Date()): Database {
   }
   assignMissingTickets(db.encounters);
   seedVaccineLots(db, now);
+  addDemoDistributionCenter(db);
   return db;
 }

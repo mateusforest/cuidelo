@@ -39,6 +39,21 @@ Use a mesma UBS e o mesmo navegador para as sessões de demonstração do consul
 - O ajuste é um novo registro com autoria de demonstração, data e motivo. A repetição do mesmo comando e a revisão concorrente do saldo são verificadas. Feche uma conferência desatualizada e revise o histórico antes de tentar outra quantidade.
 - Os dados da farmácia ficam no navegador atual. O arquivo HTML é portátil. Levar o arquivo para outro computador leva o programa, e os dados da estação ficam na origem.
 
+## Logística da central ao posto
+
+Use o sistema publicado em um único navegador ou o mesmo arquivo Cuidelo.html durante todo o exercício. Trocar o perfil ou a unidade da sessão preserva o cenário. Cada equipamento mantém seu próprio armazenamento.
+
+1. Na **Rede Aurora**, escolha **Farmácia → Central de Distribuição de Medicamentos** e entre na demonstração. O lote fictício **CD-DEMO-01** começa com 24 unidades na central. Se já tiver repetido o exercício, use o saldo atual que a tela mostrar.
+2. Em **Logística → Transferências**, clique em **Expedir transferência**. Escolha o lote, a **UBS Centro**, a quantidade 3 e informe motivo e referência fictícios. Confirme a expedição. Na primeira execução, a central fica com 21 disponíveis e uma remessa de 3 em trânsito.
+3. Use **Trocar sessão**, escolha **Farmácia** na **UBS Centro** da mesma prefeitura. O lote fica disponível para o posto apenas depois que a equipe confirma todo o recebimento físico na remessa e informa sua referência. Se o lote compatível já tiver 2 unidades no posto, o saldo passa a 5. Caso seja um lote novo, começa com 3. Se vencer no caminho, a quantidade recebida fica segregada.
+4. Na sessão **Prefeitura**, veja **Distribuição de medicamentos**. Uma expedição cria uma pendência no percurso. Ao receber, a contagem passa para a coluna de recebidas. A administração de uma UBS pode registrar logística somente na própria unidade.
+5. Em **Inventário → Contar lote**, informe o que contou no disponível e no segregado. Uma contagem segregada divergente fica registrada para recontagem e preserva os dois saldos. Quando o segregado confere, a diferença justificada do disponível é reconciliada. Os registros anteriores ficam no histórico. Se houver remessa desse lote a receber, a unidade precisa resolver a conferência antes de conciliar uma diferença positiva.
+6. Para **Destinação**, use um lote com saldo segregado do roteiro de devolução acima. Registre quantidade, destino efetivo, motivo e referência do comprovante. A saída reduz somente o segregado. A demonstração guarda a referência informada e a autoria da sessão. A destinação física e sua documentação cabem à equipe da rede.
+
+### Como conferir um estorno depois de inventariar
+
+Um lote começa com 10. A farmácia registra entrega de 6, mas apenas 5 saem fisicamente. O saldo registrado é 4. O inventário confere 5 e registra um crédito de 1. Depois, ao corrigir o comprovante da entrega, atribua essa unidade à contagem que já a repôs. O saldo permanece em 5, o comprovante identifica a contagem e a receita volta a ter 1 pendente. Se o crédito não corresponder à entrega, registre essa distinção na conferência do estorno.
+
 ## Pendências
 
-A farmácia permanece parcial no mapa de 41 percursos parciais. Para operação municipal, faltam destinação dos segregados, perdas e recolhimento, inventário físico, distribuição entre central e unidades, validação farmacêutica, controlados, catálogo e integrações nacionais. A farmácia hospitalar também precisa de fracionamento e rastreio até a administração no leito. Identidade autenticada e persistência protegida continuam pendentes.
+A farmácia permanece parcial no mapa de 41 percursos parciais. Para operação municipal, permanecem perdas e recolhimento, tratamento de avarias e recebimentos parciais, validação farmacêutica, controlados, catálogo nacional e integrações oficiais. A farmácia hospitalar também precisa de fracionamento e rastreio até a administração no leito. Identidade autenticada e persistência protegida continuam pendentes.

@@ -1,6 +1,7 @@
 import { TVPairing } from '../components/PairedTV';
 import { SectorHandoffs } from '../components/SectorHandoffs';
 import { PharmacyDispensing } from '../components/PharmacyDispensing';
+import { PharmacyLogistics } from '../components/PharmacyLogistics';
 import { StockMedicationForm } from '../components/StockMedicationForm';
 import type { MedicationLine } from '../domain/clinical-documents';
 import { useRef, useState } from 'react';
@@ -34,7 +35,12 @@ export function Pharmacy() {
     null,
   );
   const prescriptionSection = useRef<HTMLElement>(null),
-    stockSection = useRef<HTMLElement>(null);
+    stockSection = useRef<HTMLElement>(null),
+    logisticsSection = useRef<HTMLElement>(null);
+  const isCentral = data.units.find((unit) => unit.id === context.unitId)?.kind === 'central';
+  const hasPrescriptions = !isCentral && context.role === 'pharmacy';
+  const stockStep = hasPrescriptions ? '02' : '01';
+  const logisticsStep = hasPrescriptions ? '03' : '02';
   const today = dateKey(),
     alert = (l: StockLot) => stockLotAttention(l, today).needsAttention;
   const lots = data.lots.filter(
@@ -48,14 +54,18 @@ export function Pharmacy() {
     <div className="operations-page pharmacy-workspace">
       <PageHeader
         eyebrow="SUPRIMENTOS E RASTREABILIDADE"
-        title="Farmácia e estoque"
-        description="Receitas, entregas e movimentações por lote, vinculadas à sua unidade."
+        title={isCentral ? 'Central de distribuição' : 'Farmácia e estoque'}
+        description={
+          isCentral
+            ? 'Controle os lotes da central e acompanhe as remessas até o recebimento nas unidades.'
+            : 'Receitas, entregas e movimentações por lote, vinculadas à sua unidade.'
+        }
         action={<Button onClick={() => setStockForm({})}>Novo lote de medicamento</Button>}
       />
       <UnitRequired>
-        <SectorHandoffs roomId="farmacia-1" />
+        {!isCentral && <SectorHandoffs roomId="farmacia-1" />}
         <nav className="operations-shortcuts" aria-label="Áreas da farmácia">
-          {context.role === 'pharmacy' && (
+          {hasPrescriptions && (
             <button
               onClick={() => {
                 prescriptionSection.current?.scrollIntoView({ block: 'start' });
@@ -71,10 +81,18 @@ export function Pharmacy() {
               stockSection.current?.focus({ preventScroll: true });
             }}
           >
-            02 <span>Estoque e movimentações</span>
+            {stockStep} <span>Estoque e movimentações</span>
+          </button>
+          <button
+            onClick={() => {
+              logisticsSection.current?.scrollIntoView({ block: 'start' });
+              logisticsSection.current?.focus({ preventScroll: true });
+            }}
+          >
+            {logisticsStep} <span>Logística da unidade</span>
           </button>
         </nav>
-        {context.role === 'pharmacy' && (
+        {hasPrescriptions && (
           <section
             ref={prescriptionSection}
             tabIndex={-1}
@@ -91,7 +109,7 @@ export function Pharmacy() {
           className="operations-section stock-section"
         >
           <div className="operations-section-heading">
-            <span>02</span>
+            <span>{stockStep}</span>
             <div>
               <h2>Estoque e movimentações</h2>
               <p>Consulte o saldo para entrega e as quantidades segregadas por lote.</p>
@@ -113,7 +131,11 @@ export function Pharmacy() {
           </div>
           <Panel
             title="Estoque por lote"
-            subtitle="Para entregar uma receita à pessoa, use a conferência acima. Saídas avulsas não quitam receitas."
+            subtitle={
+              hasPrescriptions
+                ? 'Para entregar uma receita à pessoa, use a conferência acima. Saídas avulsas não quitam receitas.'
+                : 'Consulte e movimente os lotes desta unidade. Para enviar a outro estabelecimento, registre uma expedição em Logística da unidade.'
+            }
           >
             <div className="table-toolbar">
               <SearchField
@@ -252,8 +274,9 @@ export function Pharmacy() {
                       <div>
                         <strong>
                           {data.lots.find((l) => l.id === m.lotId)?.product} ·{' '}
-                          {m.kind === 'entry' ? '+' : '−'}
-                          {m.quantity}
+                          {m.quantity === 0 && m.adjustmentKind === 'reversal'
+                            ? 'saldo preservado pelo inventário'
+                            : (m.kind === 'entry' ? '+' : '−') + m.quantity}
                         </strong>
                         <small>
                           Lote {data.lots.find((l) => l.id === m.lotId)?.lot}
@@ -264,11 +287,15 @@ export function Pharmacy() {
                               (m.destination === 'segregated'
                                 ? 'estoque segregado'
                                 : 'saldo do lote')}
+                          {m.logisticsKind &&
+                            (m.destination === 'segregated'
+                              ? ' · saldo segregado'
+                              : ' · saldo do lote')}
                         </small>
                         <small>
                           {shortDate(m.at)} · {m.reason}
                         </small>
-                        {context.role === 'pharmacy' && m.dispensationId && (
+                        {hasPrescriptions && m.dispensationId && (
                           <Link
                             className="text-link"
                             target="_blank"
@@ -286,7 +313,25 @@ export function Pharmacy() {
             )}
           </Panel>
         </section>
-        {context.role === 'pharmacy' && <TVPairing />}
+        <section
+          ref={logisticsSection}
+          tabIndex={-1}
+          aria-label="Logística da unidade"
+          className="operations-section"
+        >
+          <div className="operations-section-heading">
+            <span>{logisticsStep}</span>
+            <div>
+              <h2>Logística da unidade</h2>
+              <p>
+                Examine as remessas, concilie as contagens físicas e registre o destino do material
+                segregado.
+              </p>
+            </div>
+          </div>
+          <PharmacyLogistics key={context.sessionId + ':' + context.unitId} />
+        </section>
+        {hasPrescriptions && <TVPairing />}
       </UnitRequired>
       {stockForm && <StockMedicationForm {...stockForm} onClose={() => setStockForm(null)} />}
       {movement && (

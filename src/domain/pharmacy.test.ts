@@ -510,7 +510,7 @@ describe('receita, dispensação e baixa por lote', () => {
     const loaded = new DemoRepository(store, () => now);
     expect(loaded.recoveryMessage).toBe('');
     expect(loaded.snapshot(pharmacist).dispensations).toHaveLength(1);
-    expect(JSON.parse(store.getItem(storageKey)!).schemaVersion).toBe(15);
+    expect(JSON.parse(store.getItem(storageKey)!).schemaVersion).toBe(16);
     const saved = store.getItem(storageKey);
     await expect(
       loaded.execute(
@@ -593,6 +593,184 @@ describe('devolução e estorno ligados à saída original', () => {
     const progress = () => prescriptionProgress(doc, db.dispensations, db.dispensationAdjustments);
     return { ...setupData, delivery, origin, adjust, progress };
   }
+  function countAvailable(db: Database, lotId: string, countedStock: number, reference: string) {
+    const lot = db.lots.find((l) => l.id === lotId)!;
+    return applyCommand(
+      db,
+      pharmacist,
+      {
+        type: 'stock.inventory',
+        lotId,
+        countedStock,
+        countedSegregated: lot.segregatedQuantity ?? 0,
+        expectedStock: lot.quantity,
+        expectedSegregated: lot.segregatedQuantity ?? 0,
+        reason: 'Conferência de estoque fictícia',
+        reference,
+        requestId: crypto.randomUUID(),
+      },
+      now,
+    );
+  }
+  it('vincula o estorno à contagem que já recompôs a unidade, reabre a receita e conserva o extrato ao recarregar', async () => {
+    const { db, a, adjust, progress, delivery } = prepared();
+    const original = structuredClone(delivery),
+      lot = db.lots.find((l) => l.id === a)!;
+    expect(lot.quantity).toBe(1);
+    const id = countAvailable(db, a, 2, 'CONT-100');
+    const cmd = adjust({ kind: 'reversal', quantity: 1 });
+    expect(() => applyCommand(db, pharmacist, cmd, now)).toThrow('créditos de inventário');
+    const bound = { ...cmd, inventoryCredits: [{ inventoryId: id, quantity: 1 }] };
+    const adjustmentId = applyCommand(db, pharmacist, bound, now),
+      revision = db.revision;
+    expect(lot.quantity).toBe(2);
+    expect(db.dispensationAdjustments.at(-1)).toMatchObject({
+      inventoryCredits: [{ inventoryId: id, reference: 'CONT-100', quantity: 1 }],
+      balanceBefore: 2,
+      balanceAfter: 2,
+    });
+    expect(db.movements.at(-1)).toMatchObject({ id: adjustmentId, quantity: 0, kind: 'entry' });
+    expect(progress().items[0]).toMatchObject({ delivered: 4, remaining: 6 });
+    expect(applyCommand(db, pharmacist, bound, now)).toBe(adjustmentId);
+    expect(db.revision).toBe(revision);
+    expect(() =>
+      applyCommand(
+        db,
+        pharmacist,
+        { ...bound, inventoryCredits: [{ inventoryId: id, quantity: 0 }] },
+        now,
+      ),
+    ).toThrow('Identificação');
+    expect(db.dispensations[0]).toEqual(original);
+    validatePharmacy(db);
+    const store = new MemoryStorage();
+    store.setItem(storageKey, JSON.stringify(db));
+    const loaded = new DemoRepository(store, () => now);
+    expect(loaded.recoveryMessage).toBe('');
+    expect(loaded.snapshot(pharmacist).dispensationAdjustments.at(-1)?.inventoryCredits).toEqual([
+      { inventoryId: id, quantity: 1, reference: 'CONT-100' },
+    ]);
+    // Uma contagem não pode recompor duas saídas, mesmo com outro requestId.
+    expect(() =>
+      applyCommand(
+        db,
+        pharmacist,
+        adjust({
+          kind: 'reversal',
+          quantity: 1,
+          inventoryCredits: [{ inventoryId: id, quantity: 1 }],
+        }),
+        now,
+      ),
+    ).toThrow('inventário');
+    const altered = structuredClone(db);
+    altered.dispensationAdjustments[0].inventoryCredits![0].quantity = 0;
+    expect(() => validatePharmacy(altered)).toThrow();
+  });
+  it('permite conciliação parcial e zero atribuído com justificativa e impede somar além da diferença contada', () => {
+    const { db, a, adjust } = prepared(),
+      lot = db.lots.find((l) => l.id === a)!;
+    const x = countAvailable(db, a, 2, 'CONT-A'),
+      y = countAvailable(db, a, 4, 'CONT-B');
+    const arithmetic = adjust({
+      kind: 'reversal',
+      quantity: 2,
+      inventoryCredits: [
+        { inventoryId: x, quantity: 1 },
+        { inventoryId: y, quantity: 0 },
+      ],
+    });
+    for (const credits of [
+      [{ inventoryId: x, quantity: 1 }],
+      [
+        { inventoryId: x, quantity: 1 },
+        { inventoryId: x, quantity: 1 },
+      ],
+      [
+        { inventoryId: x, quantity: 2 },
+        { inventoryId: y, quantity: 0 },
+      ],
+      [
+        { inventoryId: x, quantity: 1 },
+        { inventoryId: y, quantity: 2 },
+      ],
+    ])
+      expect(() =>
+        applyCommand(db, pharmacist, { ...arithmetic, inventoryCredits: credits }, now),
+      ).toThrow();
+    applyCommand(db, pharmacist, arithmetic, now);
+    expect(lot.quantity).toBe(5);
+    applyCommand(
+      db,
+      pharmacist,
+      adjust({
+        kind: 'reversal',
+        quantity: 1,
+        inventoryCredits: [{ inventoryId: y, quantity: 0 }],
+      }),
+      now,
+    );
+    expect(lot.quantity).toBe(6);
+    expect(db.dispensationAdjustments.at(-1)?.inventoryCredits?.[0].quantity).toBe(0);
+    validatePharmacy(db);
+  });
+  it('ao vencer após a contagem, reclassifica a parcela já contada e segrega a quantidade efetiva uma única vez', () => {
+    const { db, a, adjust } = prepared(),
+      lot = db.lots.find((l) => l.id === a)!;
+    const id = countAvailable(db, a, 2, 'CONT-EXP');
+    const expired = new Date('2027-01-02T12:00:00Z');
+    applyCommand(
+      db,
+      pharmacist,
+      adjust({
+        kind: 'reversal',
+        quantity: 2,
+        inventoryCredits: [{ inventoryId: id, quantity: 1 }],
+      }),
+      expired,
+    );
+    expect(lot).toMatchObject({ quantity: 1, segregatedQuantity: 2 });
+    expect(db.movements.at(-2)).toMatchObject({ kind: 'exit', destination: 'stock', quantity: 1 });
+    expect(db.movements.at(-1)).toMatchObject({
+      kind: 'entry',
+      destination: 'segregated',
+      quantity: 2,
+    });
+    validatePharmacy(db);
+    const corrupted = structuredClone(db);
+    corrupted.movements.splice(-2, 1);
+    expect(() => validatePharmacy(corrupted)).toThrow();
+  });
+  it('destina quantidades devolvidas na base 15 e aceita nova devolução sem alterar o comprovante', async () => {
+    const { db, a, adjust, delivery } = prepared();
+    applyCommand(db, pharmacist, adjust({ quantity: 3 }), now);
+    const original = structuredClone(delivery),
+      savedAdjustments = structuredClone(db.dispensationAdjustments);
+    const { stockLogistics: empty, ...legacy } = db;
+    expect(empty).toEqual([]);
+    const store = new MemoryStorage();
+    store.setItem(storageKey, JSON.stringify({ ...legacy, schemaVersion: 15 }));
+    const repo = new DemoRepository(store, () => now);
+    expect(repo.recoveryMessage).toBe('');
+    await repo.execute(pharmacist, {
+      type: 'stock.dispose',
+      lotId: a,
+      quantity: 2,
+      expectedSegregated: 3,
+      reason: 'Material já encaminhado ao coletor de teste',
+      reference: 'Termo de coleta 1',
+      destination: 'Coletor fictício',
+      requestId: crypto.randomUUID(),
+    });
+    await repo.execute(pharmacist, adjust({ quantity: 1, expectedAdjustments: 1 }));
+    const loaded = new DemoRepository(store, () => now);
+    expect(loaded.recoveryMessage).toBe('');
+    const view = loaded.snapshot(pharmacist);
+    expect(view.lots.find((l) => l.id === a)).toMatchObject({ segregatedQuantity: 2, quantity: 1 });
+    expect(view.dispensations[0]).toEqual(original);
+    expect(view.dispensationAdjustments[0]).toEqual(savedAdjustments[0]);
+    expect(view.dispensationAdjustments[1]).toMatchObject({ balanceBefore: 1, balanceAfter: 2 });
+  });
   it('segrega a devolução física sem reabrir a receita e mantém o comprovante intacto', () => {
     const { db, a, delivery, origin, adjust, progress } = prepared(),
       before = structuredClone(delivery),
