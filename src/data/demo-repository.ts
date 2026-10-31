@@ -1,4 +1,5 @@
 import { assessmentCoding } from '../domain/consultation';
+import { citizenView } from '../domain/citizen';
 import { validateUnitQueue } from '../domain/unit-queue';
 import { validateAdmissions } from '../domain/hospital';
 import { validateContinuity } from '../domain/continuity';
@@ -573,6 +574,9 @@ export class DemoRepository implements CareRepository {
     assertContext(this.db, context);
     return performance(this.db, context, from, to, this.now());
   };
+  citizenView(context: Context, patientId: string) {
+    return citizenView(this.sync(), context, patientId, this.now());
+  }
   async issueTicket(request: KioskRequest) {
     return this.locked(() => {
       const next = structuredClone(this.sync());

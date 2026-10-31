@@ -10,6 +10,7 @@ import {
 import type { Context, Snapshot, Summary } from '../domain/model';
 import type { CareRepository } from '../data/repository';
 import { browserRepository } from '../data/demo-repository';
+import { startCitizenUpdates } from '../data/citizen-links';
 import { startBroadcast } from '../data/tv-channel';
 import { storageKey } from '../data/demo-repository';
 import { demoContext, demoIdentities, identityFor } from '../domain/access';
@@ -67,7 +68,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   });
   useEffect(() => {
-    if (demoEntered) return startBroadcast(repository, context);
+    if (!demoEntered) return;
+    const stopTV = startBroadcast(repository, context),
+      stopCitizen = startCitizenUpdates(repository, context);
+    return () => {
+      stopTV?.();
+      stopCitizen?.();
+    };
   }, [repository, context, demoEntered]);
   const storageWarning = useSyncExternalStore(
     repository.subscribe,

@@ -313,6 +313,9 @@ export function Access({ resume = false }: { resume?: boolean }) {
           </form>
           <div className="access-preview-links">
             <span>Explore também</span>
+            <Link to="/cidadao">
+              <UserRound size={15} /> App do cidadão
+            </Link>
             <Link to={'/totem?' + new URLSearchParams({ rede: org, unidade: unit })}>
               <UserRound size={15} /> Totem
             </Link>
@@ -323,7 +326,7 @@ export function Access({ resume = false }: { resume?: boolean }) {
         </div>
         <footer className="access-entry-footer">
           <span>Cuidelo © {new Date().getFullYear()}</span>
-          <span>Desenvolvimento · 0.16</span>
+          <span>Desenvolvimento · 0.17</span>
         </footer>
       </section>
     </main>

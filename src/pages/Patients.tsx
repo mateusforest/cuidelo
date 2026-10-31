@@ -10,6 +10,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ArrowUpRight, FileText, ShieldCheck } from 'lucide-react';
 import { useApp } from '../app/context';
 import { can } from '../domain/model';
+import { CitizenShare } from '../components/CitizenShare';
 import { RecordedCodes } from '../components/AssessmentCodes';
 import { IntakeHistory, NoteAddenda } from '../components/ClinicalHistory';
 import { VaccineHistory } from '../components/VaccineHistory';
@@ -292,6 +293,13 @@ export function PatientDetails() {
               </div>
             )}
           </Panel>
+          {can(context.role, 'clinical') && (
+            <CitizenShare
+              key={context.sessionId + ':' + p.id}
+              patientId={p.id}
+              name={p.socialName || p.name}
+            />
+          )}
           {can(context.role, 'clinical') && <PatientDocumentHistory patientId={p.id} />}
           {can(context.role, 'clinical') && (
             <Panel

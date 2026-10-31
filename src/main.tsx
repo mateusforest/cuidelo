@@ -4,7 +4,14 @@ import { UnitQueue } from './pages/UnitQueue';
 import { ExamFollowUp } from './pages/ExamFollowUp';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, createHashRouter, RouterProvider, Link } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  createHashRouter,
+  RouterProvider,
+  Link,
+  Outlet,
+} from 'react-router-dom';
+import { Citizen } from './pages/Citizen';
 import { AppProvider, useApp } from './app/context';
 import { Shell } from './app/Shell';
 import { can, type Permission } from './domain/model';
@@ -72,71 +79,81 @@ const protect = (permission: Permission, node: ReactNode) => (
   <Gate permission={permission}>{node}</Gate>
 );
 const router = (isPortable() ? createHashRouter : createBrowserRouter)([
-  { path: '/tv', element: <QueueDisplay paired /> },
-  { path: '/painel', element: <QueueDisplay /> },
-  { path: '/totem', element: <Kiosk /> },
-  { path: '/acesso', element: <Access /> },
-  { path: '/login', element: <Access /> },
-  { path: '/dispensacoes/:id', element: protect('dispensation.read', <PharmacyReceipt />) },
-  { path: '/documentos/:id', element: protect('clinical', <ClinicalDocumentPrint />) },
+  { path: '/cidadao/*', element: <Citizen /> },
   {
-    path: '/',
-    element: <Shell />,
-    errorElement: (
-      <div className="app-error">
-        <img src="/brand/marca.svg" alt="Cuidelo" />
-        <h1>Não foi possível abrir esta tela</h1>
-        <p>
-          Recarregue o ambiente. Se o problema continuar, preserve os dados locais e informe o que
-          estava fazendo.
-        </p>
-        <a className="button primary" href={isPortable() ? '#/' : '/'}>
-          Voltar ao início
-        </a>
-      </div>
+    element: (
+      <AppProvider>
+        <Outlet />
+      </AppProvider>
     ),
     children: [
-      { index: true, element: <Home /> },
-      { path: 'modulos', element: <ModulesHub /> },
-      { path: 'modulos/:module', element: <WorkPage /> },
-      { path: 'paineis/:report', element: <WorkReport /> },
-      { path: 'exames', element: protect('clinical', <ExamFollowUp />) },
-      { path: 'fila', element: protect('queue', <UnitQueue />) },
-      { path: 'consultorio', element: protect('clinical', <ConsultingRoom />) },
-      { path: 'desempenho', element: protect('performance', <Performance />) },
-      { path: 'dispositivos', element: protect('devices', <Devices />) },
-      { path: 'pessoas', element: protect('patients.read', <Patients />) },
-      { path: 'pessoas/:id', element: protect('patients.read', <PatientDetails />) },
-      { path: 'agenda', element: protect('schedule', <Agenda />) },
-      { path: 'recepcao', element: protect('queue', <Reception />) },
-      { path: 'escuta', element: protect('clinical', <IntakeQueue />) },
-      { path: 'escuta/:id', element: protect('clinical', <IntakePage />) },
-      { path: 'vacinacao', element: protect('vaccination', <Vaccination />) },
-      { path: 'vacinas-estoque', element: protect('vaccine.stock', <VaccineStock />) },
-      { path: 'vacinacao-rede', element: protect('manage', <VaccinationManagement />) },
-      { path: 'senhas', element: protect('queue', <QueueControl />) },
-      { path: 'comparacao', element: <Coverage /> },
-      { path: 'atendimento/:id', element: protect('clinical', <EncounterPage />) },
-      { path: 'hospital', element: protect('beds', <Hospital />) },
-      { path: 'farmacia', element: protect('stock', <Pharmacy />) },
-      { path: 'regulacao', element: protect('regulation', <Referrals />) },
-      { path: 'unidades', element: protect('network', <Units />) },
-      { path: 'auditoria', element: protect('manage', <Audit />) },
-      { path: 'integracoes', element: <Integrations /> },
-      { path: 'desenvolvimento', element: <Development /> },
+      { path: '/tv', element: <QueueDisplay paired /> },
+      { path: '/painel', element: <QueueDisplay /> },
+      { path: '/totem', element: <Kiosk /> },
+      { path: '/acesso', element: <Access /> },
+      { path: '/login', element: <Access /> },
+      { path: '/dispensacoes/:id', element: protect('dispensation.read', <PharmacyReceipt />) },
+      { path: '/documentos/:id', element: protect('clinical', <ClinicalDocumentPrint />) },
       {
-        path: '*',
-        element: (
-          <EmptyState
-            title="Página não encontrada"
-            description="Escolha um módulo pelo menu para continuar."
-            action={
-              <Link className="button secondary" to="/">
-                Voltar ao início
-              </Link>
-            }
-          />
+        path: '/',
+        element: <Shell />,
+        errorElement: (
+          <div className="app-error">
+            <img src="/brand/marca.svg" alt="Cuidelo" />
+            <h1>Não foi possível abrir esta tela</h1>
+            <p>
+              Recarregue o ambiente. Se o problema continuar, preserve os dados locais e informe o
+              que estava fazendo.
+            </p>
+            <a className="button primary" href={isPortable() ? '#/' : '/'}>
+              Voltar ao início
+            </a>
+          </div>
         ),
+        children: [
+          { index: true, element: <Home /> },
+          { path: 'modulos', element: <ModulesHub /> },
+          { path: 'modulos/:module', element: <WorkPage /> },
+          { path: 'paineis/:report', element: <WorkReport /> },
+          { path: 'exames', element: protect('clinical', <ExamFollowUp />) },
+          { path: 'fila', element: protect('queue', <UnitQueue />) },
+          { path: 'consultorio', element: protect('clinical', <ConsultingRoom />) },
+          { path: 'desempenho', element: protect('performance', <Performance />) },
+          { path: 'dispositivos', element: protect('devices', <Devices />) },
+          { path: 'pessoas', element: protect('patients.read', <Patients />) },
+          { path: 'pessoas/:id', element: protect('patients.read', <PatientDetails />) },
+          { path: 'agenda', element: protect('schedule', <Agenda />) },
+          { path: 'recepcao', element: protect('queue', <Reception />) },
+          { path: 'escuta', element: protect('clinical', <IntakeQueue />) },
+          { path: 'escuta/:id', element: protect('clinical', <IntakePage />) },
+          { path: 'vacinacao', element: protect('vaccination', <Vaccination />) },
+          { path: 'vacinas-estoque', element: protect('vaccine.stock', <VaccineStock />) },
+          { path: 'vacinacao-rede', element: protect('manage', <VaccinationManagement />) },
+          { path: 'senhas', element: protect('queue', <QueueControl />) },
+          { path: 'comparacao', element: <Coverage /> },
+          { path: 'atendimento/:id', element: protect('clinical', <EncounterPage />) },
+          { path: 'hospital', element: protect('beds', <Hospital />) },
+          { path: 'farmacia', element: protect('stock', <Pharmacy />) },
+          { path: 'regulacao', element: protect('regulation', <Referrals />) },
+          { path: 'unidades', element: protect('network', <Units />) },
+          { path: 'auditoria', element: protect('manage', <Audit />) },
+          { path: 'integracoes', element: <Integrations /> },
+          { path: 'desenvolvimento', element: <Development /> },
+          {
+            path: '*',
+            element: (
+              <EmptyState
+                title="Página não encontrada"
+                description="Escolha um módulo pelo menu para continuar."
+                action={
+                  <Link className="button secondary" to="/">
+                    Voltar ao início
+                  </Link>
+                }
+              />
+            ),
+          },
+        ],
       },
     ],
   },
@@ -146,8 +163,6 @@ if (import.meta.env.VITE_DATA_MODE && import.meta.env.VITE_DATA_MODE !== 'demo')
   throw new Error('Este build suporta apenas o adaptador de demonstração.');
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppProvider>
-      <RouterProvider router={router} />
-    </AppProvider>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

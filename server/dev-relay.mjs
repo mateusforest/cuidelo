@@ -1,3 +1,4 @@
+import { citizenRelay } from './citizen-share.mjs';
 import { tvRelay } from './tv-relay.mjs';
 export function tvDevelopmentRelay() {
   const records = new Map();
@@ -17,6 +18,7 @@ export function tvDevelopmentRelay() {
   return {
     name: 'cuidelo-local-tv-relay',
     configureServer(server) {
+      server.middlewares.use('/api/cidadao', (req, res) => citizenRelay(req, res, cache));
       server.middlewares.use('/api/tv', (req, res) => tvRelay(req, res, cache));
     },
   };
