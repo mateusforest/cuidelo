@@ -30,7 +30,12 @@ export function pushRuntime() {
   return {
     publicKey,
     async read(id) {
-      const result = await get(path(id), { access: 'private', useCache: false });
+      // A resposta comprimida pode ter um ETag fraco que o Blob recusa na gravação condicional.
+      const result = await get(path(id), {
+        access: 'private',
+        useCache: false,
+        headers: { 'accept-encoding': 'identity' },
+      });
       if (!result) return null;
       const bytes = Buffer.from(await new Response(result.stream).arrayBuffer()),
         cipher = createDecipheriv('aes-256-gcm', encryption, bytes.subarray(0, 12));

@@ -40,11 +40,16 @@ try {
   await openPerson(page);
   await page.getByRole('button', { name: 'Novo lembrete' }).click();
   await page.getByLabel('Nome do medicamento').fill('Teste fictício de entrega');
-  const hhmm = await page.evaluate(() => {
+  const { hhmm, day } = await page.evaluate(() => {
     const d = new Date(Date.now() + 150000);
-    return [d.getHours(), d.getMinutes()].map((x) => String(x).padStart(2, '0')).join(':');
+    const pad = (n) => String(n).padStart(2, '0');
+    return {
+      hhmm: [d.getHours(), d.getMinutes()].map(pad).join(':'),
+      day: [d.getFullYear(), pad(d.getMonth() + 1), pad(d.getDate())].join('-'),
+    };
   });
   await page.getByLabel('Horários diários').fill(hhmm);
+  await page.getByLabel('Último dia (opcional)').fill(day);
   await page.getByRole('button', { name: 'Salvar lembrete' }).click();
   await page.getByRole('button', { name: 'Ativar avisos do aparelho' }).click();
   await expect(page.getByRole('button', { name: 'Testar em 1 minuto' })).toBeVisible({
@@ -106,14 +111,19 @@ try {
     if (enabled) {
       const cleanup = await ctx.newPage();
       await openPerson(cleanup);
-      await cleanup.getByRole('button', { name: 'Desativar avisos' }).click();
-      await expect(cleanup.getByRole('button', { name: 'Ativar avisos do aparelho' })).toBeVisible({
-        timeout: 30000,
-      });
-      await cleanup.evaluate(async () => {
-        const reg = await navigator.serviceWorker.getRegistration('/cidadao/');
-        await (await reg?.pushManager.getSubscription())?.unsubscribe();
-      });
+      try {
+        await cleanup.getByRole('button', { name: 'Desativar avisos' }).click();
+        await expect(
+          cleanup.getByRole('button', { name: 'Ativar avisos do aparelho' }),
+        ).toBeVisible({
+          timeout: 30000,
+        });
+      } finally {
+        await cleanup.evaluate(async () => {
+          const reg = await navigator.serviceWorker.getRegistration('/cidadao/');
+          await (await reg?.pushManager.getSubscription())?.unsubscribe();
+        });
+      }
     }
   } finally {
     await ctx.close();
