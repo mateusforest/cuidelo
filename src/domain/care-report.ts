@@ -1,3 +1,4 @@
+import { appointmentStatusNames } from './model';
 import { shortDate, validDay } from './dates';
 import {
   kinds,
@@ -107,12 +108,7 @@ export function careReport(d: Diary, view: CitizenView, from: string, to: string
       time: a.time,
       source: 'Unidade de saúde',
       title: a.service,
-      detail:
-        a.unit +
-        ' · ' +
-        { scheduled: 'Agendado', cancelled: 'Cancelado', 'checked-in': 'Chegada confirmada' }[
-          a.status
-        ],
+      detail: a.unit + ' · ' + appointmentStatusNames[a.status],
     });
   for (const doc of view.documents) {
     const day = localDay(new Date(doc.issuedAt));

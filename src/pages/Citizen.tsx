@@ -1,3 +1,4 @@
+import { appointmentStatusNames } from '../domain/model';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -46,11 +47,6 @@ function previous(): Session | null {
     return null;
   }
 }
-const statusNames = {
-  scheduled: 'Agendado',
-  'checked-in': 'Chegada confirmada',
-  cancelled: 'Cancelado',
-};
 const docIcons = { prescription: Pill, exams: FlaskConical, certificate: FileText };
 const kindNames = { prescription: 'Receitas', exams: 'Exames', certificate: 'Atestados' };
 function Appointment({ a }: { a: CitizenAppointment }) {
@@ -75,8 +71,10 @@ function Appointment({ a }: { a: CitizenAppointment }) {
           {a.unit}
         </p>
         <small>{a.professional}</small>
-        <span className={'cit-tag ' + (a.status === 'cancelled' ? 'warn' : '')}>
-          {statusNames[a.status]}
+        <span
+          className={'cit-tag ' + (a.status === 'cancelled' || a.status === 'missed' ? 'warn' : '')}
+        >
+          {appointmentStatusNames[a.status]}
           {a.rescheduled ? ' · remarcado' : ''}
         </span>
       </div>

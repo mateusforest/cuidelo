@@ -54,6 +54,8 @@ test('troca de prefeitura recalcula unidade e mantém profissional demonstrativo
   await page.goto('/acesso');
   await page.getByRole('button', { name: 'Prefeitura', exact: true }).click();
   await expect(page.locator('.access-selection')).toContainText('Todas as unidades');
+  await expect(page.getByLabel('Unidade da sessão', { exact: true })).toHaveValue('all');
+  await expect(page.getByLabel('Unidade da sessão', { exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Entrar na demonstração', exact: true }).click();
   await expect(page.getByLabel('Unidade ativa', { exact: true })).toHaveValue('all');
   await expect(page.getByRole('heading', { name: 'Visão da rede', exact: true })).toBeVisible();

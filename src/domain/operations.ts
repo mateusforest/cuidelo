@@ -19,6 +19,7 @@ import { activeEncounter } from './model';
 import { rescheduleReferral } from './continuity';
 import {
   updateRegistration,
+  changeAppointmentAbsence,
   rescheduleAppointment,
   validateAppointmentSlot,
   matchesKioskAppointment,
@@ -493,6 +494,11 @@ export function applyCommand(
       action = 'Agendamento criado';
       break;
     }
+    case 'appointment.absence': {
+      entityId = changeAppointmentAbsence(db, c, command, now);
+      action = command.missed ? 'Falta registrada na agenda' : 'Falta corrigida na agenda';
+      break;
+    }
     case 'appointment.cancel': {
       permit(c, 'schedule');
       const a = member(db.appointments, command.id, c);
@@ -512,7 +518,9 @@ export function applyCommand(
       const a = member(db.appointments, command.id, c);
       ensure(
         a.status === 'scheduled',
-        'A chegada já foi confirmada ou o agendamento foi cancelado.',
+        a.status === 'missed'
+          ? 'Corrija a falta antes de confirmar a chegada.'
+          : 'A chegada já foi confirmada ou o agendamento foi cancelado.',
         'conflict',
       );
       ensure(a.date === today, 'Confirme a chegada no dia agendado.');

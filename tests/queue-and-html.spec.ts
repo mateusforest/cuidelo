@@ -70,6 +70,7 @@ test('HTML abre diretamente, sem rede, com navegação, fontes, marca e guia inc
   await call.click();
   await expect(page.getByRole('status')).toContainText('Senha chamada');
   await expect(tv.getByTestId('current-ticket')).toHaveText(ticket, { timeout: 10000 });
+  await page.getByText('Sobre o projeto', { exact: true }).click();
   await page.getByRole('link', { name: 'Comparar com Pulso', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'O que veio do Pulso' })).toBeVisible();
   await expect(page.locator('.coverage-table tbody tr')).toHaveCount(46);

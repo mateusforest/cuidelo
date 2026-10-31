@@ -49,6 +49,7 @@ const asEncounter = (row: Encounter | KioskArrival) => ('patientId' in row ? row
 export function ReceptionDesk() {
   const { data, context, repository, notify } = useApp();
   const [search, setSearch] = useState(''),
+    [toolsOpen, setToolsOpen] = useState(false),
     [filter, setFilter] = useState('all'),
     [day, setDay] = useState(dateKey()),
     [selected, setSelected] = useState<DeskRow | null>(null),
@@ -80,7 +81,13 @@ export function ReceptionDesk() {
         cpf: p?.cpf,
         stage: (() => {
           const d = data.queueDirections.find((d) => d.encounterId === row.id);
-          if (!d || row.receptionHold) return flowStage(row);
+          if (
+            !d ||
+            row.receptionHold ||
+            row.status === 'closed-without-care' ||
+            row.status === 'completed'
+          )
+            return flowStage(row);
           return d.roomId === 'escuta-1'
             ? 'Devolvido à triagem'
             : (d.received ? 'Recebido no setor · ' : 'Encaminhado · ') + roomName(d.roomId);
@@ -113,6 +120,7 @@ export function ReceptionDesk() {
     ['triage', 'Na triagem'],
     ['service', 'Em atendimento / espera'],
     ['absent', 'Ausentes'],
+    ['closed', 'Encerradas'],
   ] as const;
   const visible = rows.filter(
     (r) =>
@@ -120,6 +128,11 @@ export function ReceptionDesk() {
       normalizedName(`${r.name} ${r.row.ticket} ${r.cpf ?? ''} ${formatCpf(r.cpf ?? '')}`).includes(
         normalizedName(search),
       ),
+  );
+  const laneRank = (r: DeskRow) =>
+    ({ desk: 0, triage: 1, service: 2, absent: 3, closed: 4 })[category(r)];
+  visible.sort(
+    (a, b) => laneRank(a) - laneRank(b) || a.row.arrivedAt.localeCompare(b.row.arrivedAt),
   );
   const act = async (command: Command, id: string, message: string) => {
     setBusy(id);
@@ -193,47 +206,38 @@ export function ReceptionDesk() {
           </button>
         </Notice>
       )}
-      <section className="desk-intro">
-        <span className="desk-intro-icon">
-          <UserCheck size={22} />
-        </span>
-        <div>
-          <h2>Totem e painel da unidade</h2>
-          <p>Teste a chegada e a chamada em outras abas deste navegador.</p>
-        </div>
-        <div className="row-actions">
-          <a
-            className="button secondary"
-            target="_blank"
-            rel="noreferrer"
-            href={externalRoute(`/totem?rede=${context.organizationId}&unidade=${context.unitId}`)}
-          >
-            <Ticket size={17} />
-            Abrir totem conectado
-          </a>
-          <a
-            className="button secondary"
-            target="_blank"
-            rel="noreferrer"
-            href={externalRoute(displayRoute(context.organizationId, context.unitId))}
-          >
-            <Monitor size={17} />
-            Abrir TV conectada
-          </a>
-        </div>
-      </section>
+
       <Panel
         title="Fila da recepção"
-        subtitle="Ordem de chegada. A equipe define a sequência de chamada e confere a preferência administrativa."
+        subtitle="As senhas do balcão aparecem primeiro, em ordem de chegada dentro de cada etapa."
       >
-        <div className="table-toolbar desk-toolbar">
+        <button
+          className="desk-filter-toggle"
+          aria-expanded={toolsOpen}
+          aria-controls="desk-query"
+          onClick={() => setToolsOpen(!toolsOpen)}
+        >
+          <span>{toolsOpen ? 'Recolher filtros' : 'Buscar ou alterar data'}</span>
+          <small>
+            {shortDate(day)} · {visible.length} {visible.length === 1 ? 'senha' : 'senhas'}
+            {search ? ' · busca ativa' : ''}
+          </small>
+        </button>
+        <div
+          id="desk-query"
+          className={'table-toolbar desk-toolbar ' + (toolsOpen ? 'expanded' : '')}
+        >
           <SearchField
             value={search}
             onChange={setSearch}
             placeholder="Buscar senha, nome ou CPF"
           />
           <Field label="Data das senhas">
-            <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+            <input
+              type="date"
+              value={day}
+              onChange={(e) => e.target.value && setDay(e.target.value)}
+            />
           </Field>
           <span className="result-count">{visible.length} senhas</span>
         </div>
@@ -362,6 +366,35 @@ export function ReceptionDesk() {
           />
         )}
       </Panel>
+      <section className="desk-intro">
+        <span className="desk-intro-icon">
+          <UserCheck size={22} />
+        </span>
+        <div>
+          <h2>Totem e painel da unidade</h2>
+          <p>Teste a chegada e a chamada em outras abas deste navegador.</p>
+        </div>
+        <div className="row-actions">
+          <a
+            className="button secondary"
+            target="_blank"
+            rel="noreferrer"
+            href={externalRoute(`/totem?rede=${context.organizationId}&unidade=${context.unitId}`)}
+          >
+            <Ticket size={17} />
+            Abrir totem conectado
+          </a>
+          <a
+            className="button secondary"
+            target="_blank"
+            rel="noreferrer"
+            href={externalRoute(displayRoute(context.organizationId, context.unitId))}
+          >
+            <Monitor size={17} />
+            Abrir TV conectada
+          </a>
+        </div>
+      </section>
       <Notice>
         A preferência administrativa é conferida no balcão. A triagem clínica é realizada pela
         equipe assistencial. Para testar a atualização entre telas, abra o totem e a TV pelos botões

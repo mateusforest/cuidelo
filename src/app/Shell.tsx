@@ -1,17 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useBlocker } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  CalendarDays,
-  Users,
-  ClipboardList,
-  BedDouble,
-  Pill,
   ArrowRightLeft,
-  Building2,
-  ShieldCheck,
-  Workflow,
-  Cable,
   HelpCircle,
   Menu,
   X,
@@ -20,93 +10,24 @@ import {
   Search,
   ChevronRight,
   Stethoscope,
-  Monitor,
-  SearchCheck,
-  HeartPulse,
-  Syringe,
-  Package,
+  MapPin,
+  Layers3,
 } from 'lucide-react';
-import { can, roleNames, type Permission } from '../domain/model';
+import {
+  navigation,
+  navItems,
+  stations,
+  resources,
+  allowedRoute,
+  routeInfo,
+  scopeLabel,
+} from './navigation';
+import { can, roleNames } from '../domain/model';
 import { useApp } from './context';
 import { Button, Modal, Notice } from '../components/ui';
 import { Access } from '../pages/Access';
 import { identityFor } from '../domain/access';
 
-const navigation = [
-  {
-    group: 'Acompanhar',
-    items: [
-      { path: '/', label: 'Início', icon: LayoutDashboard },
-      { path: '/modulos', label: 'Módulos e acompanhamentos', icon: Workflow },
-    ],
-  },
-  {
-    group: 'Assistência',
-    items: [
-      {
-        path: '/recepcao',
-        label: 'Recepção e atendimento',
-        icon: ClipboardList,
-        permission: 'queue',
-      },
-      { path: '/fila', label: 'Fila e salas', icon: Users, permission: 'queue' },
-      { path: '/agenda', label: 'Agenda', icon: CalendarDays, permission: 'schedule' },
-      { path: '/vacinacao', label: 'Sala de vacinação', icon: Syringe, permission: 'vaccination' },
-      {
-        path: '/escuta',
-        label: 'Escuta e sinais vitais',
-        icon: HeartPulse,
-        permission: 'clinical',
-      },
-      { path: '/exames', label: 'Exames e resultados', icon: Stethoscope, permission: 'clinical' },
-      { path: '/consultorio', label: 'Meu consultório', icon: Stethoscope, permission: 'clinical' },
-      { path: '/senhas', label: 'Painel de senhas', icon: Monitor, permission: 'queue' },
-      {
-        path: '/pessoas',
-        label: 'Pessoas e prontuários',
-        icon: Users,
-        permission: 'patients.read',
-      },
-      { path: '/hospital', label: 'Internação e leitos', icon: BedDouble, permission: 'beds' },
-    ],
-  },
-  {
-    group: 'Operação',
-    items: [
-      { path: '/farmacia', label: 'Farmácia e estoque', icon: Pill, permission: 'stock' },
-      {
-        path: '/vacinas-estoque',
-        label: 'Lotes de vacinas',
-        icon: Package,
-        permission: 'vaccine.stock',
-      },
-      { path: '/regulacao', label: 'Regulação', icon: ArrowRightLeft, permission: 'regulation' },
-    ],
-  },
-  {
-    group: 'Gestão',
-    items: [
-      { path: '/unidades', label: 'Unidades da rede', icon: Building2, permission: 'network' },
-      { path: '/vacinacao-rede', label: 'Vacinação da rede', icon: Syringe, permission: 'manage' },
-      {
-        path: '/auditoria',
-        label: 'Histórico de operações',
-        icon: ShieldCheck,
-        permission: 'manage',
-      },
-      {
-        path: '/desempenho',
-        label: 'Tempos e desempenho',
-        icon: LayoutDashboard,
-        permission: 'performance',
-      },
-      { path: '/dispositivos', label: 'Totem e TV', icon: Monitor, permission: 'devices' },
-      { path: '/integracoes', label: 'Integrações', icon: Cable },
-      { path: '/desenvolvimento', label: 'Plano de entrega', icon: Workflow },
-      { path: '/comparacao', label: 'Comparar com Pulso', icon: SearchCheck },
-    ],
-  },
-];
 export function Shell() {
   const { context, changeContext, data, repository, toast, dirty, setDirty, demoEntered } =
     useApp();
@@ -130,17 +51,52 @@ export function Shell() {
     window.addEventListener('beforeunload', fn);
     return () => window.removeEventListener('beforeunload', fn);
   }, [dirty]);
-  const current =
-    navigation.flatMap((g) => g.items).find((i) => i.path === location.pathname)?.label ??
-    (location.pathname.startsWith('/escuta/')
-      ? 'Escuta e sinais vitais'
-      : location.pathname.startsWith('/modulos/')
-        ? 'Módulos e acompanhamentos'
-        : location.pathname.startsWith('/paineis/')
-          ? 'Acompanhamento'
-          : location.pathname.startsWith('/atendimento/')
-            ? 'Atendimento'
-            : 'Pessoas e prontuários');
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (mobileOpen) {
+      const dialog = menuRef.current;
+      dialog?.showModal();
+      return () => {
+        dialog?.close();
+        triggerRef.current?.focus({ preventScroll: true });
+      };
+    }
+  }, [mobileOpen]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const media = window.matchMedia('(min-width: 901px)');
+    const close = () => {
+      if (media.matches) setMobileOpen(false);
+    };
+    media.addEventListener('change', close);
+    return () => media.removeEventListener('change', close);
+  }, [mobileOpen]);
+  const pageInfo = routeInfo(location.pathname, context.role),
+    current = pageInfo.label;
+  const daily = stations[context.role].filter((p) => allowedRoute(context.role, p));
+  const groups = [
+    {
+      group: 'Minha rotina',
+      items: daily.map(
+        (path) =>
+          navItems.find((i) => i.path === path) ?? {
+            path,
+            label: routeInfo(path).label,
+            icon: Layers3,
+          },
+      ),
+    },
+    ...navigation.map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (i) =>
+          !daily.includes(i.path) &&
+          !resources.includes(i.path) &&
+          allowedRoute(context.role, i.path),
+      ),
+    })),
+  ];
   const org = data.organizations.find((o) => o.id === context.organizationId);
   const identity = identityFor(repository.directory(), context);
   if (!demoEntered) return <Access resume={location.pathname !== '/'} />;
@@ -160,10 +116,8 @@ export function Shell() {
       </a>
       <div className="sidebar-divider" />
       <nav aria-label="Navegação principal">
-        {navigation.map((group) => {
-          const items = group.items.filter(
-            (item) => !('permission' in item) || can(context.role, item.permission as Permission),
-          );
+        {groups.map((group) => {
+          const items = group.items;
           return (
             items.length > 0 && (
               <div className="nav-group" key={group.group}>
@@ -172,29 +126,57 @@ export function Shell() {
                   <NavLink
                     key={path}
                     to={path}
+                    onClick={() => setMobileOpen(false)}
                     end={path === '/'}
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    className={() =>
+                      `nav-item ${location.pathname === path || (pageInfo.parent === path && !daily.includes(location.pathname)) ? 'active' : ''}`
+                    }
                   >
                     <Icon size={19} />
-                    <span>{label}</span>
+                    <span>{scopeLabel(path, label, context.role)}</span>
                   </NavLink>
                 ))}
               </div>
             )
           );
         })}
+        <details
+          className="project-tools"
+          key={resources.includes(location.pathname) ? 'project' : 'work'}
+          open={resources.includes(location.pathname) || undefined}
+        >
+          <summary>
+            <HelpCircle size={16} />
+            Sobre o projeto
+            <ChevronRight size={14} />
+          </summary>
+          {navItems
+            .filter((i) => resources.includes(i.path))
+            .map(({ path, label, icon: Icon }) => (
+              <NavLink
+                className={({ isActive }) => 'nav-item ' + (isActive ? 'active' : '')}
+                key={path}
+                to={path}
+                onClick={() => setMobileOpen(false)}
+              >
+                <Icon size={16} />
+                {label}
+              </NavLink>
+            ))}
+        </details>
       </nav>
       <div className="sidebar-bottom">
-        <div className="brand-promise">
-          Toda a rede.
-          <br />
-          <strong>Mais perto das pessoas.</strong>
-        </div>
-        <button className="nav-item help" onClick={() => setHelp(true)}>
+        <button
+          className="nav-item help"
+          onClick={() => {
+            setMobileOpen(false);
+            setHelp(true);
+          }}
+        >
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.23</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.24</span>
       </div>
     </>
   );
@@ -212,25 +194,42 @@ export function Shell() {
       </a>
       <aside className="sidebar">{navContent}</aside>
       {mobileOpen && (
-        <div className="mobile-overlay" onClick={() => setMobileOpen(false)}>
-          <aside className="mobile-sidebar" onClick={(e) => e.stopPropagation()}>
+        <dialog
+          id="station-menu"
+          ref={menuRef}
+          className="mobile-menu-dialog"
+          aria-label="Menu da estação"
+          onCancel={(e) => {
+            e.preventDefault();
+            setMobileOpen(false);
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMobileOpen(false);
+          }}
+        >
+          <aside className="mobile-sidebar">
             <button
               className="icon-button mobile-close"
-              onClick={() => setMobileOpen(false)}
               aria-label="Fechar menu"
+              autoFocus
+              onClick={() => setMobileOpen(false)}
             >
               <X size={20} />
             </button>
             {navContent}
           </aside>
-        </div>
+        </dialog>
       )}
       <div className="app-main">
         <header className="topbar">
           <div className="breadcrumb">
             <button
               className="icon-button menu-button"
+              ref={triggerRef}
               aria-label="Abrir menu"
+              aria-expanded={mobileOpen}
+              aria-haspopup="dialog"
+              aria-controls={mobileOpen ? 'station-menu' : undefined}
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={21} />
@@ -258,14 +257,19 @@ export function Shell() {
                 />
               </form>
             )}
-            <span className="environment-tag">
+            <button
+              className="environment-tag"
+              onClick={() => setHelp(true)}
+              aria-label="Demonstração · detalhes do ambiente"
+            >
               <span />
               Demonstração
-            </span>
+            </button>
           </div>
         </header>
         <div className="contextbar">
           <div className="context-selects">
+            <MapPin className="context-icon" size={17} aria-hidden="true" />
             <div>
               <small>
                 {context.role === 'business' ? 'Empresa' : 'Prefeitura / rede vinculada'}
@@ -309,21 +313,16 @@ export function Shell() {
               <strong>{roleNames[context.role]}</strong>
               <small>{identity.name}</small>
             </div>
-            <NavLink className="session-switch" to="/acesso" title="Trocar sessão de demonstração">
+            <NavLink
+              aria-label="Trocar sessão de demonstração"
+              className="session-switch"
+              to="/acesso"
+              title="Trocar sessão de demonstração"
+            >
               <ArrowRightLeft size={16} />
-              <span>Trocar sessão de demonstração</span>
+              <span>Trocar sessão</span>
             </NavLink>
           </div>
-        </div>
-        <div className="demo-strip">
-          <span>Dados fictícios para desenvolvimento.</span>{' '}
-          {repository.persistent
-            ? 'Alterações salvas somente neste navegador.'
-            : 'Sessão temporária; alterações não persistem ao fechar.'}
-          <button onClick={() => setHelp(true)}>
-            Entender o ambiente
-            <ChevronRight size={13} />
-          </button>
         </div>
         <main id="main-content" tabIndex={-1} className="main-content">
           {repository.recoveryMessage && <Notice tone="amber">{repository.recoveryMessage}</Notice>}
@@ -341,11 +340,15 @@ export function Shell() {
         </div>
       )}
       {help && (
-        <Modal title="Um ambiente para construir juntos" onClose={() => setHelp(false)}>
+        <Modal title="Sobre a demonstração" onClose={() => setHelp(false)}>
           <div className="modal-body">
             <p>
-              Esta é a primeira base de desenvolvimento da Cuidelo. Os nomes, pessoas, unidades e
-              registros apresentados são fictícios.
+              Os dados desta estação são fictícios.{' '}
+              {repository.persistent
+                ? 'O atendimento é salvo neste navegador.'
+                : 'O armazenamento local está indisponível nesta sessão.'}{' '}
+              TV pareada, relatórios compartilhados, orientações e avisos usam os serviços online da
+              demonstração.
             </p>
             <p>
               Você pode testar os fluxos e alternar entre redes e perfis. A entrada por sessões de
@@ -356,8 +359,8 @@ export function Shell() {
               conexão com Supabase, SUS, assinatura digital ou sistemas hospitalares.
             </Notice>
             <p>
-              O escopo de lançamento continua abrangendo toda a rede pública. O plano de entrega
-              acompanha o que já foi construído e o que ainda precisa de implementação e validação.
+              Consulte o mapa de cobertura para ver os módulos em desenvolvimento e as dependências
+              da implantação.
             </p>
           </div>
           <div className="modal-actions">

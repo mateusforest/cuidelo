@@ -320,6 +320,18 @@ export async function citizenRelay(req, res, cache, mailbox) {
     return send(400, { error: 'Mensagem inválida.' });
   }
   try {
+    if (b.op === 'health') {
+      // A consulta usa apenas endereços reservados, sem abrir a caixa de nenhuma pessoa.
+      const [sharing, inbox] = await Promise.allSettled([
+        cache.get('diagnostic:citizen'),
+        Promise.resolve().then(() => mailbox.read('diagnostic-availability')),
+      ]);
+      return send(200, {
+        service: 'citizen',
+        sharing: sharing.status === 'fulfilled',
+        inbox: inbox.status === 'fulfilled',
+      });
+    }
     const token = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization ?? '')?.[1] ?? '';
     const result = await citizenShare(
       b.op,

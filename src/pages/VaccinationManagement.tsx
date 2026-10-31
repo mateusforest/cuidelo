@@ -2,13 +2,14 @@ import { useApp } from '../app/context';
 import { Badge, EmptyState, Notice, PageHeader, Panel } from '../components/ui';
 
 export function VaccinationManagement() {
-  const { data, summary } = useApp();
+  const { data, summary, context } = useApp();
+  const unitOnly = context.unitId !== 'all';
   const v = summary.vaccination;
   return (
     <>
       <PageHeader
-        eyebrow="GESTÃO MUNICIPAL · IMUNIZAÇÃO"
-        title="Vacinação da rede"
+        eyebrow={unitOnly ? 'GESTÃO DA UNIDADE · IMUNIZAÇÃO' : 'GESTÃO MUNICIPAL · IMUNIZAÇÃO'}
+        title={unitOnly ? 'Vacinação da unidade' : 'Vacinação da rede'}
         description="Acompanhe a produção registrada e os retornos pendentes, por unidade."
       />
       <div className="vaccine-management-period">
@@ -19,7 +20,7 @@ export function VaccinationManagement() {
       </div>
       <div className="vaccine-metrics">
         <div>
-          <span>Aplicações na rede</span>
+          <span>{unitOnly ? 'Aplicações na unidade' : 'Aplicações na rede'}</span>
           <strong>{v.applied}</strong>
         </div>
         <div>

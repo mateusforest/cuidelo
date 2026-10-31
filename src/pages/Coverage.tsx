@@ -2,9 +2,9 @@ import { deliveryOrder } from '../data/delivery-order';
 import { normalizedName } from '../domain/identification';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, SearchCheck, FileCheck2 } from 'lucide-react';
+import { ArrowUpRight, FileCheck2 } from 'lucide-react';
 import inventory from '../data/pulso-inventory.json';
-import { Badge, Notice, PageHeader, Panel, SearchField } from '../components/ui';
+import { Badge, PageHeader, Panel, SearchField } from '../components/ui';
 
 const labels: Record<string, string> = {
   demonstravel: 'Demonstrável',
@@ -20,7 +20,10 @@ const tone = (status: string) =>
       : status === 'adaptado'
         ? ('blue' as const)
         : ('neutral' as const);
+import { useApp } from '../app/context';
+import { allowedRoute } from '../app/navigation';
 export function Coverage() {
+  const { context } = useApp();
   const [search, setSearch] = useState(''),
     [group, setGroup] = useState('Todas as áreas'),
     [status, setStatus] = useState('todos');
@@ -43,63 +46,10 @@ export function Coverage() {
         title="O que veio do Pulso"
         description="46 telas conferidas. Veja a cobertura atual e o que ainda precisa ser desenvolvido."
       />
-      <Notice tone="amber">
-        <SearchCheck size={20} />
-        <div>
-          <strong>A base atual ainda não reproduz todo o Pulso.</strong>
-          <p>
-            O mapa abaixo mantém cada tela do original como referência. “Parcial” indica que o
-            percurso ainda está incompleto; “demonstrável” descreve esta versão local, sem
-            homologação para atendimento.
-          </p>
-        </div>
-      </Notice>
-      <Panel
-        title="Primeira entrega · da escuta ao consultório"
-        subtitle="Prioridade 01 e 02 de 44 · Escuta inicial e Fila e salas"
-      >
-        <div className="panel-body">
-          <p>
-            <strong>01 · Escuta inicial — demonstrável no fluxo manual.</strong> Registre a
-            classificação e o prazo de reavaliação. Encaminhe para consultório, enfermagem,
-            vacinação ou farmácia. O destino pode receber, devolver ou concluir a passagem. A escuta
-            também pode terminar com orientação confirmada.
-          </p>
-          <p>
-            <strong>02 · Fila e salas — demonstrável.</strong> A equipe reserva e libera os
-            consultórios e as salas de triagem, enfermagem, vacinação e farmácia conforme os
-            serviços da unidade. Uma TV pareada em outro equipamento recebe a senha e o destino pela
-            internet.
-          </p>
-          <p>
-            <strong>03 · Consultório — demonstrável.</strong> Teste a chamada, o registro de
-            entrada, a avaliação SOAP com CIAP-2 ou CID-10 e os documentos do médico. A conclusão
-            libera a sala e deixa a consulta disponível no histórico da prefeitura.
-          </p>
-          <p>
-            Restam {inventory.rows.filter((r) => r.status === 'parcial').length} percursos parciais.
-            Farmácia e agenda são os próximos percursos do atendimento da unidade. Protocolos e
-            regras clínicas dependem de validação institucional.
-          </p>
-          <button
-            className="button secondary"
-            onClick={() => {
-              setStatus('parcial');
-              setGroup('Todas as áreas');
-              setSearch('');
-              document.getElementById('coverage-list')?.scrollIntoView({ block: 'start' });
-            }}
-          >
-            Ver percursos parciais em ordem de entrega
-          </button>
-          <Link className="row-link" to="/acesso">
-            Conhecer os acessos
-          </Link>
-        </div>
-      </Panel>
       <div className="coverage-stats">
         {Object.entries(labels).map(([key, label]) => (
           <button
+            aria-pressed={status === key}
             className={status === key ? 'selected' : ''}
             onClick={() => setStatus(status === key ? 'todos' : key)}
             key={key}
@@ -109,6 +59,21 @@ export function Coverage() {
           </button>
         ))}
       </div>
+      <p className="connection-foot">
+        A cobertura descreve os percursos disponíveis com dados fictícios. Escolha uma situação para
+        filtrar as telas.
+      </p>
+      <button
+        className="button secondary"
+        onClick={() => {
+          setStatus('parcial');
+          setGroup('Todas as áreas');
+          setSearch('');
+          document.getElementById('coverage-list')?.scrollIntoView({ block: 'start' });
+        }}
+      >
+        Ver percursos parciais em ordem de entrega
+      </button>
       <Panel
         title="Conferência tela por tela"
         subtitle="A contagem compara telas do protótipo; não mede percentual de conclusão do produto."
@@ -156,11 +121,13 @@ export function Coverage() {
                   </td>
                   <td>
                     <Badge tone={tone(row.status)}>{labels[row.status]}</Badge>
-                    {row.route && (
+                    {row.route && allowedRoute(context.role, row.route) ? (
                       <Link to={row.route} className="row-link">
                         Ver base atual
                         <ArrowUpRight size={14} />
                       </Link>
+                    ) : (
+                      <small className="cell-secondary">Disponível em outro perfil</small>
                     )}
                   </td>
                   <td>{row.note}</td>
@@ -175,6 +142,30 @@ export function Coverage() {
           </p>
         )}
       </Panel>
+      <details className="coverage-context">
+        <summary>Percursos já demonstráveis no atendimento</summary>{' '}
+        <p>
+          <strong>01 · Escuta inicial — demonstrável no fluxo manual.</strong> Registre a
+          classificação e o prazo de reavaliação. Encaminhe para consultório, enfermagem, vacinação
+          ou farmácia. O destino pode receber, devolver ou concluir a passagem. A escuta também pode
+          terminar com orientação confirmada.
+        </p>
+        <p>
+          <strong>02 · Fila e salas — demonstrável.</strong> A equipe reserva e libera os
+          consultórios e as salas de triagem, enfermagem, vacinação e farmácia conforme os serviços
+          da unidade. Uma TV pareada em outro equipamento recebe a senha e o destino pela internet.
+        </p>
+        <p>
+          <strong>03 · Consultório — demonstrável.</strong> Teste a chamada, o registro de entrada,
+          a avaliação SOAP com CIAP-2 ou CID-10 e os documentos do médico. A conclusão libera a sala
+          e deixa a consulta disponível no histórico da prefeitura.
+        </p>
+        <p>
+          Restam {inventory.rows.filter((r) => r.status === 'parcial').length} percursos parciais.
+          Farmácia e agenda são os próximos percursos do atendimento da unidade. Protocolos e regras
+          clínicas dependem de validação institucional.
+        </p>
+      </details>
       <div className="coverage-extra">
         <FileCheck2 size={24} />
         <div>

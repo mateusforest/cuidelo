@@ -29,7 +29,8 @@ export async function selectSession(
     await page
       .getByLabel('Prefeitura de demonstração', { exact: true })
       .selectOption(organizationId);
-    await page.getByLabel('Unidade da sessão', { exact: true }).selectOption(unitId);
+    if (role !== 'manager')
+      await page.getByLabel('Unidade da sessão', { exact: true }).selectOption(unitId);
   }
   const sessionId =
     role === 'business'

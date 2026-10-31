@@ -319,7 +319,7 @@ function parseDatabase(value: string): Database {
     typed.appointments.some(
       (r) =>
         !strings(r, ['patientId', 'unitId', 'professional', 'service', 'date', 'time']) ||
-        !['scheduled', 'checked-in', 'cancelled'].includes(r.status) ||
+        !['scheduled', 'checked-in', 'cancelled', 'missed'].includes(r.status) ||
         !Number.isInteger(r.duration) ||
         r.duration <= 0,
     )

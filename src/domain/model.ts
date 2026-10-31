@@ -71,7 +71,13 @@ export interface RecordChange<T> {
   before: T;
   after: T;
 }
-export type AppointmentStatus = 'scheduled' | 'checked-in' | 'cancelled';
+export const appointmentStatusNames = {
+  scheduled: 'Agendado',
+  'checked-in': 'Chegada confirmada',
+  cancelled: 'Cancelado',
+  missed: 'Falta registrada',
+} as const;
+export type AppointmentStatus = keyof typeof appointmentStatusNames;
 export interface Appointment extends Scoped {
   unitId: string;
   patientId: string;
@@ -84,6 +90,7 @@ export interface Appointment extends Scoped {
   cancellationReason?: string;
   encounterId?: string;
   reschedules?: RecordChange<AppointmentSlot>[];
+  absenceHistory?: RecordChange<{ missed: boolean }>[];
 }
 export type AppointmentSlot = Pick<
   Appointment,
@@ -627,6 +634,14 @@ export type Command =
       date: string;
       time: string;
       duration: number;
+    }
+  | {
+      type: 'appointment.absence';
+      id: string;
+      missed: boolean;
+      reason: string;
+      expectedCount: number;
+      expectedSlotChanges: number;
     }
   | { type: 'appointment.cancel'; id: string; reason: string }
   | { type: 'appointment.checkIn'; id: string; kioskEncounterId?: string }

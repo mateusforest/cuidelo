@@ -86,6 +86,10 @@ export async function tvRelay(req, res, cache) {
   }
   const token = String(req.headers.authorization ?? '').replace(/^Bearer /, '');
   try {
+    if (obj(b, ['op']) && b.op === 'health') {
+      await cache.get('diagnostic:tv');
+      return send(200, { service: 'tv', available: true });
+    }
     if (obj(b, ['op']) && b.op === 'read') {
       if (!/^[A-F0-9]{16}$/.test(token)) return send(400, { error: 'Código inválido.' });
       const item = await cache.get('screen:' + token);

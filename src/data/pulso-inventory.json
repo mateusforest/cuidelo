@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.16. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.24. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -111,7 +111,7 @@
       "group": "UBS e assistência",
       "status": "demonstravel",
       "route": "/consultorio",
-      "note": "Chamada e rechamada, devolução, entrada em sala e cronômetro. SOAP com CIAP-2 ou CID-10 selecionados pelo profissional ou justificativa sem código. Receitas, exames, encaminhamentos, atestados e declarações demonstrativos. Conclusão preservada com liberação da sala, histórico da prefeitura e adendos. Catálogo integral, receituários especiais, validações clínicas, assinatura e envio oficial seguem pendentes."
+      "note": "Chamada e rechamada, devolução, entrada em sala e cronômetro. SOAP com CIAP-2 ou CID-10 selecionados pelo profissional ou justificativa sem código. Receitas, exames, encaminhamentos, atestados e declarações demonstrativos. Conclusão preservada com liberação da sala, histórico da prefeitura e adendos. A equipe pode revisar o relatório do Dia a dia, enviar orientação e consultar a confirmação de leitura. Catálogo integral, receituários especiais, validações clínicas, assinatura e envio oficial seguem pendentes."
     },
     {
       "id": "vacina",
@@ -159,7 +159,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/agenda",
-      "note": "Agenda organizada por data, profissional, busca e situação, com criação, remarcação justificada e histórico de horários/autoria, conflitos de pessoa e profissional, cancelamento e chegada. Chegadas identificadas pelo totem podem ser vinculadas ao horário confirmado. Faltam gestão de faltas, disponibilidade por profissional e lembretes enviados."
+      "note": "Agenda organizada por data, profissional, busca e situação, com criação, remarcação justificada e histórico de horários/autoria, conflitos de pessoa e profissional, cancelamento e chegada. Chegadas identificadas pelo totem podem ser vinculadas ao horário confirmado. A falta pode ser registrada após o fim do horário e corrigida com autoria e motivo. O app do cidadão exibe a situação. Faltam a oferta de vagas por escala e o envio de lembretes de agendamento."
     },
     {
       "id": "visao",

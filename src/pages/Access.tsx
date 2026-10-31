@@ -19,9 +19,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { demoIdentities } from '../domain/access';
-import { can, roleNames, type Permission, type Role } from '../domain/model';
+import { can, roleNames, type Role } from '../domain/model';
 import { useApp } from '../app/context';
-import { Button, Field, Notice, PageHeader } from '../components/ui';
+import { Button, Field, PageHeader } from '../components/ui';
+import { navItems, stations, shortcuts } from '../app/navigation';
+import { dateKey } from '../domain/dates';
 import { displayRoute } from '../app/links';
 
 const accessRoles: {
@@ -234,33 +236,43 @@ export function Access({ resume = false }: { resume?: boolean }) {
               <div className="access-context-fields">
                 <Field label="Prefeitura de demonstração">
                   <select
-                    value={org}
+                    value={role === 'business' ? 'cuidelo' : org}
                     disabled={role === 'business'}
                     onChange={(e) => {
                       setOrg(e.target.value);
                       setUnit(directory.units.find((u) => u.organizationId === e.target.value)!.id);
                     }}
                   >
-                    {directory.organizations.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.shortName}
-                      </option>
-                    ))}
+                    {role === 'business' ? (
+                      <option value="cuidelo">Cuidelo</option>
+                    ) : (
+                      directory.organizations.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.shortName}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </Field>
                 <Field label="Unidade da sessão">
                   <select
-                    value={unit}
-                    disabled={role === 'business'}
+                    value={role === 'manager' ? 'all' : role === 'business' ? 'office' : unit}
+                    disabled={role === 'business' || role === 'manager'}
                     onChange={(e) => setUnit(e.target.value)}
                   >
-                    {directory.units
-                      .filter((u) => u.organizationId === org)
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
-                        </option>
-                      ))}
+                    {role === 'manager' ? (
+                      <option value="all">Todas as unidades</option>
+                    ) : role === 'business' ? (
+                      <option value="office">Sem unidade assistencial</option>
+                    ) : (
+                      directory.units
+                        .filter((u) => u.organizationId === org)
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))
+                    )}
                   </select>
                 </Field>
               </div>
@@ -332,117 +344,91 @@ export function Access({ resume = false }: { resume?: boolean }) {
     </main>
   );
 }
-const shortcuts: { path: string; title: string; detail: string; permission: Permission }[] = [
-  {
-    path: '/recepcao',
-    title: 'Recepção',
-    detail: 'Identificar chegadas, conferir senhas e acompanhar a fila.',
-    permission: 'queue',
-  },
-  {
-    path: '/consultorio',
-    title: 'Meu consultório',
-    detail: 'Chamar na TV e registrar o início e fim de cada consulta.',
-    permission: 'clinical',
-  },
-  {
-    path: '/exames',
-    title: 'Exames e resultados',
-    detail: 'Acompanhar pedidos, resultados recebidos e revisão médica.',
-    permission: 'clinical',
-  },
-  {
-    path: '/escuta',
-    title: 'Escuta e sinais vitais',
-    detail: 'Registrar o acolhimento antes da consulta.',
-    permission: 'clinical',
-  },
-  {
-    path: '/agenda',
-    title: 'Agenda',
-    detail: 'Marcar horários e confirmar chegadas.',
-    permission: 'schedule',
-  },
-  {
-    path: '/hospital',
-    title: 'Internação e leitos',
-    detail: 'Acompanhar admissões, saídas e disponibilidade.',
-    permission: 'beds',
-  },
-  {
-    path: '/vacinacao',
-    title: 'Vacinação',
-    detail: 'Aplicações, caderneta e retornos.',
-    permission: 'vaccination',
-  },
-  {
-    path: '/farmacia',
-    title: 'Farmácia',
-    detail: 'Conferir receitas, registrar entregas e controlar lotes.',
-    permission: 'stock',
-  },
-  {
-    path: '/regulacao',
-    title: 'Regulação',
-    detail: 'Solicitações e encaminhamentos da unidade.',
-    permission: 'regulation',
-  },
-  {
-    path: '/desempenho',
-    title: 'Tempos e desempenho',
-    detail: 'Espera, escuta e tempo em consultório.',
-    permission: 'performance',
-  },
-  {
-    path: '/dispositivos',
-    title: 'Totem e TV',
-    detail: 'Abrir as telas públicas desta unidade.',
-    permission: 'devices',
-  },
-];
 export function WorkspaceHome() {
   const { context, data, summary } = useApp();
+  const actions = shortcuts
+    .filter((s) => can(context.role, s.permission))
+    .sort((a, b) => {
+      const priority = (path: string) => {
+        const i = stations[context.role].indexOf(path);
+        return i < 0 ? 100 : i;
+      };
+      return priority(a.path) - priority(b.path);
+    });
+  const primary = actions.find((s) => s.path === stations[context.role][0]) ?? actions[0];
+  const metrics =
+    context.role === 'pharmacy'
+      ? [
+          ['Receitas da unidade', data.pharmacyPrescriptions.length],
+          ['Dispensações registradas', data.dispensations.length],
+          ['Lotes em atenção', summary.stockAlerts],
+        ]
+      : context.role === 'regulation'
+        ? [
+            ['Encaminhamentos', data.referrals.length],
+            ['Pendentes', summary.pendingReferrals],
+            ['Agendamentos de hoje', data.appointments.filter((a) => a.date === dateKey()).length],
+          ]
+        : [
+            ['Chegadas hoje', summary.today],
+            ['Aguardando', summary.waiting],
+            ['Em cuidado', summary.inCare],
+          ];
   return (
-    <>
+    <div className="station-home">
       <PageHeader
         eyebrow={roleNames[context.role]}
         title={data.units.find((u) => u.id === context.unitId)?.name ?? 'Minha unidade'}
-        description="Seu espaço de trabalho. As operações ficam vinculadas a esta unidade."
+        description="Ações e indicadores da sua estação de trabalho."
       />
-      <div className="flow-stats">
-        <article>
-          <small>Chegadas hoje</small>
-          <strong>{summary.today}</strong>
-        </article>
-        <article>
-          <small>Aguardando</small>
-          <strong>{summary.waiting}</strong>
-        </article>
-        <article>
-          <small>Em cuidado</small>
-          <strong>{summary.inCare}</strong>
-        </article>
-      </div>
-      <div className="identity-grid">
-        {shortcuts
-          .filter((s) => can(context.role, s.permission))
-          .map((s) => (
-            <Link className="identity-card workspace-link" to={s.path} key={s.path}>
-              <h2>{s.title}</h2>
-              <p>{s.detail}</p>
-              <ArrowRight size={22} />
-            </Link>
-          ))}
-      </div>
-      <Link to="/modulos" className="button secondary">
-        Abrir módulos e acompanhamentos
-      </Link>
-      {can(context.role, 'clinical') && (
-        <Notice>
-          O histórico clínico reúne as unidades desta prefeitura. As chamadas, os registros e as
-          filas pertencem à sua unidade atual.
-        </Notice>
+      {primary && (
+        <section className="station-lead">
+          <div>
+            <span className="station-label">Área principal</span>
+            <h2>{primary.title}</h2>
+            <p>{primary.detail}</p>
+          </div>
+          <Link className="button primary" to={primary.path}>
+            Abrir {primary.title}
+            <ArrowRight size={17} />
+          </Link>
+        </section>
       )}
-    </>
+      <div className="station-metrics">
+        {metrics.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <section className="catalog-section">
+        <div className="section-caption">
+          <h2>Outras áreas da unidade</h2>
+          <Link to="/modulos">
+            Ver catálogo <ChevronRight size={15} />
+          </Link>
+        </div>
+        <div className="catalog-grid">
+          {actions
+            .filter((s) => s !== primary)
+            .map((s) => {
+              const Icon = navItems.find((x) => x.path === s.path)?.icon ?? ClipboardList;
+              return (
+                <Link className="catalog-tile" to={s.path} key={s.path}>
+                  <span className="catalog-icon">
+                    <Icon size={19} />
+                  </span>
+                  <div>
+                    <strong>{s.title}</strong>
+                    <small>{s.detail}</small>
+                  </div>
+                  <ChevronRight size={16} />
+                </Link>
+              );
+            })}
+        </div>
+      </section>
+    </div>
   );
 }

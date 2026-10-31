@@ -7,11 +7,90 @@ import { registrationOf, slotOf, validateAdministrativeHistory } from './adminis
 import { intakeQueueState } from './intake';
 import type { Command, Database, PatientRegistration } from './model';
 import { demoCpf } from './identification';
+import { citizenView } from './citizen';
 
 const now = new Date('2026-10-29T15:00:00Z');
 const reception = demoContext('aurora', 'aurora-centro', 'reception');
 const doctor = demoContext('aurora', 'aurora-centro', 'clinical');
 const pharmacy = demoContext('aurora', 'aurora-centro', 'pharmacy');
+describe('faltas na agenda', () => {
+  const record = {
+    type: 'appointment.absence',
+    id: 'aurora-centro-a0',
+    missed: true,
+    expectedCount: 0,
+    expectedSlotChanges: 0,
+    reason: 'Conferência no balcão fictício.',
+  } as const;
+  it('preserva registro e correção, compartilha só a situação e impede repetição', () => {
+    const db = createSeed(now),
+      appointment = db.appointments.find((a) => a.id === record.id)!;
+    applyCommand(db, reception, record, now);
+    const external = citizenView(db, doctor, appointment.patientId, now).appointments.find(
+      (a) => a.id === record.id,
+    )!;
+    expect(external.status).toBe('missed');
+    expect(external).not.toHaveProperty('absenceHistory');
+    expect(() => applyCommand(db, reception, record, now)).toThrow();
+    expect(() =>
+      applyCommand(db, reception, { type: 'appointment.checkIn', id: record.id }, now),
+    ).toThrow();
+    expect(() => applyCommand(db, reception, { ...record, missed: false }, now)).toThrow();
+    applyCommand(
+      db,
+      reception,
+      { ...record, missed: false, expectedCount: 1, reason: 'Conferência corrigida.' },
+      now,
+    );
+    expect(appointment.status).toBe('scheduled');
+    expect(appointment.absenceHistory?.map((i) => [i.after.missed, i.actorId])).toEqual([
+      [true, reception.sessionId],
+      [false, reception.sessionId],
+    ]);
+    validateAdministrativeHistory(db);
+    applyCommand(
+      db,
+      reception,
+      { type: 'appointment.cancel', id: record.id, reason: 'Novo horário será definido.' },
+      now,
+    );
+    validateAdministrativeHistory(db);
+    appointment.absenceHistory![0].author = 'Outra estação';
+    expect(() => validateAdministrativeHistory(db)).toThrow();
+  });
+  it('bloqueia antecipação, revisão desatualizada, chegada do totem, autoria inválida e outra unidade ou rede', () => {
+    const db = createSeed(now),
+      a = db.appointments.find((a) => a.id === record.id)!;
+    for (const other of [
+      pharmacy,
+      demoContext('aurora', 'aurora-vila', 'reception'),
+      demoContext('horizonte', 'horizonte-centro', 'reception'),
+    ]) {
+      expect(() => applyCommand(db, other, record, now)).toThrow();
+    }
+    expect(() => applyCommand(db, reception, record, new Date(a.date + 'T09:29:59-03:00'))).toThrow(
+      /fim do horário/,
+    );
+    expect(() => applyCommand(db, reception, { ...record, expectedSlotChanges: 1 }, now)).toThrow();
+    expect(() => applyCommand(db, reception, { ...record, reason: '  ' }, now)).toThrow();
+    db.encounters.push({
+      ...db.encounters[0],
+      id: 'teste-chegada',
+      patientId: a.patientId,
+      unitId: a.unitId,
+      organizationId: a.organizationId,
+      arrivedAt: now.toISOString(),
+      status: 'waiting',
+      source: 'kiosk',
+      service: a.service,
+      intakeStartedAt: undefined,
+    });
+    expect(() => applyCommand(db, reception, record, now)).toThrow(/totem/);
+    expect(a.absenceHistory).toBeUndefined();
+    a.status = 'missed';
+    expect(() => validateAdministrativeHistory(db)).toThrow(/Falta sem registro/);
+  });
+});
 const update = (
   db: Database,
   values: Partial<PatientRegistration> = {},

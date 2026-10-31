@@ -4,7 +4,7 @@ import { Plus, ArrowRight, ClipboardCheck, Download } from 'lucide-react';
 import { useApp } from '../app/context';
 import { normalizedName } from '../domain/identification';
 import { demoIdentities } from '../domain/access';
-import { can, type Permission, type WorkRecord } from '../domain/model';
+import { can, type WorkRecord } from '../domain/model';
 import { workModules, type WorkModule } from '../domain/work-modules';
 import { dateKey, shortDate, clockTime } from '../domain/dates';
 import {
@@ -20,108 +20,134 @@ import {
   Badge,
 } from '../components/ui';
 
-const reportLinks: { id: string; title: string; description: string; permission: Permission }[] = [
-  {
-    id: 'prenatal-municipio',
-    title: 'Pré-natal da rede',
-    description: 'Acompanhamentos ativos e encontros registrados por unidade.',
-    permission: 'manage',
-  },
-  {
-    id: 'relatorios',
-    title: 'Relatórios da operação',
-    description: 'Conferir e exportar os indicadores locais da rede ou unidade.',
-    permission: 'manage',
-  },
-  {
-    id: 'campo-hoje',
-    title: 'Meu dia no território',
-    description: 'Visitas planejadas e pendências das famílias.',
-    permission: 'territory',
-  },
-  {
-    id: 'campo-mapa',
-    title: 'Microáreas e roteiro',
-    description: 'Organizar domicílios por microárea e planejar visitas.',
-    permission: 'territory',
-  },
-  {
-    id: 'campo-envios',
-    title: 'Registros e sincronização',
-    description: 'Conferir os registros locais e as dependências de envio.',
-    permission: 'territory',
-  },
-  {
-    id: 'campo-mes',
-    title: 'Produção do agente',
-    description: 'Visitas, ausências e famílias acompanhadas no período.',
-    permission: 'territory',
-  },
-  {
-    id: 'bo-resumo',
-    title: 'Resumo da empresa',
-    description: 'Carteira, contratos, recebimentos e implantação.',
-    permission: 'business',
-  },
-  {
-    id: 'bo-uso',
-    title: 'Acompanhamento dos clientes',
-    description: 'Unidades previstas, implantação e chamados da carteira.',
-    permission: 'business',
-  },
-];
+import {
+  reportLinks,
+  navigation,
+  resources,
+  allowedRoute,
+  shortcuts,
+  scopeLabel,
+} from '../app/navigation';
 export function ModulesHub() {
   const { context } = useApp();
-  const modules = workModules.filter((m) => can(context.role, m.permission));
-  const groups = [...new Set(modules.map((m) => m.group))];
+  const [search, setSearch] = useState(''),
+    [selected, setSelected] = useState('');
+  const entries = [
+    ...navigation.flatMap((g) =>
+      g.items
+        .filter(
+          (i) =>
+            i.path !== '/' &&
+            i.path !== '/modulos' &&
+            !resources.includes(i.path) &&
+            allowedRoute(context.role, i.path),
+        )
+        .map((i) => ({
+          path: i.path,
+          title: scopeLabel(i.path, i.label, context.role),
+          detail:
+            shortcuts.find((s) => s.path === i.path)?.detail ??
+            scopeLabel(i.path, i.label, context.role),
+          group: g.group,
+          icon: i.icon,
+        })),
+    ),
+    ...reportLinks
+      .filter((r) => can(context.role, r.permission))
+      .map((r) => ({
+        path: '/paineis/' + r.id,
+        title: scopeLabel('/paineis/' + r.id, r.title, context.role),
+        detail: r.description,
+        group: 'Painéis',
+        icon: ClipboardCheck,
+      })),
+    ...workModules
+      .filter((m) => can(context.role, m.permission))
+      .map((m) => ({
+        path: '/modulos/' + m.id,
+        title: m.title,
+        detail: m.description,
+        group: m.group,
+        icon: ClipboardCheck,
+      })),
+  ];
+  const groups = [...new Set(entries.map((e) => e.group))];
+  const filtered = entries.filter(
+    (e) =>
+      (!selected || e.group === selected) &&
+      normalizedName(e.title + ' ' + e.detail + ' ' + e.group).includes(normalizedName(search)),
+  );
   return (
-    <>
+    <div className="catalog-page">
       <PageHeader
-        eyebrow={context.role === 'business' ? 'ADMINISTRAÇÃO DA CUIDELO' : 'ÁREAS DE TRABALHO'}
+        eyebrow="Áreas de trabalho"
         title={context.role === 'business' ? 'Operação da Cuidelo' : 'Módulos e acompanhamentos'}
-        description={
-          context.role === 'business'
-            ? 'A carteira comercial fica separada dos dados de saúde das prefeituras.'
-            : 'Registros, tarefas e acompanhamento conforme o acesso da sua sessão.'
-        }
+        description="Encontre os serviços e painéis disponíveis para este perfil."
       />
-      <div className="identity-grid">
-        {reportLinks
-          .filter((r) => can(context.role, r.permission))
-          .map((r) => (
-            <Link className="identity-card workspace-link" key={r.id} to={`/paineis/${r.id}`}>
-              <ClipboardCheck size={25} />
-              <h2>{r.title}</h2>
-              <p>{r.description}</p>
-              <ArrowRight size={20} />
-            </Link>
-          ))}
+      <div className="catalog-toolbar">
+        <SearchField value={search} onChange={setSearch} placeholder="Buscar módulo ou atividade" />
+        <Field label="Grupo de módulos">
+          <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+            <option value="">Todos os grupos</option>
+            {groups.map((g) => (
+              <option key={g}>{g}</option>
+            ))}
+          </select>
+        </Field>
+        <span role="status">
+          {filtered.length} de {entries.length} áreas
+        </span>
       </div>
-      {groups.map((group) => (
-        <section key={group}>
-          <h2>{group}</h2>
-          <div className="identity-grid">
-            {modules
-              .filter((m) => m.group === group)
-              .map((m) => (
-                <Link to={`/modulos/${m.id}`} className="identity-card workspace-link" key={m.id}>
-                  <h2>{m.title}</h2>
-                  <p>{m.description}</p>
-                  <ArrowRight size={20} />
-                </Link>
-              ))}
-          </div>
-        </section>
-      ))}
-      {!groups.length && (
+      {groups.map((g) => {
+        const rows = filtered.filter((e) => e.group === g);
+        return (
+          rows.length > 0 && (
+            <section key={g} className="catalog-section">
+              <div className="section-caption">
+                <h2>{g}</h2>
+                <span>
+                  {rows.length} {rows.length === 1 ? 'área' : 'áreas'}
+                </span>
+              </div>
+              <div className="catalog-grid">
+                {rows.map(({ icon: Icon, ...item }) => (
+                  <Link className="catalog-tile" to={item.path} key={item.path}>
+                    <span className="catalog-icon">
+                      <Icon size={19} />
+                    </span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      {item.detail !== item.title && <small>{item.detail}</small>}
+                    </div>
+                    <ArrowRight size={15} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )
+        );
+      })}
+      {!filtered.length && (
         <EmptyState
-          title="Nenhum acompanhamento adicional neste perfil"
-          description="Use os fluxos disponíveis no menu da sua unidade."
+          title="Nenhuma área encontrada"
+          description="Ajuste a busca ou escolha outro grupo."
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setSelected('');
+                setSearch('');
+              }}
+            >
+              Limpar filtros
+            </Button>
+          }
         />
       )}
-    </>
+    </div>
   );
 }
+
 function recordTitle(
   r: WorkRecord,
   records: WorkRecord[],
@@ -534,7 +560,7 @@ export function WorkReport() {
     <ReportBody
       key={`${id}:${context.sessionId}:${context.unitId}`}
       id={report.id}
-      title={report.title}
+      title={scopeLabel('/paineis/' + report.id, report.title, context.role)}
       description={report.description}
     />
   );

@@ -42,6 +42,7 @@ import './styles/care-workspaces.css';
 import './styles/continuity-workspaces.css';
 import './styles/unit-queue.css';
 import './styles/paired-tv.css';
+import './styles/workspace.css';
 import { Access, WorkspaceHome } from './pages/Access';
 import { Devices, Kiosk } from './pages/Kiosk';
 import { ConsultingRoom, Performance } from './pages/PatientFlow';

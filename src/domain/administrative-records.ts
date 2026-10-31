@@ -9,7 +9,7 @@ import {
   type PatientRegistration,
   type RecordChange,
 } from './model';
-import { dateKey, minuteOfDay, validDay, validTime } from './dates';
+import { clockTime, dateKey, minuteOfDay, validDay, validTime } from './dates';
 import { cpfDigits, validCpf, normalizedName } from './identification';
 import { identityFor, demoIdentities } from './access';
 import { DomainError } from './errors';
@@ -75,6 +75,61 @@ function validSlot(values: AppointmentSlot): AppointmentSlot {
   );
   return { professional, service, date: values.date, time: values.time, duration: values.duration };
 }
+export function slotHasEnded(a: Appointment, now = new Date()) {
+  const day = dateKey(now);
+  return (
+    a.date < day ||
+    (a.date === day &&
+      minuteOfDay(clockTime(now.toISOString())) >= minuteOfDay(a.time) + a.duration)
+  );
+}
+
+export function changeAppointmentAbsence(
+  db: Database,
+  c: Context,
+  command: Extract<import('./model').Command, { type: 'appointment.absence' }>,
+  now: Date,
+) {
+  ensure(can(c.role, 'schedule'), 'Este perfil não tem acesso a esta operação.');
+  const a = db.appointments.find(
+    (a) => a.id === command.id && a.organizationId === c.organizationId && a.unitId === c.unitId,
+  );
+  ensure(a, 'Agendamento não encontrado nesta unidade.');
+  ensure(
+    typeof command.missed === 'boolean' &&
+      !a.encounterId &&
+      a.status === (command.missed ? 'scheduled' : 'missed'),
+    'A situação do agendamento mudou. Confira a agenda.',
+  );
+  ensure(
+    command.expectedCount === (a.absenceHistory?.length ?? 0) &&
+      command.expectedSlotChanges === (a.reschedules?.length ?? 0),
+    'O agendamento foi atualizado. Reabra o registro.',
+  );
+  if (command.missed) {
+    ensure(slotHasEnded(a, now), 'Registre a falta após o fim do horário agendado.');
+    ensure(
+      !db.encounters.some(
+        (e) =>
+          matchesKioskAppointment(a, e, a.date) &&
+          !db.appointments.some((other) => other.encounterId === e.id),
+      ),
+      'Há uma chegada do totem para este serviço. Confira a senha na recepção.',
+    );
+  }
+  const entry = change(
+    db,
+    c,
+    { missed: !command.missed },
+    { missed: command.missed },
+    command.reason,
+    now,
+  );
+  a.absenceHistory = [...(a.absenceHistory ?? []), entry];
+  a.status = command.missed ? 'missed' : 'scheduled';
+  return a.id;
+}
+
 export function matchesKioskAppointment(
   appointment: Appointment,
   encounter: Encounter,
@@ -288,7 +343,21 @@ export function validateAdministrativeHistory(db: Database) {
       (v) => validateRegistration(v, dateKey()),
       ['name', 'socialName', 'birthDate', 'phone', 'cpf'],
     );
-  for (const a of db.appointments)
+  for (const a of db.appointments) {
+    const first = a.absenceHistory?.[0];
+    ensure(!first || first.before?.missed === false, 'Origem do histórico de faltas inválida.');
+    ensure(a.status !== 'missed' || first, 'Falta sem registro de autoria.');
+    history(
+      a.absenceHistory,
+      { missed: a.status === 'missed' },
+      a.organizationId,
+      (v) => {
+        ensure(typeof v.missed === 'boolean', 'Situação de falta inválida.');
+        return { missed: v.missed };
+      },
+      ['missed'],
+      a.unitId,
+    );
     history(
       a.reschedules,
       slotOf(a),
@@ -297,4 +366,5 @@ export function validateAdministrativeHistory(db: Database) {
       ['professional', 'service', 'date', 'time', 'duration'],
       a.unitId,
     );
+  }
 }

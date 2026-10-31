@@ -168,7 +168,7 @@ export async function openCitizenLink(
         !validDay(a.date) ||
         !validTime(a.time) ||
         !Number.isFinite(a.duration) ||
-        !['scheduled', 'checked-in', 'cancelled'].includes(a.status)
+        !['scheduled', 'checked-in', 'cancelled', 'missed'].includes(a.status)
       )
         throw Error();
     for (const d of v.documents) {

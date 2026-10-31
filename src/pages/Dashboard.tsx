@@ -48,7 +48,7 @@ export function Dashboard() {
         'Aguardando atendimento hoje',
         'Ausentes hoje',
       ],
-      ...summary.units.map((s) => [
+      ...units.map((s) => [
         s.unit.name,
         dateKey(),
         s.today,

@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import {
+  checkConnections,
+  connectionLabels,
+  type ConnectionState,
+} from '../data/connection-checks';
+import {
   ArrowUpRight,
   Building2,
   Cable,
@@ -185,7 +190,7 @@ const integrations = [
     name: 'Produção e faturamento SUS',
     scope: 'AIH, BPA, APAC e fechamento conforme os serviços da rede.',
     next: 'Implementar regras por competência, críticas e conciliação de retornos.',
-    url: 'https://controleavaliacao.saude.gov.br/',
+    url: 'https://www.gov.br/saude/pt-br/composicao/saes/drac/sistemas/sistemas/',
   },
   {
     name: 'Laboratório e imagem',
@@ -207,17 +212,74 @@ const integrations = [
   },
 ];
 export function Integrations() {
+  const [checks, setChecks] = useState<ConnectionState | null>(null),
+    [checking, setChecking] = useState(false),
+    [at, setAt] = useState('');
+  async function verify() {
+    setChecking(true);
+    try {
+      setChecks(await checkConnections());
+      setAt(new Date().toISOString());
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <>
       <PageHeader
         eyebrow="CONEXÕES DA PLATAFORMA"
         title="Integrações"
-        description="Dependências previstas para a operação real da rede pública."
+        description="Confira os canais da demonstração e as conexões previstas para as prefeituras."
       />
-      <Notice>
-        Nenhuma integração está ativa. Este painel registra o trabalho necessário, sem transmitir
-        dados ou simular confirmações externas.
-      </Notice>
+      <Panel
+        className="connection-check"
+        title="Canais da demonstração"
+        subtitle="Consulta de disponibilidade sem enviar dados de pacientes."
+        action={
+          <Button onClick={verify} disabled={checking}>
+            <RotateCcw size={16} />
+            {checking ? 'Verificando…' : 'Verificar conexões'}
+          </Button>
+        }
+      >
+        <div className="panel-body" aria-live="polite" aria-busy={checking}>
+          {connectionLabels.map(({ key, title, detail }) => (
+            <div key={key} className="connection-row">
+              <div>
+                <strong>{title}</strong>
+                <p>{detail}</p>
+              </div>
+              <Badge
+                tone={
+                  checks?.[key] === 'ok' ? 'green' : checks?.[key] === 'error' ? 'amber' : 'neutral'
+                }
+              >
+                {checking
+                  ? 'Verificando…'
+                  : !checks
+                    ? 'A verificar'
+                    : checks[key] === 'ok'
+                      ? 'Disponível'
+                      : checks[key] === 'web'
+                        ? 'Testar no site'
+                        : 'Indisponível'}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <p className="connection-foot" role="status">
+        {at ? 'Última verificação às ' + clockTime(at) + '. ' : ''}A consulta verifica se os
+        serviços respondem. O recebimento de avisos no celular também depende da permissão no
+        aparelho.
+        {location.protocol === 'file:'
+          ? ' No HTML, a TV e o app consultam a demonstração publicada. Para testar notificações, abra cuidelo.vercel.app.'
+          : ''}
+      </p>
+      <div className="section-caption">
+        <h2>Dependências para implantação</h2>
+        <span>{integrations.length} frentes pendentes</span>
+      </div>
       <div className="integration-grid">
         {integrations.map((i) => (
           <Panel key={i.name}>
@@ -270,8 +332,8 @@ const scope = [
   [
     'Agenda e recepção',
     'Fluxo local',
-    'Agendamento, conflitos, cancelamento, chegada e fila.',
-    'Escalas, salas, bloqueios, faltas e validação em campo.',
+    'Agendamento, remarcação, chegada, registro e correção de faltas com histórico.',
+    'Escalas, bloqueios de horários, lembretes de agendamento e validação em campo.',
   ],
   [
     'Prontuário e enfermagem',

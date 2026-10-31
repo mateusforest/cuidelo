@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { matchesKioskAppointment } from '../domain/administrative-records';
+import { matchesKioskAppointment, slotHasEnded } from '../domain/administrative-records';
 import { normalizedName } from '../domain/identification';
 import { ChevronLeft, ChevronRight, Plus, Check, X, CalendarDays } from 'lucide-react';
 import { useApp } from '../app/context';
-import { addDays, dateKey, shortDate } from '../domain/dates';
-import { can, type Appointment } from '../domain/model';
+import { clockTime, addDays, dateKey, shortDate } from '../domain/dates';
+import { appointmentStatusNames, can, type Appointment } from '../domain/model';
 import {
   ActionForm,
   Avatar,
@@ -29,11 +29,22 @@ export function Agenda() {
     [editing, setEditing] = useState<Appointment | null>(null),
     [search, setSearch] = useState(''),
     [status, setStatus] = useState('all'),
+    [absence, setAbsence] = useState<Appointment | null>(null),
     [cancel, setCancel] = useState<Appointment | null>(null),
     [linkArrival, setLinkArrival] = useState<{ a: Appointment; id: string; ticket: string } | null>(
       null,
     ),
     [busy, setBusy] = useState('');
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const refresh = () => setNow(new Date());
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
   const dayAppointments = data.appointments
     .filter((a) => a.date === day && (professional === 'all' || a.professional === professional))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -138,6 +149,7 @@ export function Agenda() {
             ['scheduled', 'Aguardando chegada'],
             ['checked-in', 'Chegadas confirmadas'],
             ['cancelled', 'Cancelados'],
+            ['missed', 'Faltas'],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -183,6 +195,22 @@ export function Agenda() {
                       <small>
                         {a.service} · {a.professional}
                       </small>
+                      {!!a.absenceHistory?.length && (
+                        <details className="appointment-history">
+                          <summary>Histórico de faltas ({a.absenceHistory.length})</summary>
+                          {a.absenceHistory.map((h, i) => (
+                            <div key={i}>
+                              <strong>
+                                {h.after.missed ? 'Falta registrada' : 'Falta corrigida'}
+                              </strong>
+                              <p>{h.reason}</p>
+                              <small>
+                                {shortDate(h.at)} às {clockTime(h.at)} · {h.author}
+                              </small>
+                            </div>
+                          ))}
+                        </details>
+                      )}
                       {a.cancellationReason && <small>Motivo: {a.cancellationReason}</small>}
                       {!!a.reschedules?.length && (
                         <details className="appointment-history">
@@ -216,14 +244,12 @@ export function Agenda() {
                         ? 'green'
                         : a.status === 'cancelled'
                           ? 'neutral'
-                          : 'blue'
+                          : a.status === 'missed'
+                            ? 'amber'
+                            : 'blue'
                     }
                   >
-                    {a.status === 'checked-in'
-                      ? 'Chegada confirmada'
-                      : a.status === 'cancelled'
-                        ? 'Cancelado'
-                        : 'Agendado'}
+                    {appointmentStatusNames[a.status]}
                   </Badge>
                   <div className="row-actions">
                     {a.status === 'scheduled' && (
@@ -253,6 +279,12 @@ export function Agenda() {
                         </button>
                       </>
                     )}
+                    {(a.status === 'missed' ||
+                      (a.status === 'scheduled' && slotHasEnded(a, now))) && (
+                      <Button variant="ghost" onClick={() => setAbsence(a)}>
+                        {a.status === 'missed' ? 'Corrigir falta' : 'Registrar falta'}
+                      </Button>
+                    )}
                     {a.status === 'checked-in' && can(context.role, 'queue') && (
                       <Link className="button secondary" to="/recepcao">
                         Ver recepção
@@ -277,6 +309,49 @@ export function Agenda() {
           )}
         </Panel>
       </UnitRequired>
+      {absence && (
+        <Modal
+          title={absence.status === 'missed' ? 'Corrigir falta' : 'Registrar falta'}
+          description={
+            data.patients.find((p) => p.id === absence.patientId)?.name +
+            ' · ' +
+            shortDate(absence.date) +
+            ' às ' +
+            absence.time
+          }
+          onClose={() => setAbsence(null)}
+        >
+          <ActionForm
+            onClose={() => setAbsence(null)}
+            submitLabel={absence.status === 'missed' ? 'Confirmar correção' : 'Confirmar falta'}
+            onSubmit={async (f) => {
+              const missed = absence.status === 'scheduled';
+              await repository.execute(context, {
+                type: 'appointment.absence',
+                id: absence.id,
+                missed,
+                reason: valueOf(f, 'reason'),
+                expectedCount: absence.absenceHistory?.length ?? 0,
+                expectedSlotChanges: absence.reschedules?.length ?? 0,
+              });
+              notify(
+                missed
+                  ? 'Falta registrada no histórico.'
+                  : 'Falta corrigida. O agendamento está pendente de chegada.',
+              );
+            }}
+          >
+            <p>
+              {absence.status === 'missed'
+                ? 'O horário volta a aguardar chegada. A correção ficará no histórico.'
+                : 'Confira se a pessoa chegou por outro fluxo antes de confirmar a falta.'}
+            </p>
+            <Field label="Motivo do registro">
+              <textarea name="reason" required maxLength={1000} />
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
       {linkArrival && (
         <Modal title="Vincular senha do totem" onClose={() => setLinkArrival(null)}>
           <div className="modal-body">
