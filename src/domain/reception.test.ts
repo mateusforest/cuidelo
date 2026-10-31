@@ -343,7 +343,7 @@ describe('recepção, conferência e encaminhamento', () => {
     const reload = new DemoRepository(storage, () => now);
     expect(reload.recoveryMessage).toBe('');
     expect(reload.snapshot(reception).encounters.at(-1)?.receptionChecks).toHaveLength(1);
-    expect(JSON.parse(saved).schemaVersion).toBe(10);
+    expect(JSON.parse(saved).schemaVersion).toBe(11);
     expect(reload.snapshot(reception).encounters[0].receptionStartedAt).toBeUndefined();
   });
   it('falha de conferência não deixa vínculo parcial nem altera armazenamento', async () => {

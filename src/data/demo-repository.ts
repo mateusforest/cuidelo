@@ -1,3 +1,4 @@
+import { validateUnitQueue } from '../domain/unit-queue';
 import { validateAdmissions } from '../domain/hospital';
 import { validateContinuity } from '../domain/continuity';
 import { validateAdministrativeHistory } from '../domain/administrative-records';
@@ -30,6 +31,8 @@ const collections = [
   'clinicalDocuments',
   'workRecords',
   'careSegments',
+  'queueAssessments',
+  'queueServiceEvents',
   'kioskArrivals',
   'organizations',
   'units',
@@ -114,9 +117,14 @@ function parseDatabase(value: string): Database {
     db.dispensations = [];
   }
   if (isRecord(db) && db.schemaVersion === 9) db.schemaVersion = 10;
+  if (isRecord(db) && db.schemaVersion === 10) {
+    db.schemaVersion = 11;
+    db.queueAssessments = [];
+    db.queueServiceEvents = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 10 ||
+    db.schemaVersion !== 11 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -459,6 +467,7 @@ function parseDatabase(value: string): Database {
   validateAdministrativeHistory(typed);
   validateContinuity(typed);
   validateAdmissions(typed);
+  validateUnitQueue(typed);
   return typed;
 }
 

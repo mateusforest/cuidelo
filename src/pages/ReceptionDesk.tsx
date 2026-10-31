@@ -31,6 +31,7 @@ import {
   servicesForUnit,
   type PreferenceReason,
 } from '../domain/kiosk-options';
+import { roomName } from '../domain/unit-queue';
 import { roomsForUnit } from '../domain/queue';
 import { clockTime, dateKey, shortDate } from '../domain/dates';
 import { duration, LiveDuration } from './PatientFlow';
@@ -77,7 +78,13 @@ export function ReceptionDesk() {
         row,
         name: p?.socialName || p?.name || 'Cadastro',
         cpf: p?.cpf,
-        stage: flowStage(row),
+        stage: (() => {
+          const d = data.queueDirections.find((d) => d.encounterId === row.id);
+          if (!d || row.receptionHold) return flowStage(row);
+          return d.roomId === 'escuta-1'
+            ? 'Devolvido à triagem'
+            : (d.received ? 'Recebido no setor · ' : 'Encaminhado · ') + roomName(d.roomId);
+        })(),
       };
     }),
   ]
@@ -145,7 +152,7 @@ export function ReceptionDesk() {
     const roomId =
       e && !needsReception(e)
         ? e.intakeCompletedAt
-          ? 'consultorio-1'
+          ? (data.queueDirections.find((d) => d.encounterId === e.id)?.roomId ?? 'consultorio-1')
           : (check?.roomId ?? 'recepcao-1')
         : 'recepcao-1';
     await act(
@@ -760,6 +767,43 @@ function Journey({ item, onClose }: { item: DeskRow; onClose: () => void }) {
       at: c.at,
       label: `${i ? 'Conferência revista' : 'Identificação e preferência conferidas'} · ${c.destination === 'triage' ? 'Encaminhado à triagem' : 'Encaminhado ao serviço'} · ${actor(c.actorId)}${c.adjustmentReason ? ' · ' + c.adjustmentReason : ''}`,
     })),
+    ...(e
+      ? data.queueServiceEvents
+          .filter((ev) => ev.encounterId === e.id)
+          .map((ev) => ({
+            at: ev.at,
+            label:
+              {
+                receive: 'Recebido no setor',
+                return: 'Devolvido à escuta',
+                finish: 'Passagem concluída',
+              }[ev.action] +
+              ' · ' +
+              actor(ev.actorId),
+          }))
+      : []),
+    ...(e?.roomStays ?? []).flatMap((s) => [
+      {
+        at: s.at,
+        label: 'Consultório vinculado · ' + roomName(s.roomId) + ' · ' + actor(s.actorId),
+      },
+      ...(s.enteredAt
+        ? [{ at: s.enteredAt, label: 'Entrada confirmada · ' + roomName(s.roomId) }]
+        : []),
+      ...(s.endedAt
+        ? [
+            {
+              at: s.endedAt,
+              label:
+                'Consultório liberado · ' +
+                roomName(s.roomId) +
+                ' · ' +
+                actor(s.endedBy) +
+                (s.reason ? ' · ' + s.reason : ''),
+            },
+          ]
+        : []),
+    ]),
     ...(row.receptionEvents ?? []).map((event) => ({
       at: event.at,
       label: `${event.kind === 'absent' ? 'Ausência registrada' : 'Retorno registrado'} · ${event.reason}`,

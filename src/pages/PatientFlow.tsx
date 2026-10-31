@@ -1,3 +1,4 @@
+import { consultRooms, currentStay, roomName, isConsultRoom } from '../domain/unit-queue';
 import { activeEncounter } from '../domain/model';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -6,7 +7,7 @@ import { useApp } from '../app/context';
 import { demoIdentities } from '../domain/access';
 import { readyForConsultation } from '../domain/reception';
 import type { Encounter } from '../domain/model';
-import { roomsForUnit } from '../domain/queue';
+
 import { clockTime, dateKey } from '../domain/dates';
 import {
   Button,
@@ -39,9 +40,16 @@ export function DoctorCall({
   onChange?: (previousRevision: number) => void;
 }) {
   const { data, context, repository, notify } = useApp();
-  const [room, setRoom] = useState('consultorio-1'),
+  const assigned =
+    currentStay(encounter)?.roomId ??
+    data.queueDirections.find((d) => d.encounterId === encounter.id)?.roomId;
+  const [selectedRoom, setRoom] = useState(''),
     [busy, setBusy] = useState(false);
-  const unit = data.units.find((u) => u.id === context.unitId)!;
+  const occupied = new Set(
+    data.encounters.filter((e) => e.id !== encounter.id).map((e) => currentStay(e)?.roomId),
+  );
+  const room =
+    assigned ?? (selectedRoom || consultRooms.find((r) => !occupied.has(r.id))?.id || '');
   const active = data.careSegments.find((s) => s.encounterId === encounter.id && !s.endedAt);
   const owner = demoIdentities(repository.directory()).find(
     (i) => i.sessionId === active?.professionalId,
@@ -53,7 +61,7 @@ export function DoctorCall({
       await repository.execute(
         context,
         start
-          ? { type: 'encounter.start', id: encounter.id }
+          ? { type: 'encounter.start', id: encounter.id, roomId: room }
           : { type: 'queue.call', encounterId: encounter.id, roomId: room },
       );
       onChange?.(previousRevision);
@@ -77,6 +85,7 @@ export function DoctorCall({
         <p>
           {active ? (
             <>
+              {currentStay(encounter) ? roomName(currentStay(encounter)!.roomId) + ' · ' : ''}
               {owner?.name} · <LiveDuration since={active.startedAt} /> em consulta
             </>
           ) : encounter.status === 'completed' ? (
@@ -93,24 +102,34 @@ export function DoctorCall({
       {activeEncounter(encounter) && (
         <>
           <Field label="Destino da chamada">
-            <select value={room} onChange={(e) => setRoom(e.target.value)}>
-              {roomsForUnit(unit).map((r) => (
-                <option key={r.id} value={r.id}>
+            <select value={room} disabled={!!assigned} onChange={(e) => setRoom(e.target.value)}>
+              {!room && <option value="">Sem sala livre</option>}
+              {consultRooms.map((r) => (
+                <option key={r.id} value={r.id} disabled={occupied.has(r.id)}>
                   {r.name}
+                  {occupied.has(r.id) ? ' · indisponível' : ''}
                 </option>
               ))}
             </select>
           </Field>
           <Button
             variant="secondary"
-            disabled={busy || !!(active && active.professionalId !== context.sessionId)}
+            disabled={
+              busy ||
+              !isConsultRoom(room) ||
+              occupied.has(room) ||
+              !!(active && active.professionalId !== context.sessionId)
+            }
             onClick={() => act(false)}
           >
             <Megaphone size={18} />
             Chamar / rechamar na TV
           </Button>
           {!active && (
-            <Button disabled={busy} onClick={() => act(true)}>
+            <Button
+              disabled={busy || !isConsultRoom(room) || occupied.has(room)}
+              onClick={() => act(true)}
+            >
               <Play size={16} />
               {encounter.status === 'in-care' ? 'Assumir atendimento' : 'Pessoa entrou · iniciar'}
             </Button>
@@ -125,15 +144,24 @@ export function ConsultingRoom() {
   const active = data.careSegments.find(
     (s) => s.professionalId === context.sessionId && !s.endedAt,
   );
+  const order = new Map(data.queueDirections.map((d) => [d.encounterId, d.order]));
+  const routed = new Map(data.queueDirections.map((d) => [d.encounterId, d.roomId]));
   const waiting = data.encounters
     .filter(
       (e) =>
-        (e.status === 'waiting' && readyForConsultation(e)) ||
+        (e.status === 'waiting' &&
+          readyForConsultation(e) &&
+          (!routed.has(e.id) || isConsultRoom(routed.get(e.id)!))) ||
         e.status === 'observation' ||
         (e.status === 'in-care' &&
           !data.careSegments.some((s) => s.encounterId === e.id && !s.endedAt)),
     )
-    .sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt));
+    .sort(
+      (a, b) =>
+        (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity) ||
+        Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
+        a.arrivedAt.localeCompare(b.arrivedAt),
+    );
   const person = (e: Encounter) => {
     const p = data.patients.find((p) => p.id === e.patientId);
     return p?.socialName || p?.name;
@@ -181,13 +209,16 @@ export function ConsultingRoom() {
           })()}
         <Panel
           title="Fila e atendimentos para acompanhar"
-          subtitle="Ordem de chegada. A prioridade clínica deve ser avaliada pela equipe; este ambiente não executa protocolo de risco."
+          subtitle="Classificados pela faixa indicada na escuta. A preferência administrativa e a chegada ordenam os empates. As pessoas sem avaliação ficam identificadas separadamente."
         >
           <div className="consulting-list">
             {waiting.map((e) => (
               <article key={e.id}>
                 <div className="consulting-person">
                   <strong>{person(e)}</strong>
+                  <small>
+                    {order.has(e.id) ? 'Classificação registrada' : 'Sem classificação registrada'}
+                  </small>
                   <span>
                     {e.service} ·{' '}
                     {e.priority === 'priority' ? 'Preferência administrativa' : 'Fluxo habitual'} ·{' '}

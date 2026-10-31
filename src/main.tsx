@@ -1,5 +1,6 @@
 import { PharmacyReceipt } from './pages/PharmacyReceipt';
 import { ClinicalDocumentPrint } from './pages/ClinicalDocumentPrint';
+import { UnitQueue } from './pages/UnitQueue';
 import { ExamFollowUp } from './pages/ExamFollowUp';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -32,6 +33,7 @@ import './styles/access.css';
 import './styles/operations.css';
 import './styles/care-workspaces.css';
 import './styles/continuity-workspaces.css';
+import './styles/unit-queue.css';
 import { Access, WorkspaceHome } from './pages/Access';
 import { Devices, Kiosk } from './pages/Kiosk';
 import { ConsultingRoom, Performance } from './pages/PatientFlow';
@@ -97,6 +99,7 @@ const router = (isPortable() ? createHashRouter : createBrowserRouter)([
       { path: 'modulos/:module', element: <WorkPage /> },
       { path: 'paineis/:report', element: <WorkReport /> },
       { path: 'exames', element: protect('clinical', <ExamFollowUp />) },
+      { path: 'fila', element: protect('queue', <UnitQueue />) },
       { path: 'consultorio', element: protect('clinical', <ConsultingRoom />) },
       { path: 'desempenho', element: protect('performance', <Performance />) },
       { path: 'dispositivos', element: protect('devices', <Devices />) },

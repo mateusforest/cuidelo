@@ -49,6 +49,7 @@ const navigation = [
         icon: ClipboardList,
         permission: 'queue',
       },
+      { path: '/fila', label: 'Fila e salas', icon: Users, permission: 'queue' },
       { path: '/agenda', label: 'Agenda', icon: CalendarDays, permission: 'schedule' },
       { path: '/vacinacao', label: 'Sala de vacinação', icon: Syringe, permission: 'vaccination' },
       {
@@ -193,7 +194,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.13</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.14</span>
       </div>
     </>
   );

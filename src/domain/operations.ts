@@ -1,3 +1,15 @@
+import {
+  assessQueue,
+  recordService,
+  serviceTickets,
+  availableRoom,
+  currentStay,
+  markEntry,
+  closeRoom,
+  reserveCall,
+  releaseRoom,
+  queueDirections,
+} from './unit-queue';
 import { checkMovementTime } from './hospital';
 import { activeEncounter } from './model';
 import { rescheduleReferral } from './continuity';
@@ -164,6 +176,20 @@ export function applyCommand(
     case 'reception.return':
     case 'queue.call-arrival': {
       ({ entityId, action } = applyReceptionCommand(db, c, command, now, newId));
+      if (
+        command.type === 'reception.absent' ||
+        command.type === 'reception.complete' ||
+        command.type === 'reception.close-prior'
+      ) {
+        const e = db.encounters.find(
+          (row) =>
+            row.id === entityId &&
+            row.unitId === c.unitId &&
+            row.organizationId === c.organizationId,
+        );
+        if (e && currentStay(e) && !currentStay(e)?.enteredAt)
+          closeRoom(e, c, at, 'released', 'Fluxo atualizado pela recepção');
+      }
       break;
     }
     case 'work.create':
@@ -183,6 +209,7 @@ export function applyCommand(
         'A escuta já começou ou este atendimento saiu da espera.',
         'conflict',
       );
+      if (currentStay(e)) closeRoom(e, c, at, 'released', 'Entrada registrada na escuta');
       e.intakeStartedAt = at;
       entityId = e.id;
       action = 'Escuta iniciada';
@@ -298,11 +325,49 @@ export function applyCommand(
       action = 'Complemento de registro concluído adicionado';
       break;
     }
+    case 'queue.call-service': {
+      const e = encounter(command.id);
+      const ticket = serviceTickets(db, c).find(
+        (t) => t.encounterId === e.id && t.assessmentId === command.assessmentId && !t.received,
+      );
+      ensure(ticket, 'Esta senha não aguarda recebimento no seu setor.', 'permission');
+      const call = makeQueueCall(db, e, ticket.roomId, now, newId());
+      db.calls.push(call);
+      entityId = call.id;
+      action = 'Senha chamada pelo setor de destino';
+      break;
+    }
+    case 'queue.service': {
+      const e = encounter(command.id);
+      entityId = newId();
+      recordService(db, c, e, command, at, entityId);
+      action = 'Passagem pelo setor registrada';
+      break;
+    }
+    case 'queue.assess': {
+      const e = encounter(command.id);
+      entityId = newId();
+      assessQueue(db, c, e, command, at, entityId);
+      if (command.roomId === 'orientacao') {
+        e.status = 'completed';
+        e.completedAt = at;
+      }
+      action = 'Avaliação de fila registrada pela equipe';
+      break;
+    }
+    case 'queue.release-room': {
+      const e = encounter(command.id);
+      releaseRoom(e, c, command, at);
+      entityId = e.id;
+      action = 'Reserva de consultório liberada';
+      break;
+    }
     case 'queue.call': {
       permit(c, 'queue');
       const e = encounter(command.encounterId);
       assertCallDestination(e, command.roomId);
       const call = makeQueueCall(db, e, command.roomId, now, newId());
+      call.roomStayId = reserveCall(db, c, e, call.roomId, at, call.id);
       db.calls.push(call);
       entityId = call.id;
       action = `Senha ${call.ticket} chamada`;
@@ -323,8 +388,15 @@ export function applyCommand(
         break;
       }
       const e = encounter(previous.encounterId ?? a!.encounterId!);
+      if (previous.roomStayId)
+        ensure(
+          currentStay(e)?.id === previous.roomStayId,
+          'A reserva terminou. Faça uma nova chamada pela fila.',
+          'conflict',
+        );
       assertCallDestination(e, previous.roomId);
       const call = makeQueueCall(db, e, previous.roomId, now, newId());
+      call.roomStayId = reserveCall(db, c, e, call.roomId, at, call.id);
       db.calls.push(call);
       entityId = call.id;
       action = `Senha ${call.ticket} chamada novamente`;
@@ -452,7 +524,14 @@ export function applyCommand(
         readyForConsultation(e),
         'Conclua a conferência da recepção e a triagem antes de iniciar a consulta.',
       );
-      startCare(db, c, e, at, newId);
+      const roomId = availableRoom(db, c, e, command.roomId);
+      const prior = currentStay(e);
+      ensure(
+        at >= (prior?.at ?? e.roomStays?.at(-1)?.endedAt ?? e.arrivedAt),
+        'Confira o relógio antes de registrar a entrada.',
+      );
+      const segmentId = startCare(db, c, e, at, newId);
+      markEntry(e, c, roomId, at, segmentId);
       e.status = 'in-care';
       e.startedAt ??= at;
       entityId = e.id;
@@ -472,6 +551,7 @@ export function applyCommand(
         'Inicie o atendimento antes de encaminhar à observação.',
         'conflict',
       );
+      closeRoom(e, c, at, 'observation');
       e.status = 'observation';
       closeCare(db, e.id, at, 'observation');
       entityId = e.id;
@@ -551,6 +631,8 @@ export function applyCommand(
         !db.clinicalDocuments.some((d) => d.encounterId === e.id && d.status === 'draft'),
         'Há documentos em rascunho. Emita ou descarte cada um antes de concluir o atendimento.',
       );
+      if (currentStay(e)?.enteredAt) closeRoom(e, c, at, 'completed');
+      else closeRoom(e, c, at, 'released', 'Conclusão durante a observação');
       note.status = 'final';
       note.finalizedAt = at;
       note.updatedAt = at;
@@ -821,6 +903,14 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
   return structuredClone({
     organizations: db.organizations.filter((o) => o.id === c.organizationId),
     workRecords: visibleWorkRecords(db, c),
+    serviceTickets: serviceTickets(db, c),
+    queueServiceEvents: has('clinical')
+      ? org(db.queueServiceEvents)
+      : has('queue')
+        ? unit(db.queueServiceEvents).map((ev) => ({ ...ev, note: '' }))
+        : [],
+    queueAssessments: has('clinical') ? org(db.queueAssessments) : [],
+    queueDirections: has('queue') ? queueDirections(db, c) : [],
     units: org(db.units),
     careSegments: has('clinical') ? unit(db.careSegments) : [],
     calls: has('queue')
@@ -911,6 +1001,8 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
     items.filter((x) => x.organizationId === c.organizationId && included.has(x.unitId));
   const encounters = scoped(db.encounters),
     beds = scoped(db.beds);
+  const sectorState = new Map(db.queueServiceEvents.map((ev) => [ev.encounterId, ev.action]));
+  const atSector = (e: Encounter) => e.status === 'waiting' && sectorState.get(e.id) === 'receive';
   const flowFor = (unitId?: string) => {
     const list = encounters.filter(
       (e) => (!unitId || e.unitId === unitId) && dateKey(new Date(e.arrivedAt)) === today,
@@ -921,7 +1013,8 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
         (!unitId || a.unitId === unitId) &&
         dateKey(new Date(a.arrivedAt)) === today,
     );
-    const count = (labels: string[]) => list.filter((e) => labels.includes(flowStage(e))).length;
+    const count = (labels: string[]) =>
+      list.filter((e) => !atSector(e) && labels.includes(flowStage(e))).length;
     return {
       reception:
         anonymous.filter((a) => !a.receptionHold).length +
@@ -936,8 +1029,10 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
     flow: flowFor(),
     vaccination: vaccinationSummary(db, c, now),
     today: encounters.filter((e) => dateKey(new Date(e.arrivedAt)) === today).length,
-    waiting: encounters.filter((e) => e.status === 'waiting').length,
-    inCare: encounters.filter((e) => e.status === 'in-care' || e.status === 'observation').length,
+    waiting: encounters.filter((e) => e.status === 'waiting' && !atSector(e)).length,
+    inCare: encounters.filter(
+      (e) => e.status === 'in-care' || e.status === 'observation' || atSector(e),
+    ).length,
     completed: encounters.filter((e) => e.completedAt && dateKey(new Date(e.completedAt)) === today)
       .length,
     occupied: beds.filter((b) => b.status === 'occupied').length,
@@ -952,9 +1047,13 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
       today: encounters.filter(
         (e) => e.unitId === unit.id && dateKey(new Date(e.arrivedAt)) === today,
       ).length,
-      waiting: encounters.filter((e) => e.unitId === unit.id && e.status === 'waiting').length,
+      waiting: encounters.filter(
+        (e) => e.unitId === unit.id && e.status === 'waiting' && !atSector(e),
+      ).length,
       inCare: encounters.filter(
-        (e) => e.unitId === unit.id && (e.status === 'in-care' || e.status === 'observation'),
+        (e) =>
+          e.unitId === unit.id &&
+          (e.status === 'in-care' || e.status === 'observation' || atSector(e)),
       ).length,
       occupied: beds.filter((b) => b.unitId === unit.id && b.status === 'occupied').length,
       totalBeds: beds.filter((b) => b.unitId === unit.id).length,

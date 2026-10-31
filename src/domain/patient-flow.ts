@@ -30,14 +30,16 @@ export function startCare(db: Database, c: Context, e: Encounter, at: string, id
   if (e.intakeStartedAt && !e.intakeCompletedAt)
     throw new DomainError('Conclua a escuta antes de iniciar a consulta.', 'conflict');
   e.professionalId = c.sessionId;
+  const segmentId = id();
   db.careSegments.push({
-    id: id(),
+    id: segmentId,
     organizationId: c.organizationId,
     unitId: c.unitId,
     encounterId: e.id,
     professionalId: c.sessionId,
     startedAt: at,
   });
+  return segmentId;
 }
 export function closeCare(
   db: Database,
@@ -312,8 +314,12 @@ export function performance(db: Database, c: Context, from: string, to: string, 
     ? entries.filter((e) => segments.some((s) => s.encounterId === e.id))
     : entries;
   const identities = demoIdentities(db);
+  const passages = new Map(db.queueServiceEvents.map((ev) => [ev.encounterId, ev.action]));
   const awaiting = (e: Encounter) =>
-    e.status === 'waiting' && !e.receptionHold && !(e.intakeStartedAt && !e.intakeCompletedAt);
+    e.status === 'waiting' &&
+    passages.get(e.id) !== 'receive' &&
+    !e.receptionHold &&
+    !(e.intakeStartedAt && !e.intakeCompletedAt);
   return {
     arrivals: encounters.length,
     waiting: encounters.filter(awaiting).length,

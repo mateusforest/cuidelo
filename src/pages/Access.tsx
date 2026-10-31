@@ -323,7 +323,7 @@ export function Access({ resume = false }: { resume?: boolean }) {
         </div>
         <footer className="access-entry-footer">
           <span>Cuidelo © {new Date().getFullYear()}</span>
-          <span>Desenvolvimento · 0.13</span>
+          <span>Desenvolvimento · 0.14</span>
         </footer>
       </section>
     </main>

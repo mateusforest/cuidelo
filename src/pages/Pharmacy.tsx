@@ -1,3 +1,4 @@
+import { SectorHandoffs } from '../components/SectorHandoffs';
 import { PharmacyDispensing } from '../components/PharmacyDispensing';
 import { StockMedicationForm } from '../components/StockMedicationForm';
 import type { MedicationLine } from '../domain/clinical-documents';
@@ -49,6 +50,7 @@ export function Pharmacy() {
         action={<Button onClick={() => setStockForm({})}>Novo lote de medicamento</Button>}
       />
       <UnitRequired>
+        <SectorHandoffs roomId="farmacia-1" />
         <nav className="operations-shortcuts" aria-label="Áreas da farmácia">
           {context.role === 'pharmacy' && (
             <button

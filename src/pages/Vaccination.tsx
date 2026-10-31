@@ -1,3 +1,4 @@
+import { SectorHandoffs } from '../components/SectorHandoffs';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CalendarPlus, ClipboardList, Package, Plus, PhoneCall } from 'lucide-react';
@@ -87,6 +88,7 @@ export function Vaccination() {
         }
       />
       <UnitRequired>
+        <SectorHandoffs roomId="vacina-1" />
         <div className="continuity-metrics" aria-label="Resumo da vacinação da unidade">
           <article>
             <span>Aplicações hoje</span>

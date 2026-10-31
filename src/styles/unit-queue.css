@@ -1,0 +1,99 @@
+@media screen {
+  .queue-room-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+  .queue-room-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.7rem;
+    background: #f8faf9;
+    border: 1px solid #dae6e1;
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .queue-room-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+  .queue-room-head strong,
+  .assessment-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+  .queue-room-card p,
+  .queue-room-card small,
+  .queue-board-list p,
+  .queue-board-list small,
+  .assessment-panel p {
+    color: #456158;
+    margin: 0;
+  }
+  .queue-board-list article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 1.2rem;
+    align-items: center;
+    padding: 1rem 1.4rem;
+    border-top: 1px solid #e1e9e5;
+  }
+  .queue-board-list article > div:first-child,
+  .queue-board-duration,
+  .assessment-panel,
+  .assessment-log li {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .queue-board-list,
+  .assessment-panel {
+    overflow-wrap: anywhere;
+  }
+  .queue-board-list article .row-actions,
+  .queue-room-card .row-actions {
+    flex-wrap: wrap;
+  }
+  .assessment-panel summary {
+    cursor: pointer;
+    padding: 0.6rem 0;
+    color: #155e56;
+  }
+  .assessment-log {
+    list-style: none;
+    margin: 0.75rem 0;
+    padding: 0;
+  }
+  .assessment-log li {
+    padding: 0.8rem;
+    border-left: 3px solid #6c9f93;
+    background: #f5f9f7;
+    margin: 0.4rem 0;
+  }
+  .assessment-log small {
+    color: #486559;
+  }
+  @media (max-width: 800px) {
+    .queue-room-grid {
+      grid-template-columns: 1fr;
+    }
+    .queue-board-list article {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .queue-board-list .row-actions {
+      grid-column: 1/-1;
+    }
+  }
+}
+
+@media screen and (min-width: 1000px) {
+  .operations-page.intake-workspace .intake-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

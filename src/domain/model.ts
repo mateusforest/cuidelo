@@ -102,7 +102,52 @@ export interface ReceptionTracking {
   receptionHold?: { at: string; actorId: string; reason: string };
   receptionChecks?: import('./reception').ReceptionCheck[];
 }
+export interface RoomStay {
+  id: string;
+  roomId: string;
+  at: string;
+  actorId: string;
+  enteredAt?: string;
+  segmentId?: string;
+  endedAt?: string;
+  endedBy?: string;
+  outcome?: 'released' | 'completed' | 'observation';
+  reason?: string;
+}
+export interface QueueServiceEvent extends Scoped {
+  encounterId: string;
+  assessmentId: string;
+  unitId: string;
+  at: string;
+  actorId: string;
+  action: 'receive' | 'return' | 'finish';
+  note: string;
+}
+export interface ServiceTicket {
+  encounterId: string;
+  assessmentId: string;
+  ticket: string;
+  name: string;
+  roomId: string;
+  at: string;
+  received: boolean;
+  count: number;
+}
+export interface QueueAssessment extends Scoped {
+  unitId: string;
+  encounterId: string;
+  patientId: string;
+  actorId: string;
+  at: string;
+  classification: string;
+  protocol: string;
+  rank: number;
+  roomId: string;
+  reason: string;
+  reviewAt?: string;
+}
 export interface Encounter extends Scoped, ReceptionTracking {
+  roomStays?: RoomStay[];
   closedWithoutCare?: { at: string; actorId: string; reason: string };
 
   preferenceReason?: import('./kiosk-options').PreferenceReason;
@@ -253,6 +298,7 @@ export interface AuditEvent extends Scoped {
   entityId: string;
 }
 export interface QueueCall extends Scoped {
+  roomStayId?: string;
   unitId: string;
   encounterId?: string;
   arrivalId?: string;
@@ -388,9 +434,11 @@ export interface VaccinationSummary {
   byImmunobiological: { name: string; applied: number }[];
 }
 export interface Database {
+  queueServiceEvents: QueueServiceEvent[];
+  queueAssessments: QueueAssessment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 10;
+  schemaVersion: 11;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -417,6 +465,10 @@ export interface Database {
   addenda: NoteAddendum[];
 }
 export interface Snapshot {
+  queueServiceEvents: QueueServiceEvent[];
+  serviceTickets: ServiceTicket[];
+  queueAssessments: QueueAssessment[];
+  queueDirections: { encounterId: string; roomId: string; order: number; received: boolean }[];
   pharmacyPrescriptions: import('./pharmacy').PharmacyPrescription[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
@@ -533,7 +585,29 @@ export type Command =
       service: string;
       priority: 'routine' | 'priority';
     }
-  | { type: 'encounter.start'; id: string }
+  | { type: 'queue.call-service'; id: string; assessmentId: string }
+  | {
+      type: 'queue.service';
+      id: string;
+      assessmentId: string;
+      expectedCount: number;
+      action: 'receive' | 'return' | 'finish';
+      note: string;
+    }
+  | {
+      type: 'queue.assess';
+      id: string;
+      classification: string;
+      protocol: string;
+      rank: number;
+      roomId: string;
+      reason: string;
+      reviewMinutes?: number;
+      confirmClosure?: boolean;
+      expectedCount: number;
+    }
+  | { type: 'queue.release-room'; id: string; stayId: string; reason: string }
+  | { type: 'encounter.start'; id: string; roomId?: string }
   | { type: 'encounter.observe'; id: string }
   | { type: 'note.save'; encounterId: string; soap: Soap }
   | { type: 'note.finalize'; encounterId: string }

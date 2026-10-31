@@ -104,8 +104,8 @@ export function Reception() {
             {urgent && (
               <Notice>
                 <HeartPulse size={16} /> O fluxo de observação está disponível para demonstração. A
-                classificação clínica de risco depende de protocolo aprovado e ainda não está
-                implementada.
+                equipe assistencial registra a classificação e a referência utilizada em Escuta e
+                sinais vitais.
               </Notice>
             )}
             <div className="queue-stats">

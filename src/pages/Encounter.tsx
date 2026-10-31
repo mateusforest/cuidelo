@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
 import { useApp } from '../app/context';
 import { EncounterDocuments } from '../components/ClinicalDocuments';
+import { QueueAssessmentPanel } from '../components/QueueAssessment';
 import { DoctorCall } from './PatientFlow';
 import { emptySoap, type Soap } from '../domain/model';
 import { ageAt, clockTime, shortDate } from '../domain/dates';
@@ -46,6 +47,28 @@ function EncounterEditor({ id }: { id?: string }) {
         title="Chegada encerrada sem atendimento"
         description="O motivo e a autoria ficam no percurso da senha na recepção."
       />
+    );
+  if (
+    encounter?.status === 'completed' &&
+    !note &&
+    (data.queueAssessments.some(
+      (a) => a.encounterId === encounter.id && a.roomId === 'orientacao',
+    ) ||
+      data.queueServiceEvents.some(
+        (ev) => ev.encounterId === encounter.id && ev.action === 'finish',
+      ))
+  )
+    return (
+      <div className="operations-page">
+        <Link className="back-link" to="/fila">
+          Voltar à fila da unidade
+        </Link>
+        <h1>Atendimento encerrado após a escuta</h1>
+        <QueueAssessmentPanel encounter={encounter} />
+        <Link className="button secondary" to={'/escuta/' + encounter.id}>
+          Ver escuta e aferições
+        </Link>
+      </div>
     );
   if (!encounter || !patient)
     return (
@@ -130,6 +153,7 @@ function EncounterEditor({ id }: { id?: string }) {
         <ArrowLeft size={16} />
         Recepção e atendimento
       </Link>
+      <QueueAssessmentPanel encounter={encounter} />
       <div className="patient-hero">
         <Avatar name={patient.socialName || patient.name} />
         <div>

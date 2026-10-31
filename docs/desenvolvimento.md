@@ -2,7 +2,7 @@
 
 O escopo público completo está em [plano-completo.md](plano-completo.md). Esta lista ordena dependências de construção, sem autorizar uma implantação incompleta. A primeira operação em UBS, UPA, pronto atendimento e hospital depende do aceite dos módulos e integrações exigidos pela rede contratada.
 
-## Marco atual: demonstração 0.13
+## Marco atual: demonstração 0.14
 
 Identidade aprovada, estrutura de interface, domínio separado da persistência e fluxos demonstráveis de cadastro, agenda, recepção, escuta, sinais vitais, correções, SOAP com complementos, painel de senhas, observação, leitos, estoque, encaminhamentos e vacinação com caderneta, lotes, aprazamentos e visão gerencial. Receitas, pedidos de exames e encaminhamentos possuem rascunho, emissão de teste e impressão; exames recebem resultados e revisão médica, e a regulação registra contrarreferência manual. Testes automatizados verificam regras e percursos críticos. Os módulos presentes não estão homologados para uso clínico.
 
@@ -58,3 +58,5 @@ A versão 0.11 unifica a apresentação da agenda, do cadastro de pacientes e da
 A versão 0.12 unifica a apresentação de vacinação, exames e regulação. Registra contatos manuais para retornos pendentes e reagendamentos justificados, preservando autoria, horários e documentos clínicos emitidos. Filtros destacam datas ultrapassadas sem presumir realização ou ausência. Os novos comandos verificam contexto, permissão e alterações simultâneas. O [roteiro de teste](vacinacao-exames-regulacao.md) descreve os percursos e limites; os 44 módulos continuam parciais.
 
 A [auditoria geral da versão 0.13](auditoria-0.13.md) cobre navegação por perfil, preservação das bases locais, fluxo entre totem e agenda, encerramento de chegadas antigas, transferência hospitalar e os critérios de aceite ainda abertos.
+
+Na versão 0.14, os dois primeiros percursos são escuta e fila. A avaliação manual orienta a chamada e a reserva de consultório. A [sequência e o roteiro](escuta-fila-salas.md) registram os critérios de teste e o que depende da rede.

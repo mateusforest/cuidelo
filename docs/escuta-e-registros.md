@@ -1,5 +1,7 @@
 # Escuta, aferições e complementos — versão 0.3
 
+Este documento descreve a entrega 0.3. O [roteiro atual da escuta](escuta-fila-salas.md) inclui classificação manual, reavaliação e encaminhamentos da versão 0.14.
+
 ## Percurso para experimentar
 
 1. Selecione uma unidade e o perfil Enfermagem, Equipe médica ou Administração.

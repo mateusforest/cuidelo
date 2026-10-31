@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.13. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.14. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -74,8 +74,8 @@
       "dispositivo": "desktop",
       "group": "UBS e assistência",
       "status": "parcial",
-      "route": "/consultorio",
-      "note": "Etapas explícitas de recepção, triagem e atendimento; chamada de senha anônima no guichê, chamada/rechamada à sala, ausências, retorno e percurso com horários. A consulta aguarda conferência e triagem quando previstas. Ocupação de salas, protocolos de ordenação e sincronização remota continuam pendentes."
+      "route": "/fila",
+      "note": "Fila operacional por etapa, espera, preferência e faixa indicada na escuta. Chamada à TV, reserva, devolução justificada, confirmação da entrada e liberação de dois consultórios com histórico. Faltam controle de ocupação nos demais setores, protocolos locais validados e sincronização entre dispositivos."
     },
     {
       "id": "tv",
@@ -97,9 +97,9 @@
       "quem": "Enfermagem",
       "dispositivo": "desktop",
       "group": "UBS e assistência",
-      "status": "parcial",
+      "status": "demonstravel",
       "route": "/escuta",
-      "note": "Fila separada em espera, escuta em andamento e registros concluídos, com busca, filtro de chegada e tempos visíveis. Chamada/rechamada na TV, início e fim, sinais vitais, aferições seriadas e correções preservadas. Faltam classificação de risco por protocolo aprovado e reavaliação clínica completa."
+      "note": "Percurso manual demonstrável: escuta e sinais vitais, classificação com referência e justificativa, reavaliação com prazo e histórico, encaminhamento para consulta, enfermagem, vacinação ou farmácia e encerramento após orientação confirmada. O setor recebe, devolve ou conclui a passagem. A classificação é profissional; sugestões automáticas do Pulso e homologação dos protocolos locais não estão incluídas."
     },
     {
       "id": "consultorio",

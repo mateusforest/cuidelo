@@ -35,6 +35,7 @@ export function roomsForUnit(unit: Unit): Room[] {
       direction: 'Corredor principal · lado esquerdo',
     },
     { id: 'consultorio-2', name: 'Consultório 02', direction: 'Corredor principal · lado direito' },
+    { id: 'enfermagem-1', name: 'Enfermagem', direction: 'Dirija-se à sala de enfermagem' },
     { id: 'farmacia-1', name: 'Farmácia', direction: 'Ao final do corredor principal' },
     unit.kind === 'ubs'
       ? { id: 'vacina-1', name: 'Sala de vacina', direction: 'Corredor lateral · segunda porta' }
@@ -136,10 +137,16 @@ export function readDisplay(
     });
     if (calls.length === 5) break;
   }
+  const announced = list[0];
+  const released =
+    !!announced?.roomStayId &&
+    db.encounters
+      .find((e) => e.id === announced.encounterId)
+      ?.roomStays?.some((s) => s.id === announced.roomStayId && s.outcome === 'released');
   return {
     unitName: unit.name,
     organizationName: org.shortName,
-    current: calls[0] ?? null,
-    recent: calls.slice(1),
+    current: released ? null : (calls[0] ?? null),
+    recent: released ? calls.slice(0, 4) : calls.slice(1),
   };
 }

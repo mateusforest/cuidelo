@@ -1,3 +1,4 @@
+import { SectorHandoffs } from '../components/SectorHandoffs';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ClipboardCheck, HeartPulse, Save } from 'lucide-react';
@@ -5,6 +6,7 @@ import { useApp } from '../app/context';
 import type { IntakeRecord, Vitals } from '../domain/model';
 import { activeIntakes, vitalFields, intakeQueueState } from '../domain/intake';
 import { readyForIntake, lastReceptionCheck } from '../domain/reception';
+import { QueueAssessmentPanel } from '../components/QueueAssessment';
 import { TriageCall } from '../components/TriageCall';
 import { LiveDuration, duration } from './PatientFlow';
 import { normalizedName } from '../domain/identification';
@@ -26,9 +28,23 @@ import '../styles/intake.css';
 
 export function IntakeQueue() {
   const { data } = useApp();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const latest = new Map(data.queueAssessments.map((a) => [a.encounterId, a]));
+  const due = (e: (typeof data.encounters)[number]) =>
+    !data.queueDirections.find((d) => d.encounterId === e.id)?.received &&
+    e.status === 'waiting' &&
+    !!latest.get(e.id)?.reviewAt &&
+    Date.parse(latest.get(e.id)!.reviewAt!) <= now;
   const [search, setSearch] = useState(''),
     [filter, setFilter] = useState('pending'),
     [day, setDay] = useState('');
+  const returned = new Set(
+    data.queueDirections.filter((d) => d.roomId === 'escuta-1').map((d) => d.encounterId),
+  );
   const hasRecord = (id: string) => data.intakes.some((r) => r.encounterId === id);
   const dated = data.encounters.filter((e) => !day || dateKey(new Date(e.arrivedAt)) === day);
   const stage = (e: (typeof data.encounters)[number]) => intakeQueueState(e, hasRecord(e.id));
@@ -43,7 +59,12 @@ export function IntakeQueue() {
     .filter((e) => {
       const p = data.patients.find((p) => p.id === e.patientId);
       return (
-        (filter === 'all' || stage(e) === filter) &&
+        (filter === 'all' ||
+          (filter === 'review'
+            ? due(e)
+            : filter === 'returned'
+              ? returned.has(e.id)
+              : stage(e) === filter)) &&
         normalizedName(`${p?.name} ${p?.socialName} ${e.ticket}`).includes(normalizedName(search))
       );
     })
@@ -61,6 +82,7 @@ export function IntakeQueue() {
         }
       />
       <UnitRequired>
+        <SectorHandoffs roomId="enfermagem-1" />
         <div className="desk-filters intake-stats">
           {(
             [
@@ -71,6 +93,8 @@ export function IntakeQueue() {
                 'Com escuta registrada',
                 dated.filter((e) => stage(e) === 'recorded').length,
               ],
+              ['returned', 'Devolvidos à escuta', dated.filter((e) => returned.has(e.id)).length],
+              ['review', 'Reavaliação pendente', dated.filter(due).length],
               ['all', 'Todos os atendimentos', dated.length],
             ] as const
           ).map(([key, label, count]) => (
@@ -129,7 +153,15 @@ export function IntakeQueue() {
                           </span>
                         </div>
                       </td>
-                      <td>{e.service}</td>
+                      <td>
+                        {e.service}
+                        {latest.has(e.id) && (
+                          <small className="cell-secondary">
+                            Faixa {latest.get(e.id)!.rank} · {latest.get(e.id)!.classification}
+                          </small>
+                        )}
+                        {due(e) && <small className="cell-secondary">Reavaliação pendente</small>}
+                      </td>
                       <td>
                         {clockTime(e.arrivedAt)}
                         <small className="cell-secondary">{shortDate(e.arrivedAt)}</small>
@@ -199,7 +231,7 @@ export function IntakePage() {
   return <IntakeEditor key={id} id={id} />;
 }
 function IntakeEditor({ id }: { id?: string }) {
-  const { data, context, repository, notify, setDirty } = useApp();
+  const { data, context, repository, notify, setDirty, revision } = useApp();
   const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
   const encounter = data.encounters.find((e) => e.id === id),
@@ -220,6 +252,9 @@ function IntakeEditor({ id }: { id?: string }) {
     setDirty(dirty);
     return () => setDirty(false);
   }, [dirty, setDirty]);
+  useEffect(() => {
+    if (!dirty && !correcting) setBaseRevision(revision);
+  }, [revision, dirty, correcting]);
   if (encounter?.status === 'closed-without-care')
     return (
       <EmptyState
@@ -602,6 +637,7 @@ function IntakeEditor({ id }: { id?: string }) {
           </Panel>
         </div>
         <aside>
+          <QueueAssessmentPanel encounter={encounter} allowEdit disabled={dirty || busy} />
           <Panel title="Continuidade do cuidado">
             <div className="panel-body">
               <span className="intake-side-icon">
@@ -615,7 +651,17 @@ function IntakeEditor({ id }: { id?: string }) {
                   ? `Último registro às ${clockTime(latest.recordedAt)}. A equipe pode consultá-lo sem copiar os valores para o SOAP.`
                   : 'Preencha o motivo da procura e as informações disponíveis.'}
               </p>
-              <Button disabled={busy || dirty} onClick={openConsultation}>
+              <Button
+                disabled={
+                  busy ||
+                  dirty ||
+                  (encounter.status === 'waiting' &&
+                    data.queueDirections.some(
+                      (d) => d.encounterId === encounter.id && !d.roomId.startsWith('consultorio-'),
+                    ))
+                }
+                onClick={openConsultation}
+              >
                 {completed
                   ? 'Ver atendimento concluído'
                   : encounter.status === 'waiting'
@@ -658,8 +704,8 @@ function IntakeEditor({ id }: { id?: string }) {
             </div>
           </Panel>
           <Notice>
-            Registro de demonstração, sem classificação de risco, sugestão de conduta ou assinatura
-            digital.
+            A classificação e o prazo de reavaliação são informados pela equipe, com dados
+            fictícios.
           </Notice>
         </aside>
       </div>

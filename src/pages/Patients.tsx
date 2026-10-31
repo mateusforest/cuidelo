@@ -1,3 +1,4 @@
+import { AssessmentLog } from '../components/QueueAssessment';
 import {
   PatientRegistrationForm,
   RegistrationHistory,
@@ -183,6 +184,13 @@ export function PatientDetails() {
         <ArrowLeft size={16} />
         Pessoas e prontuários
       </Link>
+      {data.queueAssessments.some((a) => a.patientId === p.id) && (
+        <Panel title="Classificações na rede">
+          <div className="panel-body">
+            <AssessmentLog records={data.queueAssessments.filter((a) => a.patientId === p.id)} />
+          </div>
+        </Panel>
+      )}
       <div className="patient-hero">
         <Avatar name={p.socialName || p.name} />
         <div>
