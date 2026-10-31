@@ -2,7 +2,7 @@ import type { Context, Database, Encounter, Scoped } from './model';
 import { can } from './model';
 import { demoIdentities, identityFor } from './access';
 import { DomainError } from './errors';
-import { dateKey, validDay, validTime } from './dates';
+import { clockTime, dateKey, validDay, validTime } from './dates';
 
 export interface MedicationLine {
   id: string;
@@ -24,6 +24,8 @@ export interface ExamLine {
   notes: string;
 }
 export type DocumentContent =
+  | { kind: 'certificate'; startDate: string; days: string }
+  | { kind: 'attendance'; from: string; until: string }
   | { kind: 'prescription'; items: MedicationLine[]; orientations: string }
   | {
       kind: 'exams';
@@ -43,6 +45,8 @@ export type DocumentContent =
     };
 export type DocumentKind = DocumentContent['kind'];
 export const documentNames: Record<DocumentKind, string> = {
+  certificate: 'Atestado',
+  attendance: 'Declaração de comparecimento',
   prescription: 'Receita',
   exams: 'Pedido de exames',
   referral: 'Encaminhamento',
@@ -113,6 +117,13 @@ export type ClinicalDocumentCommand =
       note: string;
     };
 
+const documentPrefixes: Record<DocumentKind, string> = {
+  prescription: 'RX',
+  exams: 'EX',
+  referral: 'EN',
+  certificate: 'AT',
+  attendance: 'DC',
+};
 function ensure(value: unknown, message: string, code = 'conflict'): asserts value {
   if (!value) throw new DomainError(message, code);
 }
@@ -130,10 +141,35 @@ function text(value: unknown, label: string, max: number, required = false): str
   return value.trim();
 }
 export function validateDocumentContent(raw: DocumentContent, complete = false): DocumentContent {
-  ensure(
-    raw && ['prescription', 'exams', 'referral'].includes(raw.kind),
-    'Tipo de documento inválido.',
-  );
+  ensure(raw && Object.hasOwn(documentNames, raw.kind), 'Tipo de documento inválido.');
+  if (raw.kind === 'certificate') {
+    const startDate = text(raw.startDate, 'Data de início', 10, complete),
+      days = text(raw.days, 'Dias de afastamento', 3, complete);
+    ensure(!startDate || validDay(startDate), 'Confira a data de início.');
+    ensure(
+      !days || /^[1-9]\d{0,2}$/.test(days),
+      'Informe uma quantidade inteira de dias, de 1 a 999.',
+    );
+    return { kind: raw.kind, startDate, days };
+  }
+  if (raw.kind === 'attendance') {
+    const from = text(raw.from, 'Início do comparecimento', 16, complete),
+      until = text(raw.until, 'Fim do comparecimento', 16, complete);
+    for (const value of [from, until])
+      ensure(
+        !value ||
+          (value.length === 16 &&
+            value[10] === 'T' &&
+            validDay(value.slice(0, 10)) &&
+            validTime(value.slice(11))),
+        'Confira a data e a hora do comparecimento.',
+      );
+    ensure(
+      !from || !until || until >= from,
+      'O fim do comparecimento precisa ser igual ou posterior ao início.',
+    );
+    return { kind: raw.kind, from, until };
+  }
   if (raw.kind === 'referral') {
     ensure(['routine', 'urgent'].includes(raw.priority), 'Informe a prioridade do encaminhamento.');
     return {
@@ -443,10 +479,15 @@ export function applyDocumentCommand(
   ensure(doc.status === 'draft', 'Este documento já foi emitido ou descartado.');
   ensure(cmd.reviewed === true, 'Confirme a revisão dos dados e dos itens antes de emitir.');
   const content = validateDocumentContent(doc.content, true);
+  if (content.kind === 'attendance')
+    ensure(
+      content.until <= dateKey(now) + 'T' + clockTime(at),
+      'O período de comparecimento termina no futuro.',
+    );
   const patient = db.patients.find(
     (p) => p.id === e.patientId && p.organizationId === c.organizationId,
   )!;
-  const prefix = { prescription: 'RX', exams: 'EX', referral: 'EN' }[content.kind];
+  const prefix = documentPrefixes[content.kind];
   const sequence =
     1 +
     Math.max(
@@ -590,7 +631,7 @@ export function validateClinicalDocuments(db: Database) {
     if (doc.status === 'issued' || doc.status === 'cancelled') {
       ensure(
         !!doc.number &&
-          /^DEMO-(RX|EX|EN)-\d{4,}$/.test(doc.number) &&
+          /^DEMO-[A-Z]{2}-\d{4,}$/.test(doc.number) &&
           date(doc.issuedAt) &&
           !!doc.identity,
         'Invalid issued document',
@@ -612,9 +653,7 @@ export function validateClinicalDocuments(db: Database) {
         'Invalid document identity',
       );
       ensure(
-        doc.number!.startsWith(
-          `DEMO-${{ prescription: 'RX', exams: 'EX', referral: 'EN' }[doc.content.kind]}-`,
-        ) &&
+        doc.number!.startsWith(`DEMO-${documentPrefixes[doc.content.kind]}-`) &&
           doc.issuedAt! >= doc.createdAt &&
           doc.issuedAt! <= doc.updatedAt &&
           doc.history.filter((h) => h.action === 'issued').length === 1,

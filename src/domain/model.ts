@@ -178,6 +178,7 @@ export interface ClinicalNote extends Scoped {
   patientId: string;
   unitId: string;
   soap: Soap;
+  coding?: import('./consultation').AssessmentCoding;
   status: 'draft' | 'final';
   updatedAt: string;
   author: string;
@@ -440,7 +441,7 @@ export interface Database {
   queueAssessments: QueueAssessment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 12;
+  schemaVersion: 13;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -619,8 +620,17 @@ export type Command =
   | { type: 'queue.release-room'; id: string; stayId: string; reason: string }
   | { type: 'encounter.start'; id: string; roomId?: string }
   | { type: 'encounter.observe'; id: string }
-  | { type: 'note.save'; encounterId: string; soap: Soap }
-  | { type: 'note.finalize'; encounterId: string }
+  | {
+      type: 'note.save';
+      encounterId: string;
+      soap: Soap;
+      coding?: import('./consultation').AssessmentCoding;
+    }
+  | {
+      type: 'note.finalize';
+      encounterId: string;
+      record?: { soap: Soap; coding: import('./consultation').AssessmentCoding };
+    }
   | { type: 'admission.create'; patientId: string; bedId: string }
   | {
       type: 'admission.transfer';

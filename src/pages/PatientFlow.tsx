@@ -16,6 +16,9 @@ import {
   PageHeader,
   Panel,
   EmptyState,
+  Modal,
+  ActionForm,
+  valueOf,
   UnitRequired,
 } from '../components/ui';
 
@@ -44,13 +47,20 @@ export function DoctorCall({
     currentStay(encounter)?.roomId ??
     data.queueDirections.find((d) => d.encounterId === encounter.id)?.roomId;
   const [selectedRoom, setRoom] = useState(''),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [releasing, setReleasing] = useState(false);
   const occupied = new Set(
     data.encounters.filter((e) => e.id !== encounter.id).map((e) => currentStay(e)?.roomId),
   );
   const room =
     assigned ?? (selectedRoom || consultRooms.find((r) => !occupied.has(r.id))?.id || '');
   const active = data.careSegments.find((s) => s.encounterId === encounter.id && !s.endedAt);
+  const otherVisit = data.careSegments.some(
+    (s) => s.professionalId === context.sessionId && !s.endedAt && s.encounterId !== encounter.id,
+  );
+  const stay = currentStay(encounter);
+  const reserved = stay && !stay.enteredAt && isConsultRoom(stay.roomId);
+  const lastCall = reserved ? data.calls.filter((c) => c.roomStayId === stay.id).at(-1) : undefined;
   const owner = demoIdentities(repository.directory()).find(
     (i) => i.sessionId === active?.professionalId,
   );
@@ -94,11 +104,42 @@ export function DoctorCall({
             'Em observação'
           ) : encounter.status === 'in-care' ? (
             'Atendimento anterior · confirme o profissional responsável'
+          ) : reserved ? (
+            'Aguardando entrada · senha chamada às ' + clockTime(lastCall?.calledAt ?? stay.at)
+          ) : otherVisit ? (
+            'Conclua o atendimento em curso para iniciar outro.'
           ) : (
             'Aguardando entrada no consultório'
           )}
         </p>
       </div>
+      {releasing && reserved && (
+        <Modal
+          title="Devolver senha à fila"
+          description={encounter.ticket + ' · ' + roomName(stay.roomId)}
+          onClose={() => setReleasing(false)}
+        >
+          <ActionForm
+            submitLabel="Confirmar devolução"
+            onClose={() => setReleasing(false)}
+            onSubmit={async (f) => {
+              const rev = repository.getRevision();
+              await repository.execute(context, {
+                type: 'queue.release-room',
+                id: encounter.id,
+                stayId: stay.id,
+                reason: valueOf(f, 'reason'),
+              });
+              onChange?.(rev);
+              notify('Reserva liberada. A chegada foi preservada.');
+            }}
+          >
+            <Field label="Motivo da devolução">
+              <textarea name="reason" required maxLength={400} />
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
       {activeEncounter(encounter) && (
         <>
           <Field label="Destino da chamada">
@@ -116,6 +157,7 @@ export function DoctorCall({
             variant="secondary"
             disabled={
               busy ||
+              otherVisit ||
               !isConsultRoom(room) ||
               occupied.has(room) ||
               !!(active && active.professionalId !== context.sessionId)
@@ -125,9 +167,14 @@ export function DoctorCall({
             <Megaphone size={18} />
             Chamar / rechamar na TV
           </Button>
+          {reserved && (
+            <Button variant="secondary" onClick={() => setReleasing(true)}>
+              Devolver senha à fila
+            </Button>
+          )}
           {!active && (
             <Button
-              disabled={busy || !isConsultRoom(room) || occupied.has(room)}
+              disabled={busy || otherVisit || !isConsultRoom(room) || occupied.has(room)}
               onClick={() => act(true)}
             >
               <Play size={16} />
@@ -151,6 +198,7 @@ export function ConsultingRoom() {
       (e) =>
         (e.status === 'waiting' &&
           readyForConsultation(e) &&
+          (!currentStay(e) || isConsultRoom(currentStay(e)!.roomId)) &&
           (!routed.has(e.id) || isConsultRoom(routed.get(e.id)!))) ||
         e.status === 'observation' ||
         (e.status === 'in-care' &&
@@ -162,6 +210,15 @@ export function ConsultingRoom() {
         Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
         a.arrivedAt.localeCompare(b.arrivedAt),
     );
+  const completedToday = data.encounters
+    .filter(
+      (e) =>
+        e.status === 'completed' &&
+        e.professionalId === context.sessionId &&
+        e.completedAt &&
+        dateKey(new Date(e.completedAt)) === dateKey(),
+    )
+    .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
   const person = (e: Encounter) => {
     const p = data.patients.find((p) => p.id === e.patientId);
     return p?.socialName || p?.name;
@@ -239,6 +296,23 @@ export function ConsultingRoom() {
             />
           )}
         </Panel>
+        {completedToday.length > 0 && (
+          <Panel
+            title="Minhas consultas concluídas hoje"
+            subtitle="Abra o registro preservado ou consulte o histórico da pessoa."
+          >
+            <div className="panel-body">
+              {completedToday.map((e) => (
+                <p key={e.id}>
+                  <Link to={'/atendimento/' + e.id}>
+                    {e.ticket} · {person(e)}
+                  </Link>{' '}
+                  · {clockTime(e.completedAt!)}
+                </p>
+              ))}
+            </div>
+          </Panel>
+        )}
         <Notice>
           Chamar ou rechamar a senha não inicia o atendimento. O tempo de consulta começa em “Pessoa
           entrou · iniciar” e termina na conclusão ou no encaminhamento à observação.

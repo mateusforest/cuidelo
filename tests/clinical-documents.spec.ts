@@ -34,6 +34,8 @@ async function issue(page: Page) {
 async function finish(page: Page) {
   await page.getByLabel('A · Avaliação', { exact: true }).fill('Avaliação fictícia para teste.');
   await page.getByLabel('P · Plano', { exact: true }).fill('Plano fictício para teste.');
+  const code = page.getByRole('button', { name: 'R05 · Tosse', exact: true });
+  if (await code.isEnabled()) await code.click();
   await page.getByRole('button', { name: 'Salvar e concluir' }).click();
 }
 async function getDocs(page: Page) {

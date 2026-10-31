@@ -50,6 +50,7 @@ test('escuta → aferição → correção → consulta → complemento e histó
   );
   await page.getByLabel('A · Avaliação', { exact: true }).fill('Avaliação fictícia para o teste.');
   await page.getByLabel('P · Plano', { exact: true }).fill('Plano fictício de teste.');
+  await page.getByRole('button', { name: 'R05 · Tosse', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar e concluir', exact: true }).click();
   await expect(page.getByLabel('A · Avaliação', { exact: true })).toBeDisabled();
   await page.getByLabel('Motivo do complemento', { exact: true }).fill('Informação adicional.');

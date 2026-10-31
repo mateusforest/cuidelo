@@ -62,6 +62,7 @@ test('escuta → reavaliação → fila → TV → consultório → sala livre, 
   await expect(page.locator('.assessment-log')).toContainText('Revisão fictícia preservada.');
   await page.getByLabel('A · Avaliação', { exact: true }).fill('Avaliação fictícia');
   await page.getByLabel('P · Plano', { exact: true }).fill('Plano fictício');
+  await page.getByRole('button', { name: 'R05 · Tosse', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar e concluir' }).click();
   await expect(page.getByLabel('A · Avaliação', { exact: true })).toBeDisabled();
   await page.goto('/fila');

@@ -61,7 +61,16 @@ describe('contexto e permissões', () => {
   it('recepção não recebe notas ou alergias nem pode registrar evolução', () => {
     const db = createSeed(now);
     applyCommand(db, clinic, { type: 'encounter.start', id: 'aurora-centro-e2' }, now);
-    applyCommand(db, clinic, { type: 'note.save', encounterId: 'aurora-centro-e2', soap }, now);
+    applyCommand(
+      db,
+      clinic,
+      {
+        type: 'note.save',
+        encounterId: 'aurora-centro-e2',
+        soap,
+      },
+      now,
+    );
     const reception: Context = demoContext(clinic.organizationId, clinic.unitId, 'reception');
     const view = readSnapshot(db, reception);
     expect(view.notes).toEqual([]);
@@ -70,7 +79,11 @@ describe('contexto e permissões', () => {
       applyCommand(
         db,
         reception,
-        { type: 'note.save', encounterId: 'aurora-centro-e2', soap },
+        {
+          type: 'note.save',
+          encounterId: 'aurora-centro-e2',
+          soap,
+        },
         now,
       ),
     ).toThrow('não tem acesso');
@@ -159,7 +172,11 @@ describe('agenda e atendimento', () => {
     applyCommand(
       db,
       clinic,
-      { type: 'note.save', encounterId: 'aurora-centro-e2', soap: { ...soap, plan: '' } },
+      {
+        type: 'note.save',
+        encounterId: 'aurora-centro-e2',
+        soap: { ...soap, plan: '' },
+      },
       now,
     );
     expect(() =>
@@ -169,7 +186,17 @@ describe('agenda e atendimento', () => {
   it('preserva a nota finalizada e encerra o atendimento', () => {
     const db = createSeed(now);
     applyCommand(db, clinic, { type: 'encounter.start', id: 'aurora-centro-e2' }, now);
-    applyCommand(db, clinic, { type: 'note.save', encounterId: 'aurora-centro-e2', soap }, now);
+    applyCommand(
+      db,
+      clinic,
+      {
+        type: 'note.save',
+        coding: { codes: [{ system: 'CIAP-2', code: 'R05', label: 'Tosse' }], reason: '' },
+        encounterId: 'aurora-centro-e2',
+        soap,
+      },
+      now,
+    );
     applyCommand(db, clinic, { type: 'note.finalize', encounterId: 'aurora-centro-e2' }, now);
     expect(db.notes[0].status).toBe('final');
     expect(db.encounters.find((e) => e.id === 'aurora-centro-e2')?.status).toBe('completed');
@@ -177,7 +204,11 @@ describe('agenda e atendimento', () => {
       applyCommand(
         db,
         clinic,
-        { type: 'note.save', encounterId: 'aurora-centro-e2', soap: { ...soap, plan: 'Alterado' } },
+        {
+          type: 'note.save',
+          encounterId: 'aurora-centro-e2',
+          soap: { ...soap, plan: 'Alterado' },
+        },
         now,
       ),
     ).toThrow();

@@ -56,6 +56,7 @@ test('cadastro → agenda → chegada → registro finalizado e persistido', asy
   await expect(page.getByRole('textbox', { name: 'S · Subjetivo', exact: true })).toHaveValue(
     'Texto fictício para verificar o percurso.',
   );
+  await page.getByRole('button', { name: 'R05 · Tosse', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar e concluir' }).click();
   await expect(page.getByText('Registro concluído', { exact: true })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'P · Plano', exact: true })).toBeDisabled();

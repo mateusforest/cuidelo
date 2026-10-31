@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.15. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.16. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -109,9 +109,9 @@
       "quem": "Médicos e enfermeiros",
       "dispositivo": "desktop",
       "group": "UBS e assistência",
-      "status": "parcial",
+      "status": "demonstravel",
       "route": "/consultorio",
-      "note": "SOAP e complementos; receitas, exames e encaminhamentos com rascunho, revisão, emissão de demonstração, impressão e cancelamento preservado. Exames têm acompanhamento, reagendamento justificado, destaque de datas ultrapassadas e revisão médica. Receitas seguem para a farmácia, com entregas consultáveis no histórico da prefeitura. Faltam CIAP/CID, receituários especiais, validações clínicas, assinatura e integrações."
+      "note": "Chamada e rechamada, devolução, entrada em sala e cronômetro. SOAP com CIAP-2 ou CID-10 selecionados pelo profissional ou justificativa sem código. Receitas, exames, encaminhamentos, atestados e declarações demonstrativos. Conclusão preservada com liberação da sala, histórico da prefeitura e adendos. Catálogo integral, receituários especiais, validações clínicas, assinatura e envio oficial seguem pendentes."
     },
     {
       "id": "vacina",

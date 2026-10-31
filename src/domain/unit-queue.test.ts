@@ -161,6 +161,7 @@ describe('classificação e circulação entre salas', () => {
       doctor,
       {
         type: 'note.save',
+        coding: { codes: [{ system: 'CIAP-2', code: 'R05', label: 'Tosse' }], reason: '' },
         encounterId: e0,
         soap: {
           subjective: '',

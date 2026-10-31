@@ -75,6 +75,7 @@ describe('atualização cadastral preservada', () => {
       doctor,
       {
         type: 'note.save',
+        coding: { codes: [{ system: 'CIAP-2', code: 'R05', label: 'Tosse' }], reason: '' },
         encounterId: 'aurora-centro-e0',
         soap: {
           subjective: 'Teste',

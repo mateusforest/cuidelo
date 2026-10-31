@@ -14,7 +14,7 @@ import {
   type MedicationLine,
   type ExamLine,
 } from '../domain/clinical-documents';
-import { clockTime, shortDate } from '../domain/dates';
+import { clockTime, dateKey, shortDate } from '../domain/dates';
 import { ActionForm, Badge, Button, Field, Modal, Notice, Panel, valueOf } from './ui';
 import '../styles/clinical-documents.css';
 
@@ -33,19 +33,23 @@ const blankMedication = (): MedicationLine => ({
 });
 const blankExam = (): ExamLine => ({ id: crypto.randomUUID(), name: '', material: '', notes: '' });
 const blankContent = (kind: DocumentKind): DocumentContent =>
-  kind === 'prescription'
-    ? { kind, items: [blankMedication()], orientations: '' }
-    : kind === 'exams'
-      ? { kind, items: [blankExam()], indication: '', priority: 'routine', priorityReason: '' }
-      : {
-          kind,
-          specialty: '',
-          destination: '',
-          reason: '',
-          summary: '',
-          priority: 'routine',
-          priorityReason: '',
-        };
+  kind === 'attendance'
+    ? { kind, from: '', until: '' }
+    : kind === 'certificate'
+      ? { kind, startDate: '', days: '' }
+      : kind === 'prescription'
+        ? { kind, items: [blankMedication()], orientations: '' }
+        : kind === 'exams'
+          ? { kind, items: [blankExam()], indication: '', priority: 'routine', priorityReason: '' }
+          : {
+              kind,
+              specialty: '',
+              destination: '',
+              reason: '',
+              summary: '',
+              priority: 'routine',
+              priorityReason: '',
+            };
 export const documentStatus = (s: ClinicalDocument['status']) =>
   ({
     draft: 'Rascunho',
@@ -55,6 +59,28 @@ export const documentStatus = (s: ClinicalDocument['status']) =>
   })[s];
 
 export function DocumentBody({ content }: { content: DocumentContent }) {
+  if (content.kind === 'certificate')
+    return (
+      <div className="document-body">
+        <h3>Período de afastamento</h3>
+        <p>
+          {content.days || '—'} dia(s) a partir de{' '}
+          {content.startDate ? shortDate(content.startDate) : 'data pendente'}.
+        </p>
+      </div>
+    );
+  if (content.kind === 'attendance') {
+    const stamp = (v: string) =>
+      v ? shortDate(v.slice(0, 10)) + ' às ' + v.slice(11) : 'horário pendente';
+    return (
+      <div className="document-body">
+        <h3>Período de comparecimento</h3>
+        <p>
+          De {stamp(content.from)} até {stamp(content.until)}.
+        </p>
+      </div>
+    );
+  }
   if (content.kind === 'prescription')
     return (
       <div className="document-body">
@@ -195,7 +221,7 @@ export function EncounterDocuments({
   const draftCount = docs.filter((d) => d.status === 'draft').length;
   return (
     <Panel
-      title="Receitas, exames e encaminhamentos"
+      title="Documentos do consultório"
       subtitle="Documentos vinculados a este atendimento e preservados no histórico da pessoa."
       className="clinical-documents-panel"
     >
@@ -215,6 +241,18 @@ export function EncounterDocuments({
               Icon: FlaskConical,
             },
             {
+              kind: 'certificate',
+              label: 'Emitir atestado',
+              detail: 'Período de afastamento',
+              Icon: FilePlus2,
+            },
+            {
+              kind: 'attendance',
+              label: 'Declarar comparecimento',
+              detail: 'Datas e horários na unidade',
+              Icon: FilePlus2,
+            },
+            {
               kind: 'referral',
               label: 'Encaminhar',
               detail: 'Solicitação ligada à regulação',
@@ -226,7 +264,18 @@ export function EncounterDocuments({
             key={kind}
             aria-label={label}
             disabled={!canCreate}
-            onClick={() => setEditor({ kind, copy: blankContent(kind) })}
+            onClick={() => {
+              const stamp = (iso: string) => dateKey(new Date(iso)) + 'T' + clockTime(iso);
+              const copy =
+                kind === 'attendance'
+                  ? {
+                      kind,
+                      from: stamp(encounter.arrivedAt),
+                      until: stamp(new Date().toISOString()),
+                    }
+                  : blankContent(kind);
+              setEditor({ kind, copy });
+            }}
           >
             <Icon size={23} />
             <strong>{label}</strong>
@@ -266,7 +315,9 @@ export function EncounterDocuments({
                   {shortDate(doc.updatedAt)} · {clockTime(doc.updatedAt)} ·{' '}
                   {doc.content.kind === 'referral'
                     ? doc.content.specialty || 'Especialidade pendente'
-                    : `${doc.content.items.length} item(ns)`}
+                    : 'items' in doc.content
+                      ? `${doc.content.items.length} item(ns)`
+                      : documentNames[doc.content.kind]}
                 </small>
               </div>
               <Badge
@@ -743,7 +794,45 @@ function DocumentEditor({
               </Notice>
             </>
           )}
-          {content.kind !== 'prescription' && (
+          {content.kind === 'certificate' && (
+            <>
+              <Field label="Data de início do afastamento">
+                <input
+                  type="date"
+                  value={content.startDate}
+                  onChange={(e) => setContent({ ...content, startDate: e.target.value })}
+                />
+              </Field>
+              <Field label="Dias de afastamento">
+                <input
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={content.days}
+                  onChange={(e) => setContent({ ...content, days: e.target.value })}
+                />
+              </Field>
+            </>
+          )}
+          {content.kind === 'attendance' && (
+            <>
+              <Field label="Início do comparecimento">
+                <input
+                  type="datetime-local"
+                  value={content.from}
+                  onChange={(e) => setContent({ ...content, from: e.target.value })}
+                />
+              </Field>
+              <Field label="Fim do comparecimento">
+                <input
+                  type="datetime-local"
+                  value={content.until}
+                  onChange={(e) => setContent({ ...content, until: e.target.value })}
+                />
+              </Field>
+            </>
+          )}
+          {(content.kind === 'exams' || content.kind === 'referral') && (
             <>
               <Field label="Prioridade informada pelo médico">
                 <select
@@ -793,7 +882,7 @@ export function PatientDocumentHistory({ patientId }: { patientId: string }) {
     .sort((a, b) => b.issuedAt!.localeCompare(a.issuedAt!));
   return (
     <Panel
-      title="Receitas, exames e encaminhamentos da prefeitura"
+      title="Documentos clínicos da prefeitura"
       subtitle="Documentos emitidos nas unidades desta prefeitura; alterações permanecem restritas à unidade de origem."
     >
       <div className="clinical-document-list">

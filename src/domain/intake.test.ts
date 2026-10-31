@@ -31,6 +31,7 @@ function completeNote(db: Database) {
     context,
     {
       type: 'note.save',
+      coding: { codes: [{ system: 'CIAP-2', code: 'R05', label: 'Tosse' }], reason: '' },
       encounterId: 'aurora-centro-e2',
       soap: {
         subjective: 'Teste',
@@ -213,7 +214,7 @@ describe('escuta, aferições e complementos', () => {
     const saved = JSON.parse(storage.getItem(storageKey)!);
     for (const key of ['patients', 'appointments', 'notes', 'encounters', 'calls'])
       expect(saved[key]).toEqual(old[key]);
-    expect(saved.schemaVersion).toBe(12);
+    expect(saved.schemaVersion).toBe(13);
     const restored = new DemoRepository(storage, () => now);
     expect(restored.recoveryMessage).toBe('');
     expect(restored.snapshot(context).intakes).toHaveLength(1);

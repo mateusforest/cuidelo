@@ -487,3 +487,48 @@
     margin-top: 8mm;
   }
 }
+
+.assessment-coding {
+  display: grid;
+  gap: 0.8rem;
+  border-top: 1px solid var(--line, #d8e5df);
+  padding-top: 1rem;
+}
+.assessment-coding h3,
+.assessment-coding p,
+.recorded-codes {
+  margin: 0;
+}
+.assessment-coding p {
+  color: var(--muted, #506760);
+}
+.coding-fields {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(0, 2fr);
+  gap: 0.7rem;
+}
+.coding-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.assessment-coding details {
+  padding: 0.75rem;
+  border: 1px solid #d8e5df;
+  border-radius: 8px;
+}
+.assessment-coding details[open] {
+  display: grid;
+  gap: 0.7rem;
+}
+.recorded-codes {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem 0 0.65rem 1.25rem;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .coding-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

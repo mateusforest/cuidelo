@@ -79,6 +79,7 @@ test('totem → identificação → chamada da estação → TV → consulta →
   await page.getByLabel('P · Plano', { exact: true }).fill('Plano de teste.');
   await page.getByRole('button', { name: 'Chamar / rechamar na TV' }).click();
   await expect(page.getByRole('status')).toContainText('enviada');
+  await page.getByRole('button', { name: 'R05 · Tosse', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar e concluir' }).click();
   await expect(page.getByText('Registro concluído', { exact: true })).toBeVisible();
   await page.goto('/desempenho');

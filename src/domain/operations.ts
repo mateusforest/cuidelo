@@ -37,6 +37,7 @@ import {
 } from './model';
 import { addDays, dateKey, validDay, validTime } from './dates';
 import { DomainError } from './errors';
+import { assessmentCoding, emptyCoding, normalizeSoap } from './consultation';
 import { makeQueueCall, nextTicket } from './queue';
 import { validateIntakeContent } from './intake';
 import { applyVaccinationCommand, vaccinationSummary } from './vaccination';
@@ -584,89 +585,71 @@ export function applyCommand(
       action = 'Atendimento encaminhado à observação';
       break;
     }
-    case 'note.save': {
+    case 'note.save':
+    case 'note.finalize': {
       permit(c, 'clinical');
       const e = encounter(command.encounterId);
       ownCare(e, c);
-      ensure(
-        e.status === 'in-care' || e.status === 'observation',
-        'O atendimento deve estar em andamento.',
-        'conflict',
-      );
       const existing = db.notes.find(
-        (n) => n.encounterId === e.id && n.organizationId === c.organizationId,
+        (n) =>
+          n.encounterId === e.id && n.organizationId === c.organizationId && n.unitId === c.unitId,
       );
       ensure(
         !existing || existing.status === 'draft',
         'Um registro finalizado não pode ser alterado.',
         'immutable',
       );
-      for (const value of Object.values(command.soap))
-        ensure(
-          typeof value === 'string' && value.length <= 10000,
-          'Cada campo permite até 10.000 caracteres.',
-        );
-      const soap = {
-        subjective: command.soap.subjective.trim(),
-        objective: command.soap.objective.trim(),
-        assessment: command.soap.assessment.trim(),
-        plan: command.soap.plan.trim(),
-      };
       ensure(
-        Object.values(soap).some(Boolean),
+        e.status === 'in-care' || e.status === 'observation',
+        'O atendimento deve estar em andamento.',
+        'conflict',
+      );
+      const finalize = command.type === 'note.finalize';
+      const input = command.type === 'note.save' ? command : command.record;
+      ensure(input || existing, 'Salve o rascunho antes de concluir.');
+      const soap = normalizeSoap((input ?? existing)!.soap);
+      if (finalize) {
+        required(soap.assessment, 'Avaliação', 10000);
+        required(soap.plan, 'Plano', 10000);
+        ensure(
+          !db.clinicalDocuments.some((d) => d.encounterId === e.id && d.status === 'draft'),
+          'Há documentos em rascunho. Emita ou descarte cada um antes de concluir o atendimento.',
+        );
+        const segment = db.careSegments.find((s) => s.encounterId === e.id && !s.endedAt);
+        ensure(
+          at >= (segment?.startedAt ?? e.startedAt ?? e.arrivedAt) &&
+            (!existing || at >= existing.updatedAt),
+          'Confira o relógio antes de concluir o atendimento.',
+        );
+      }
+      const coding = assessmentCoding(input?.coding ?? existing?.coding ?? emptyCoding(), finalize);
+      ensure(
+        Object.values(soap).some(Boolean) || coding.codes.length,
         'Preencha ao menos um campo para salvar o rascunho.',
       );
       entityId = existing?.id ?? newId();
-      if (existing)
-        Object.assign(existing, {
-          soap,
-          updatedAt: at,
-          author: identityFor(db, c).name,
-        });
-      else
-        db.notes.push({
-          id: entityId,
-          organizationId: c.organizationId,
-          unitId: c.unitId,
-          patientId: e.patientId,
-          encounterId: e.id,
-          soap,
-          status: 'draft',
-          updatedAt: at,
-          author: identityFor(db, c).name,
-        });
-      action = 'Rascunho clínico salvo';
-      break;
-    }
-    case 'note.finalize': {
-      permit(c, 'clinical');
-      const e = encounter(command.encounterId);
-      ownCare(e, c);
-      ensure(
-        e.status === 'in-care' || e.status === 'observation',
-        'Este atendimento não está em andamento.',
-        'conflict',
-      );
-      const note = db.notes.find(
-        (n) => n.encounterId === e.id && n.organizationId === c.organizationId,
-      );
-      ensure(note && note.status === 'draft', 'Salve o rascunho antes de concluir.');
-      required(note.soap.assessment, 'Avaliação');
-      required(note.soap.plan, 'Plano');
-      ensure(
-        !db.clinicalDocuments.some((d) => d.encounterId === e.id && d.status === 'draft'),
-        'Há documentos em rascunho. Emita ou descarte cada um antes de concluir o atendimento.',
-      );
-      if (currentStay(e)?.enteredAt) closeRoom(e, c, at, 'completed');
-      else closeRoom(e, c, at, 'released', 'Conclusão durante a observação');
-      note.status = 'final';
-      note.finalizedAt = at;
-      note.updatedAt = at;
-      e.status = 'completed';
-      e.completedAt = at;
-      closeCare(db, e.id, at, 'completed');
-      entityId = note.id;
-      action = 'Registro de demonstração concluído (sem assinatura digital)';
+      const update = { soap, coding, updatedAt: at, author: identityFor(db, c).name };
+      if (finalize) {
+        if (currentStay(e)?.enteredAt) closeRoom(e, c, at, 'completed');
+        else closeRoom(e, c, at, 'released', 'Conclusão durante a observação');
+        closeCare(db, e.id, at, 'completed');
+        e.status = 'completed';
+        e.completedAt = at;
+      }
+      const note = existing ?? {
+        id: entityId,
+        organizationId: c.organizationId,
+        unitId: c.unitId,
+        patientId: e.patientId,
+        encounterId: e.id,
+        status: 'draft' as const,
+        ...update,
+      };
+      Object.assign(note, update, finalize ? { status: 'final', finalizedAt: at } : {});
+      if (!existing) db.notes.push(note);
+      action = finalize
+        ? 'Atendimento concluído no prontuário de demonstração'
+        : 'Rascunho clínico salvo';
       break;
     }
     case 'admission.create': {
@@ -975,7 +958,9 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
             (c.role === 'clinical' && d.unitId === c.unitId),
         )
       : [],
-    notes: has('clinical') ? org(db.notes) : [],
+    notes: has('clinical')
+      ? org(db.notes).filter((n) => n.status === 'final' || n.unitId === c.unitId)
+      : [],
     intakes: has('clinical') ? org(db.intakes) : [],
     addenda: has('clinical') ? org(db.addenda) : [],
     vaccineLots: has('vaccine.stock') ? unit(db.vaccineLots) : [],

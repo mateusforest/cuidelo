@@ -4,6 +4,8 @@ import { ArrowLeft, Save, CheckCircle2, Clock3, FileCheck2 } from 'lucide-react'
 import { useApp } from '../app/context';
 import { EncounterDocuments } from '../components/ClinicalDocuments';
 import { QueueAssessmentPanel } from '../components/QueueAssessment';
+import { AssessmentCodes, RecordedCodes } from '../components/AssessmentCodes';
+import { emptyCoding, type AssessmentCoding } from '../domain/consultation';
 import { DoctorCall } from './PatientFlow';
 import { emptySoap, type Soap } from '../domain/model';
 import { ageAt, clockTime, shortDate } from '../domain/dates';
@@ -26,7 +28,10 @@ function EncounterEditor({ id }: { id?: string }) {
     patient = data.patients.find((p) => p.id === encounter?.patientId),
     note = data.notes.find((n) => n.encounterId === id);
   const [soap, setSoap] = useState<Soap>(note?.soap ?? emptySoap()),
-    [baseline, setBaseline] = useState(JSON.stringify(note?.soap ?? emptySoap())),
+    [coding, setCoding] = useState<AssessmentCoding>(note?.coding ?? emptyCoding()),
+    [baseline, setBaseline] = useState(
+      JSON.stringify([note?.soap ?? emptySoap(), note?.coding ?? emptyCoding()]),
+    ),
     [baseRevision, setBaseRevision] = useState(repository.getRevision()),
     [pending, setPending] = useState(false),
     [error, setError] = useState('');
@@ -36,7 +41,18 @@ function EncounterEditor({ id }: { id?: string }) {
   const intakes = data.intakes.filter((r) => r.encounterId === id);
   const finalized = encounter?.status === 'completed',
     dirty =
-      documentDirty || JSON.stringify(soap) !== baseline || !!(addendumText || addendumReason);
+      documentDirty ||
+      (!finalized && JSON.stringify([soap, coding]) !== baseline) ||
+      !!(addendumText || addendumReason);
+  const storedRecord = JSON.stringify([note?.soap ?? emptySoap(), note?.coding ?? emptyCoding()]);
+  useEffect(() => {
+    if (!dirty && baseline !== storedRecord) {
+      setSoap(note?.soap ?? emptySoap());
+      setCoding(note?.coding ?? emptyCoding());
+      setBaseline(storedRecord);
+      setBaseRevision(repository.getRevision());
+    }
+  }, [note, storedRecord, baseline, dirty, repository]);
   useEffect(() => {
     setDirty(dirty);
     return () => setDirty(false);
@@ -90,16 +106,16 @@ function EncounterEditor({ id }: { id?: string }) {
         throw new Error('Preencha a avaliação e o plano antes de concluir.');
       await repository.execute(
         context,
-        { type: 'note.save', encounterId: encounter.id, soap },
+        finalize
+          ? { type: 'note.finalize', encounterId: encounter.id, record: { soap, coding } }
+          : { type: 'note.save', encounterId: encounter.id, soap, coding },
         baseRevision,
       );
-      setBaseline(JSON.stringify(soap));
-      setDirty(false);
+      const saved = repository.snapshot(context).notes.find((n) => n.encounterId === encounter.id)!;
+      setSoap(saved.soap);
+      setCoding(saved.coding ?? emptyCoding());
+      setBaseline(JSON.stringify([saved.soap, saved.coding ?? emptyCoding()]));
       setBaseRevision(repository.getRevision());
-      if (finalize) {
-        await repository.execute(context, { type: 'note.finalize', encounterId: encounter.id });
-        setBaseRevision(repository.getRevision());
-      }
       notify(
         finalize
           ? 'Registro concluído no ambiente de demonstração.'
@@ -149,9 +165,9 @@ function EncounterEditor({ id }: { id?: string }) {
   };
   return (
     <div className="operations-page encounter-workspace">
-      <Link className="back-link" to="/recepcao">
+      <Link className="back-link" to="/consultorio">
         <ArrowLeft size={16} />
-        Recepção e atendimento
+        Meu consultório
       </Link>
       <QueueAssessmentPanel encounter={encounter} />
       <div className="patient-hero">
@@ -168,9 +184,35 @@ function EncounterEditor({ id }: { id?: string }) {
             ? 'Registro concluído'
             : encounter.status === 'observation'
               ? 'Em observação'
-              : 'Em atendimento'}
+              : encounter.status === 'waiting'
+                ? 'Aguardando entrada'
+                : 'Em atendimento'}
         </Badge>
       </div>
+      {finalized && note && (
+        <Panel
+          title="Consulta concluída"
+          subtitle={
+            shortDate(note.finalizedAt ?? note.updatedAt) +
+            ' às ' +
+            clockTime(note.finalizedAt ?? note.updatedAt) +
+            ' · ' +
+            note.author
+          }
+        >
+          <div className="panel-body">
+            <p>O registro está no prontuário da pessoa. A sala foi liberada.</p>
+            <div className="row-actions">
+              <Link className="button primary" to={'/pessoas/' + patient.id}>
+                Ver consulta no prontuário
+              </Link>
+              <Link className="button secondary" to="/consultorio">
+                Voltar para a fila médica
+              </Link>
+            </div>
+          </div>
+        </Panel>
+      )}
       <div className="clinical-grid">
         <div>
           <DoctorCall
@@ -238,13 +280,20 @@ function EncounterEditor({ id }: { id?: string }) {
                     aria-label={labels[key].title}
                     rows={5}
                     maxLength={10000}
-                    value={soap[key]}
+                    value={finalized && note ? note.soap[key] : soap[key]}
                     onChange={(e) => setSoap({ ...soap, [key]: e.target.value })}
                     placeholder="Registrar informação fictícia para testar o fluxo…"
                   />
                 </Field>
               ))}
+              {!finalized && canEdit && <AssessmentCodes value={coding} onChange={setCoding} />}
             </fieldset>
+            {(finalized || !canEdit) && note && (
+              <div className="panel-body">
+                <h3>Problemas e condições avaliados</h3>
+                <RecordedCodes value={note.coding} />
+              </div>
+            )}
             {error && !finalized && (
               <div className="form-error" role="alert">
                 {error}
@@ -258,12 +307,17 @@ function EncounterEditor({ id }: { id?: string }) {
                         )
                       )
                         return;
-                      const latest =
-                        repository
-                          .snapshot(context)
-                          .notes.find((n) => n.encounterId === encounter.id)?.soap ?? emptySoap();
-                      setSoap(latest);
-                      setBaseline(JSON.stringify(latest));
+                      const latest = repository
+                        .snapshot(context)
+                        .notes.find((n) => n.encounterId === encounter.id);
+                      setSoap(latest?.soap ?? emptySoap());
+                      setCoding(latest?.coding ?? emptyCoding());
+                      setBaseline(
+                        JSON.stringify([
+                          latest?.soap ?? emptySoap(),
+                          latest?.coding ?? emptyCoding(),
+                        ]),
+                      );
                       setDirty(false);
                       setBaseRevision(repository.getRevision());
                       setError('');

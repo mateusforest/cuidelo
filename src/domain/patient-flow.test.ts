@@ -90,10 +90,17 @@ describe('sessões, jornada e totem', () => {
     applyCommand(
       db,
       doctor,
-      { type: 'note.save', encounterId: 'aurora-centro-e0', soap },
+      {
+        type: 'note.save',
+        coding: { codes: [{ system: 'CIAP-2', code: 'R05', label: 'Tosse' }], reason: '' },
+        encounterId: 'aurora-centro-e0',
+        soap,
+      },
       later(5),
     );
     const other = demoContext('aurora', 'aurora-vila', 'clinical');
+    expect(readSnapshot(db, other).notes).toHaveLength(0);
+    applyCommand(db, doctor, { type: 'note.finalize', encounterId: 'aurora-centro-e0' }, later(6));
     expect(readSnapshot(db, other).notes).toHaveLength(1);
     expect(
       readSnapshot(db, demoContext('horizonte', 'horizonte-centro', 'clinical')).notes,
@@ -128,7 +135,17 @@ describe('sessões, jornada e totem', () => {
     );
     expect(e.startedAt).toBeUndefined();
     applyCommand(db, c, { type: 'encounter.start', id: e.id }, later(15));
-    applyCommand(db, c, { type: 'note.save', encounterId: e.id, soap }, later(20));
+    applyCommand(
+      db,
+      c,
+      {
+        type: 'note.save',
+        coding: { codes: [{ system: 'CIAP-2', code: 'R05', label: 'Tosse' }], reason: '' },
+        encounterId: e.id,
+        soap,
+      },
+      later(20),
+    );
     applyCommand(db, c, { type: 'encounter.observe', id: e.id }, later(25));
     applyCommand(db, c, { type: 'encounter.start', id: e.id }, later(55));
     applyCommand(db, c, { type: 'note.finalize', encounterId: e.id }, later(60));
@@ -147,7 +164,16 @@ describe('sessões, jornada e totem', () => {
       applyCommand(db, other, { type: 'encounter.start', id: 'aurora-centro-e0' }, now),
     ).toThrow('em curso');
     expect(() =>
-      applyCommand(db, other, { type: 'note.save', encounterId: 'aurora-centro-e0', soap }, now),
+      applyCommand(
+        db,
+        other,
+        {
+          type: 'note.save',
+          encounterId: 'aurora-centro-e0',
+          soap,
+        },
+        now,
+      ),
     ).toThrow('responsável');
     expect(() =>
       applyCommand(db, doctor, { type: 'encounter.start', id: 'aurora-centro-e1' }, now),

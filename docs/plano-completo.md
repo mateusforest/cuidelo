@@ -588,3 +588,7 @@ Referências consultadas em 29 de outubro de 2026. Revalidar versões, modelos, 
 | Conciliação | Comparação dos registros de origem e destino para resolver divergências |
 
 Cada conector e documento clínico deverá manter sua referência normativa ou técnica, versão e responsável por atualização. A adoção de um padrão não substitui testes do fluxo completo nem autoriza acesso a bases de terceiros.
+
+## Aplicativo do cidadão · etapa posterior
+
+Após o incremento do Consultório, levantar com as prefeituras e pessoas atendidas as jornadas prioritárias do aplicativo do cidadão. Candidatos para essa definição incluem consulta de agendamentos e acesso aos próprios documentos disponibilizados. Antes de desenvolver o acesso a dados pessoais, definir identificação do cidadão, regras de representação, escopo de dados publicados e autorização no servidor. O aplicativo do cidadão permanece como frente futura, separada das sessões de teste da equipe.

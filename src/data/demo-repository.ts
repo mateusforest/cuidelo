@@ -1,3 +1,4 @@
+import { assessmentCoding } from '../domain/consultation';
 import { validateUnitQueue } from '../domain/unit-queue';
 import { validateAdmissions } from '../domain/hospital';
 import { validateContinuity } from '../domain/continuity';
@@ -123,9 +124,10 @@ function parseDatabase(value: string): Database {
     db.queueServiceEvents = [];
   }
   if (isRecord(db) && db.schemaVersion === 11) db.schemaVersion = 12;
+  if (isRecord(db) && db.schemaVersion === 12) db.schemaVersion = 13;
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 12 ||
+    db.schemaVersion !== 13 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )
@@ -468,6 +470,17 @@ function parseDatabase(value: string): Database {
   validateAdministrativeHistory(typed);
   validateContinuity(typed);
   validateAdmissions(typed);
+  for (const note of typed.notes) {
+    if (note.coding === undefined) continue;
+    const normalized = assessmentCoding(note.coding, note.status === 'final');
+    if (
+      note.coding.reason !== normalized.reason ||
+      normalized.codes.some(
+        (c, i) => c.label !== note.coding!.codes[i].label || c.code !== note.coding!.codes[i].code,
+      )
+    )
+      throw new Error('Codificação clínica inconsistente.');
+  }
   validateUnitQueue(typed);
   return typed;
 }

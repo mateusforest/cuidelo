@@ -481,6 +481,17 @@ export function reserveCall(
     requireRule(!own, 'Libere a sala antes de chamar a pessoa para outro setor.');
     return;
   }
+  if (can(c.role, 'clinical')) {
+    requireRule(
+      !db.careSegments.some(
+        (s) =>
+          !s.endedAt &&
+          ((s.encounterId === e.id && s.professionalId !== c.sessionId) ||
+            (s.professionalId === c.sessionId && s.encounterId !== e.id)),
+      ),
+      'Confira o atendimento em curso antes de chamar para o consultório.',
+    );
+  }
   const room = availableRoom(db, c, e, roomId);
   if (own) {
     requireRule(at >= own.at, 'Confira o relógio antes de rechamar.');

@@ -72,9 +72,14 @@ export function Coverage() {
             internet.
           </p>
           <p>
+            <strong>03 · Consultório — demonstrável.</strong> Teste a chamada, o registro de
+            entrada, a avaliação SOAP com CIAP-2 ou CID-10 e os documentos do médico. A conclusão
+            libera a sala e deixa a consulta disponível no histórico da prefeitura.
+          </p>
+          <p>
             Restam {inventory.rows.filter((r) => r.status === 'parcial').length} percursos parciais.
-            A ordem começa pelo atendimento da unidade, com consultório, farmácia e agenda logo após
-            a fila. Protocolos e regras clínicas dependem de validação institucional.
+            Farmácia e agenda são os próximos percursos do atendimento da unidade. Protocolos e
+            regras clínicas dependem de validação institucional.
           </p>
           <button
             className="button secondary"
