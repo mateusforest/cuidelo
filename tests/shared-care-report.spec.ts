@@ -157,20 +157,28 @@ test('celular compartilha cinco tipos de registro com outro navegador, confere p
       phone.getByText('Levar o diário à próxima consulta de demonstração.', { exact: true }),
     ).toBeVisible({ timeout: 20000 });
     // Perde só a resposta: o servidor recebeu, mas a estação deve manter o envio pendente até conferir.
-    let dropped = false;
-    await page.route('**/api/cidadao', async (route) => {
-      if (!dropped && route.request().postDataJSON()?.op === 'report.reply') {
-        dropped = true;
-        const response = await route.fetch();
-        expect(response.ok()).toBe(true);
-        await route.abort('failed');
-      } else await route.continue();
+    await page.evaluate(() => {
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const response = await original(input, init);
+        if (
+          typeof init?.body === 'string' &&
+          String(input).endsWith('/api/cidadao') &&
+          JSON.parse(init.body).op === 'report.reply'
+        ) {
+          window.fetch = original;
+          document.documentElement.dataset.replyStatus = String(response.status);
+          if (response.ok) throw new TypeError('Simulação de resposta perdida após o aceite.');
+        }
+        return response;
+      };
     });
     await guidance.fill('Segunda orientação fictícia para o retorno.');
     await page.getByRole('button', { name: 'Registrar e enviar orientação' }).click();
     await expect(page.getByRole('button', { name: 'Tentar enviar novamente' })).toBeVisible({
       timeout: 25000,
     });
+    await expect(page.locator('html')).toHaveAttribute('data-reply-status', /^(200|201)$/);
     await phone.getByRole('link', { name: 'Relatório', exact: true }).click();
     await phone.getByRole('button', { name: 'Encerrar compartilhamento' }).click();
     await expect(field).toHaveCount(0);
