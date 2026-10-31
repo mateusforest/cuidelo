@@ -269,3 +269,122 @@ test('HTML offline no celular recebe receita, cadastra lote, entrega e abre comp
   await page.reload();
   await expect(page.locator('.document-sheet')).toContainText('Saldo da receita concluído');
 });
+
+for (const portable of [false, true]) {
+  const surface = portable ? 'no HTML offline em tela de celular' : 'na web';
+  test(`farmácia ${surface} · devolução e estorno por lote preservam a entrega original`, async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(90000);
+    const base = portable ? pathToFileURL(resolve('dist-standalone/Cuidelo.html')).href + '#' : '';
+    if (portable) {
+      await context.setOffline(true);
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
+    const docId = await prescription(page, base);
+    const firstCode = 'AJUSTE-01',
+      secondCode = 'AJUSTE-02';
+    const firstLot = await register(page, firstCode, 5, true);
+    const secondLot = await register(page, secondCode, 5);
+    const card = page.getByTestId('prescription-' + docId);
+    await card.getByRole('button', { name: 'Conferir e entregar' }).click();
+    await page.getByLabel('Lote · item 1 · linha 1', { exact: true }).selectOption(firstLot);
+    await page.getByLabel('Entregar · item 1 · linha 1', { exact: true }).fill('4');
+    await page.getByRole('button', { name: 'Adicionar lote ao item 1' }).click();
+    await page.getByLabel('Lote · item 1 · linha 2', { exact: true }).selectOption(secondLot);
+    await page.getByLabel('Entregar · item 1 · linha 2', { exact: true }).fill('2');
+    await confirm(page);
+    await page.getByRole('button', { name: 'Confirmar entrega e concluir' }).click();
+    await deliverySaved(page);
+    const popup = page.waitForEvent('popup');
+    await page.getByRole('link', { name: 'Abrir último comprovante' }).click();
+    const receipt = await popup;
+    await expect(receipt.getByRole('heading', { name: 'Comprovante de entrega' })).toBeVisible();
+    const number = await receipt.locator('.document-sheet-title strong').innerText();
+    const originalItems = await receipt.locator('.receipt-item').innerText();
+    const originalUrl = receipt.url();
+    await receipt.close();
+
+    const returnReason = 'Material fictício recebido no balcão.';
+    const reversalReason = 'Uma unidade fictícia permaneceu na farmácia.';
+    async function openDelivery(search: string) {
+      await page.getByRole('button', { name: 'Localizar entrega' }).click();
+      const input = page.getByRole('searchbox', { name: 'Buscar pessoa, comprovante ou lote' });
+      await input.fill('SEM-CORRESPONDENCIA');
+      await expect(card).toHaveCount(0);
+      await input.fill(search);
+      await card.getByRole('button', { name: 'Ver receita e entregas (1)' }).click();
+      await expect(page.getByRole('dialog')).toContainText(number);
+    }
+    async function adjust(
+      action: 'devolução' | 'estorno',
+      lot: string,
+      available: number,
+      qty: number,
+      reason: string,
+    ) {
+      await page.getByRole('button', { name: 'Registrar ' + action, exact: true }).click();
+      const editor = page.getByRole('dialog', { name: 'Registrar ' + action, exact: true });
+      await editor.getByLabel('Item e lote da entrega').selectOption({
+        label:
+          'Medicamento fictício Alfa · lote ' + lot + ' · até ' + available + ' unidade de teste',
+      });
+      await editor.getByLabel('Quantidade do ajuste').fill(String(qty));
+      await editor.getByLabel('Motivo do ajuste').fill(reason);
+      await editor.getByRole('checkbox').check();
+      await editor.getByRole('button', { name: 'Confirmar ' + action }).click();
+      await expect(
+        page.getByRole('region', { name: 'Ajustes da entrega ' + number }),
+      ).toContainText(reason);
+      await page.getByRole('dialog').getByRole('button', { name: 'Fechar janela' }).click();
+    }
+    async function checkStock(code: string, available: number, segregated: number) {
+      const row = page
+        .getByRole('row')
+        .filter({ has: page.getByRole('cell', { name: code, exact: true }) });
+      await expect(row.getByText('Disponível · ' + available, { exact: true })).toBeVisible();
+      await expect(row.getByText('Segregado · ' + segregated, { exact: true })).toBeVisible();
+    }
+    const prescriptionBalance = (label: string) =>
+      card
+        .locator('dl > div')
+        .filter({ has: page.getByText(label, { exact: true }) })
+        .locator('dd');
+    await openDelivery(firstCode);
+    await adjust('devolução', firstCode, 4, 2, returnReason);
+    await checkStock(firstCode, 1, 2);
+    await expect(card.getByText('Entregue por completo', { exact: true })).toBeVisible();
+    await expect(prescriptionBalance('Pendente')).toHaveText('0');
+    await openDelivery(number);
+    await adjust('estorno', secondCode, 2, 1, reversalReason);
+    await page.reload();
+    await checkStock(firstCode, 1, 2);
+    await checkStock(secondCode, 4, 0);
+    await expect(card.getByText('Entrega parcial', { exact: true })).toBeVisible();
+    await expect(prescriptionBalance('Entregue')).toHaveText('5');
+    await expect(prescriptionBalance('Pendente')).toHaveText('1');
+    await page.goto(originalUrl);
+    await expect(page.locator('.receipt-item')).toHaveText(originalItems, { useInnerText: true });
+    const audit = page.getByRole('region', { name: 'Ajustes da entrega ' + number });
+    await expect(audit.getByRole('listitem')).toHaveCount(2);
+    const returned = audit.getByRole('listitem').filter({ hasText: returnReason });
+    await expect(returned).toContainText(firstCode);
+    await expect(returned).toContainText('Entrada em estoque segregado · de 0 para 2');
+    const reversed = audit.getByRole('listitem').filter({ hasText: reversalReason });
+    await expect(reversed).toContainText(secondCode);
+    await expect(reversed).toContainText('Reposição no saldo do lote · de 3 para 4');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    await selectSession(page, { role: 'clinical', unitId: 'aurora-vila' });
+    await page.goto(base + '/pessoas/aurora-p1');
+    await page.getByText('Entregas da farmácia', { exact: true }).click();
+    await expect(audit).toContainText(returnReason);
+    await expect(audit).toContainText(reversalReason);
+    await expect(page.getByRole('button', { name: /Registrar (devolução|estorno)/ })).toHaveCount(
+      0,
+    );
+  });
+}

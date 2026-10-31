@@ -66,19 +66,42 @@ const entries = (await readdir(path.join(out, 'assets'))).filter((x) => x.endsWi
 if (entries.length !== 1)
   throw new Error('A exportação precisa conter um único módulo JavaScript.');
 let script = embed(await readFile(path.join(out, 'assets', entries[0]), 'utf8'));
-script = script.replace(/(["'\x60])\/brand\/guia\.html\1/g, 'window.__CUIDELO_GUIDE_URL__');
-if (script.includes('/brand/guia.html')) throw new Error('O guia ainda não foi incorporado.');
+const embeddedPages = [
+  { route: '/brand/guia.html', variable: 'window.__CUIDELO_GUIDE_URL__', content: guide },
+  {
+    route: '/panorama-municipal.html',
+    variable: 'window.__CUIDELO_STUDY_URL__',
+    content: await readFile(path.join(root, 'public/panorama-municipal.html'), 'utf8'),
+  },
+];
+const bootPages = embeddedPages
+  .map(({ route, variable, content }) => {
+    const before = script;
+    for (const quote of ['"', "'", String.fromCharCode(96)]) {
+      script = script.replaceAll(quote + route + quote, variable);
+    }
+    if (script === before || script.includes(route))
+      throw new Error('Página não incorporada ao HTML: ' + route);
+    return (
+      variable +
+      '=URL.createObjectURL(new Blob([' +
+      JSON.stringify(content).replaceAll('<', '\\u003c') +
+      '],{type:"text/html;charset=utf-8"}));'
+    );
+  })
+  .join('');
 if (/(?:from\s*|import\s*\()(["'])\.\.?\//.test(script))
   throw new Error('Há dependência JavaScript externa no HTML.');
 const styles = (await readdir(path.join(out, 'assets'))).filter((x) => x.endsWith('.css'));
 let css = embed(
   (await Promise.all(styles.map((x) => readFile(path.join(out, 'assets', x), 'utf8')))).join('\n'),
 );
-const guideBoot = `<script>window.__CUIDELO_GUIDE_URL__=URL.createObjectURL(new Blob([${JSON.stringify(guide).replaceAll('<', '\\u003c')}],{type:'text/html;charset=utf-8'}));</script>`;
 html = html.replace(
   /<script\b[^>]*src="[^"]+"[^>]*><\/script>/g,
   () =>
-    guideBoot +
+    '<script>' +
+    bootPages +
+    '</script>' +
     '<script type="module">' +
     script.replace(/<\/script/gi, '<\\/script') +
     '</script>',

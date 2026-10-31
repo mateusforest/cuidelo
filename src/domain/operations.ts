@@ -24,7 +24,7 @@ import {
   validateAppointmentSlot,
   matchesKioskAppointment,
 } from './administrative-records';
-import { applyPharmacyCommand, pharmacyPrescription } from './pharmacy';
+import { applyPharmacyCommand, pharmacyPrescription, stockLotAttention } from './pharmacy';
 import {
   can,
   roleNames,
@@ -37,7 +37,7 @@ import {
   type Summary,
   type Encounter,
 } from './model';
-import { addDays, dateKey, validDay, validTime } from './dates';
+import { dateKey, validDay, validTime } from './dates';
 import { DomainError } from './errors';
 import { assessmentCoding, emptyCoding, normalizeSoap } from './consultation';
 import { makeQueueCall, nextTicket } from './queue';
@@ -163,8 +163,11 @@ export function applyCommand(
     }
     case 'stock.register':
     case 'stock.identify':
+    case 'pharmacy.adjust':
     case 'pharmacy.dispense': {
-      ({ entityId, action } = applyPharmacyCommand(db, c, command, now, newId));
+      const result = applyPharmacyCommand(db, c, command, now, newId);
+      if ('replayed' in result && result.replayed) return result.entityId;
+      ({ entityId, action } = result);
       break;
     }
     case 'document.save':
@@ -964,6 +967,11 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
             )
             .map(pharmacyPrescription)
         : [],
+    dispensationAdjustments: has('clinical')
+      ? org(db.dispensationAdjustments)
+      : c.role === 'pharmacy'
+        ? unit(db.dispensationAdjustments)
+        : [],
     dispensations: has('clinical')
       ? org(db.dispensations)
       : c.role === 'pharmacy'
@@ -999,7 +1007,13 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
                 dispensationId: undefined,
                 documentId: undefined,
                 itemId: undefined,
-                reason: 'Entrega vinculada a receita',
+                originalMovementId: undefined,
+                reason:
+                  m.adjustmentKind === 'return'
+                    ? 'Devolução ao estoque segregado'
+                    : m.adjustmentKind === 'reversal'
+                      ? 'Estorno de saída por lote'
+                      : 'Entrega vinculada a receita',
               }
             : m,
         )
@@ -1069,9 +1083,8 @@ export function readSummary(db: Database, c: Context, now = new Date()): Summary
       .length,
     occupied: beds.filter((b) => b.status === 'occupied').length,
     totalBeds: beds.length,
-    stockAlerts: scoped(db.lots).filter(
-      (l) => l.quantity > 0 && (l.quantity < l.minimum || l.expiresAt <= addDays(today, 30)),
-    ).length,
+    stockAlerts: scoped(db.lots).filter((lot) => stockLotAttention(lot, today).needsAttention)
+      .length,
     pendingReferrals: scoped(db.referrals).filter((r) => r.status === 'requested').length,
     units: units.map((unit) => ({
       unit,

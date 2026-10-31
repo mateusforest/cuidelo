@@ -3,7 +3,7 @@
   "source": "Pulso.html",
   "sourceBytes": 1619050,
   "sourceSha256": "0899c8e9e3f7db2e24aa28df604ab84536405a1ada24fc500d8fd395c2375102",
-  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.24. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
+  "method": "Comparação estática das 46 telas do Pulso com as telas e fluxos locais do Cuidelo 0.25. Cada área possui correspondência navegável; parcial não significa operacional nem homologado. Os limites de cada percurso permanecem descritos.",
   "rows": [
     {
       "id": "inicio",
@@ -147,7 +147,7 @@
       "group": "UBS e assistência",
       "status": "parcial",
       "route": "/farmacia",
-      "note": "Recebe receitas emitidas no consultório da unidade; conferência da pessoa ou representante, entrega total/parcial com saldo por item, múltiplos lotes, baixa vinculada, comprovante e histórico. Cadastro e identificação de lotes; bloqueios de vencimento, incompatibilidade e excesso. Faltam devoluções e estornos vinculados, perdas/quarentena, validação farmacêutica completa, controlados e integração e-SUS AF."
+      "note": "Receitas do consultório, entrega parcial ou total e baixa por lote. Devoluções físicas entram em saldo segregado. Estornos corrigem a saída e o saldo da receita. Cada ajuste conserva a entrega original, o lote, a quantidade, o motivo e a autoria. Permanecem a destinação dos segregados, perdas, inventário e transferências, controlados, validação farmacêutica e integração com SI-BNAFAR e RNDS."
     },
     {
       "id": "agenda",

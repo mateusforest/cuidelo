@@ -182,9 +182,9 @@ const integrations = [
   },
   {
     name: 'Assistência farmacêutica',
-    scope: 'Informações e fluxos da assistência farmacêutica pública.',
-    next: 'Mapear os conjuntos exigidos e a integração aplicável à rede.',
-    url: 'https://webatendimento.saude.gov.br/faq/esusaf',
+    scope: 'Posição de estoque e saídas no SI-BNAFAR. Dispensação ou fornecimento na RNDS.',
+    next: 'Conciliar o catálogo local com a OBM, validar os modelos e testar envio, rejeição e reprocessamento com a rede.',
+    url: 'https://webatendimento.saude.gov.br/faq/sibnafar',
   },
   {
     name: 'Produção e faturamento SUS',
@@ -350,20 +350,20 @@ const scope = [
   [
     'Internação e leitos',
     'Fluxo local',
-    'Admissão, ocupação, saída e higienização.',
-    'Transferências, isolamento, beira-leito e passagem de plantão.',
+    'Admissão, ocupação, transferência de leito com histórico, saída e higienização.',
+    'Transferência entre serviços, isolamento, beira-leito e passagem de plantão.',
   ],
   [
     'Farmácia e suprimentos',
     'Fluxo local',
-    'Lotes, validade, saldo e movimentos administrativos.',
-    'Prescrição, validação, dispensação, administração, compras e perdas.',
+    'Receita, entrega parcial ou total por lote, devolução segregada e estorno rastreável no comprovante original.',
+    'Destinação de devolvidos, inventário, transferências, perdas, controlados e integração nacional.',
   ],
   [
     'Regulação e transporte',
     'Fluxo local',
-    'Solicitação e registro manual de agendamento.',
-    'Vagas integradas, contrarreferência, transporte e TFD.',
+    'Solicitação, reagendamento justificado e contrarreferência manual.',
+    'Oferta regional, autorização externa, retorno eletrônico e transporte pactuado.',
   ],
   [
     'Vacinação e vigilância',
@@ -373,9 +373,9 @@ const scope = [
   ],
   [
     'Território e ACS',
-    'Planejado',
-    'Escopo incluído na primeira versão pública.',
-    'Domicílios, famílias, microáreas, visitas e sincronização protegida.',
+    'Fluxo local',
+    'Famílias, domicílios, visitas e produção local por microárea.',
+    'Cadastro individual conciliado, georreferenciamento e sincronização protegida.',
   ],
   [
     'Odontologia, CAPS e reabilitação',
@@ -415,9 +415,9 @@ const scope = [
   ],
   [
     'Cidadão e comunicação',
-    'Planejado',
-    'Escopo incluído na primeira versão pública.',
-    'Acesso representado, agendamentos, documentos e canais autorizados.',
+    'Demonstração online',
+    'Agenda, documentos, diário, avisos no aparelho, revisão médica e confirmação de leitura.',
+    'Identidade do cidadão e responsáveis, acesso assistido e confirmação antecipada de consultas.',
   ],
 ];
 export function Development() {
@@ -445,6 +445,16 @@ export function Development() {
           <ExternalLink size={15} />
         </a>
       </div>
+      <Panel
+        title="O que a rede municipal precisa"
+        subtitle="Compare os percursos do Cuidelo com os sistemas em uso no SUS e com demandas documentadas por prefeituras."
+      >
+        <div className="panel-body">
+          <a className="text-link" href="/panorama-municipal.html" target="_blank" rel="noreferrer">
+            Ler estudo e prioridades de desenvolvimento <ExternalLink size={15} />
+          </a>
+        </div>
+      </Panel>
       <Panel
         title="Cobertura e próximos passos"
         subtitle="A existência de uma tela não significa conclusão operacional de um módulo."

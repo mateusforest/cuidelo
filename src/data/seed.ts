@@ -64,10 +64,11 @@ export function createSeed(now = new Date()): Database {
     },
   ];
   const db: Database = {
-    schemaVersion: 14,
+    schemaVersion: 15,
     queueAssessments: [],
     queueServiceEvents: [],
     dispensations: [],
+    dispensationAdjustments: [],
     clinicalDocuments: [],
     workRecords: [],
     careSegments: [],

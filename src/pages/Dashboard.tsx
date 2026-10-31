@@ -96,7 +96,7 @@ export function Dashboard() {
     {
       label: 'Lotes que precisam de atenção',
       value: summary.stockAlerts,
-      description: 'Saldo baixo ou validade próxima',
+      description: 'Saldo baixo, validade ou material segregado',
       icon: PackageCheck,
     },
   ];

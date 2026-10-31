@@ -5,6 +5,7 @@ import { useApp } from '../app/context';
 import { clockTime, shortDate } from '../domain/dates';
 import { formatCpf } from '../domain/identification';
 import { Button, EmptyState } from '../components/ui';
+import { AdjustmentHistory } from '../components/DispensationAdjustments';
 import '../styles/clinical-documents.css';
 import '../styles/pharmacy.css';
 
@@ -154,6 +155,12 @@ export function PharmacyReceipt() {
               <p>{delivery.notes}</p>
             </section>
           )}
+          <AdjustmentHistory
+            delivery={delivery}
+            adjustments={data.dispensationAdjustments.filter(
+              (a) => a.dispensationId === delivery.id,
+            )}
+          />
         </div>
         <footer className="document-sheet-footer">
           <strong>{delivery.author}</strong>

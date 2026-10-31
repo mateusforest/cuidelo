@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { createSeed } from '../data/seed';
 import { DemoRepository, storageKey } from '../data/demo-repository';
 import { demoContext } from './access';
-import { applyCommand, readSnapshot } from './operations';
+import { applyCommand, readSnapshot, readSummary } from './operations';
 import {
+  allocationBalance,
   matchesMedication,
+  stockLotAttention,
   prescriptionProgress,
   validatePharmacy,
   type PharmacyCommand,
@@ -16,6 +18,41 @@ const now = new Date('2026-10-29T15:00:00Z'),
   doctor = demoContext('aurora', 'aurora-centro', 'clinical'),
   pharmacist = demoContext('aurora', 'aurora-centro', 'pharmacy'),
   admin = demoContext('aurora', 'aurora-centro', 'admin');
+
+it('conta atenção por segregação, mínimo e validade apenas nos lotes do contexto', () => {
+  const db = createSeed(now);
+  const base = {
+    ...db.lots[0],
+    organizationId: 'aurora',
+    unitId: 'aurora-centro',
+    quantity: 0,
+    minimum: 0,
+    expiresAt: '2026-11-29',
+  };
+  db.lots = [
+    { ...base, id: 'segregado', segregatedQuantity: 2 },
+    { ...base, id: 'mínimo', minimum: 1 },
+    { ...base, id: '30 dias', quantity: 1, expiresAt: '2026-11-28' },
+    { ...base, id: 'vencido', quantity: 1, expiresAt: '2026-10-28' },
+    { ...base, id: '31 dias e no mínimo', quantity: 1, minimum: 1 },
+    { ...base, id: 'sem alerta' },
+    { ...base, id: 'outra unidade', unitId: 'aurora-vila', segregatedQuantity: 2 },
+    {
+      ...base,
+      id: 'outra rede',
+      organizationId: 'horizonte',
+      unitId: 'horizonte-centro',
+      minimum: 1,
+    },
+  ];
+  const flagged = readSnapshot(db, pharmacist).lots.filter(
+    (l) => stockLotAttention(l, '2026-10-29').needsAttention,
+  );
+  expect(flagged.map((l) => l.id)).toEqual(['segregado', 'mínimo', '30 dias', 'vencido']);
+  expect(readSummary(db, pharmacist, now).stockAlerts).toBe(4);
+  expect(readSummary(db, demoContext('aurora', 'all', 'manager'), now).stockAlerts).toBe(5);
+  expect(readSummary(db, demoContext('horizonte', 'all', 'manager'), now).stockAlerts).toBe(1);
+});
 const content: DocumentContent = {
   kind: 'prescription',
   orientations: 'Somente demonstração.',
@@ -473,7 +510,7 @@ describe('receita, dispensação e baixa por lote', () => {
     const loaded = new DemoRepository(store, () => now);
     expect(loaded.recoveryMessage).toBe('');
     expect(loaded.snapshot(pharmacist).dispensations).toHaveLength(1);
-    expect(JSON.parse(store.getItem(storageKey)!).schemaVersion).toBe(14);
+    expect(JSON.parse(store.getItem(storageKey)!).schemaVersion).toBe(15);
     const saved = store.getItem(storageKey);
     await expect(
       loaded.execute(
@@ -526,6 +563,304 @@ describe('receita, dispensação e baixa por lote', () => {
       const store = new MemoryStorage();
       store.setItem(storageKey, JSON.stringify(altered));
       expect(new DemoRepository(store, () => now).recoveryMessage).not.toBe('');
+    }
+  });
+});
+
+describe('devolução e estorno ligados à saída original', () => {
+  function prepared() {
+    const setupData = setup();
+    const { db, doc, a, b } = setupData;
+    applyCommand(db, pharmacist, command(doc, a, b), now);
+    const delivery = db.dispensations[0],
+      origin = delivery.allocations[0];
+    const adjust = (
+      patch: Partial<Extract<PharmacyCommand, { type: 'pharmacy.adjust' }>> = {},
+    ): Extract<PharmacyCommand, { type: 'pharmacy.adjust' }> => ({
+      type: 'pharmacy.adjust',
+      dispensationId: delivery.id,
+      originalMovementId: origin.movementId,
+      kind: 'return',
+      quantity: 2,
+      confirmed: true,
+      expectedAdjustments: db.dispensationAdjustments.filter(
+        (r) => r.dispensationId === delivery.id,
+      ).length,
+      reason: 'Conferência fictícia de balcão',
+      requestId: crypto.randomUUID(),
+      ...patch,
+    });
+    const progress = () => prescriptionProgress(doc, db.dispensations, db.dispensationAdjustments);
+    return { ...setupData, delivery, origin, adjust, progress };
+  }
+  it('segrega a devolução física sem reabrir a receita e mantém o comprovante intacto', () => {
+    const { db, a, delivery, origin, adjust, progress } = prepared(),
+      before = structuredClone(delivery),
+      lot = db.lots.find((l) => l.id === a)!;
+    const q = lot.quantity,
+      cmd = adjust(),
+      id = applyCommand(db, pharmacist, cmd, now);
+    expect(lot.quantity).toBe(q);
+    expect(lot.segregatedQuantity).toBe(2);
+    expect(db.dispensationAdjustments[0]).toMatchObject({
+      id,
+      kind: 'return',
+      destination: 'segregated',
+      balanceBefore: 0,
+      balanceAfter: 2,
+      authorId: pharmacist.sessionId,
+      at: now.toISOString(),
+      reason: cmd.reason,
+    });
+    expect(db.movements.at(-1)).toMatchObject({
+      id,
+      kind: 'entry',
+      adjustmentKind: 'return',
+      originalMovementId: origin.movementId,
+      itemId: origin.itemId,
+      lotId: a,
+      dispensationId: delivery.id,
+    });
+    expect(progress().items[0]).toMatchObject({ delivered: 5, remaining: 5 });
+    expect(allocationBalance(origin, db.dispensationAdjustments)).toEqual({
+      remaining: 3,
+      returned: 2,
+      reversed: 0,
+    });
+    expect(() =>
+      applyCommand(db, pharmacist, adjust({ quantity: 4, kind: 'reversal' }), now),
+    ).toThrow('saldo ajustável');
+    expect(delivery).toEqual(before);
+    expect(() =>
+      applyCommand(
+        db,
+        pharmacist,
+        { type: 'stock.move', id: a, quantity: q + 1, reason: 'Teste', kind: 'exit' },
+        now,
+      ),
+    ).toThrow('Saldo insuficiente');
+    validatePharmacy(db);
+  });
+  it('estorno parcial recompõe o lote e a receita e permite uma nova baixa em outro lote do mesmo item', () => {
+    const { db, doc, a, a2, b, delivery, origin, adjust, progress } = prepared(),
+      lot = db.lots.find((l) => l.id === a)!;
+    const initial = structuredClone(delivery);
+    applyCommand(db, pharmacist, adjust({ kind: 'reversal', quantity: 3 }), now);
+    expect(lot.quantity).toBe(4);
+    expect(db.dispensationAdjustments[0]).toMatchObject({
+      destination: 'stock',
+      balanceBefore: 1,
+      balanceAfter: 4,
+    });
+    expect(progress().items[0]).toMatchObject({ delivered: 2, remaining: 8 });
+    const follow = command(doc, a2, b, {
+      expectedDeliveries: 1,
+      expectedAdjustments: 1,
+      allocations: [
+        { itemId: 'med-a', lotId: a2, quantity: 8 },
+        { itemId: 'med-b', lotId: b, quantity: 2 },
+      ],
+      partialReason: '',
+    });
+    expect(() => applyCommand(db, pharmacist, { ...follow, expectedAdjustments: 0 }, now)).toThrow(
+      'ajuste',
+    );
+    applyCommand(db, pharmacist, follow, now);
+    expect(progress().status).toBe('complete');
+    expect(db.dispensations[1].balances[0]).toEqual({
+      itemId: 'med-a',
+      prescribed: 10,
+      before: 2,
+      delivered: 8,
+      remaining: 0,
+    });
+    applyCommand(db, pharmacist, adjust({ kind: 'return', quantity: 2 }), now);
+    expect(allocationBalance(origin, db.dispensationAdjustments).remaining).toBe(0);
+    expect(() =>
+      applyCommand(db, pharmacist, adjust({ kind: 'reversal', quantity: 1 }), now),
+    ).toThrow('saldo ajustável');
+    expect(delivery).toEqual(initial);
+    expect(lot.quantity).toBe(4);
+    applyCommand(
+      db,
+      pharmacist,
+      { type: 'stock.move', id: a, quantity: 3, reason: 'Uso fictício', kind: 'exit' },
+      now,
+    );
+    validatePharmacy(db);
+  });
+  it('estorno total de todos os itens permite nova entrega e cada lote conserva sua própria quantidade', () => {
+    const { db, delivery, adjust, progress } = prepared();
+    for (const movement of delivery.allocations)
+      applyCommand(
+        db,
+        pharmacist,
+        adjust({
+          kind: 'reversal',
+          originalMovementId: movement.movementId,
+          quantity: movement.quantity,
+        }),
+        now,
+      );
+    expect(progress().status).toBe('waiting');
+    expect(progress().items.map((x) => x.remaining)).toEqual([10, 4]);
+    expect(db.dispensationAdjustments.map((r) => r.sequence)).toEqual([1, 2]);
+    validatePharmacy(db);
+  });
+  it('recebe ajustes de entrega cancelada e de lote vencido sem liberar nova dispensação', () => {
+    const { db, doc, a, b, adjust, progress } = prepared(),
+      lot = db.lots.find((l) => l.id === a)!;
+    applyCommand(
+      db,
+      doctor,
+      {
+        type: 'document.cancel',
+        id: doc.id,
+        expectedVersion: doc.version,
+        reason: 'Cancelamento demonstrativo.',
+      },
+      now,
+    );
+    const later = new Date('2027-01-02T15:00:00Z');
+    applyCommand(db, pharmacist, adjust({ kind: 'reversal' }), later);
+    applyCommand(db, pharmacist, adjust({ kind: 'return' }), later);
+    expect(db.dispensationAdjustments.map((x) => x.destination)).toEqual([
+      'segregated',
+      'segregated',
+    ]);
+    expect(lot.quantity).toBe(1);
+    expect(lot.segregatedQuantity).toBe(4);
+    expect(progress().status).toBe('cancelled');
+    expect(() =>
+      applyCommand(
+        db,
+        pharmacist,
+        command(doc, a, b, { expectedDeliveries: 1, expectedAdjustments: 2 }),
+        later,
+      ),
+    ).toThrow('cancelada');
+    validatePharmacy(db);
+  });
+  it('impede acesso de outra unidade, outra rede e outros perfis, preservando a leitura municipal da equipe de saúde', () => {
+    const { db, adjust } = prepared(),
+      cmd = adjust();
+    const foreign = demoContext('aurora', 'aurora-vila', 'pharmacy'),
+      cross = demoContext('horizonte', 'horizonte-centro', 'pharmacy'),
+      reception = demoContext('aurora', 'aurora-centro', 'reception');
+    for (const c of [foreign, cross, admin, doctor, reception])
+      expect(() => applyCommand(db, c, cmd, now)).toThrow();
+    applyCommand(db, pharmacist, cmd, now);
+    for (const c of [foreign, cross, admin, reception])
+      expect(readSnapshot(db, c).dispensationAdjustments).toEqual([]);
+    expect(
+      readSnapshot(db, demoContext('aurora', 'aurora-vila', 'clinical')).dispensationAdjustments,
+    ).toHaveLength(1);
+    expect(
+      readSnapshot(db, demoContext('horizonte', 'horizonte-centro', 'clinical'))
+        .dispensationAdjustments,
+    ).toHaveLength(0);
+    const entry = readSnapshot(db, admin).movements.at(-1)!;
+    expect(entry.dispensationId).toBeUndefined();
+    expect(entry.documentId).toBeUndefined();
+    expect(entry.originalMovementId).toBeUndefined();
+    expect(entry.reason).not.toContain(cmd.reason);
+  });
+  it('exige origem, quantidade, motivo e conferência válidos, permite repetição idêntica e recusa concorrência', () => {
+    const { db, adjust } = prepared(),
+      cmd = adjust();
+    for (const patch of [
+      { originalMovementId: 'ausente' },
+      { dispensationId: 'ausente' },
+      { quantity: 6 },
+      { quantity: 0 },
+      { quantity: -2 },
+      { quantity: 0.01 },
+      { confirmed: false },
+      { reason: '   ' },
+      { reason: 'a'.repeat(501) },
+    ]) {
+      const before = structuredClone(db);
+      expect(() => applyCommand(db, pharmacist, { ...cmd, ...patch }, now)).toThrow();
+      expect(db).toEqual(before);
+    }
+    const second = adjust(),
+      id = applyCommand(db, pharmacist, cmd, now),
+      saved = structuredClone(db);
+    expect(applyCommand(db, pharmacist, cmd, now)).toBe(id);
+    expect(() => applyCommand(db, pharmacist, { ...cmd, quantity: 1 }, now)).toThrow(
+      'Identificação',
+    );
+    expect(() => applyCommand(db, pharmacist, second, now)).toThrow('outro ajuste');
+    expect(db).toEqual(saved);
+  });
+  it('abre a base 14 com suas entregas, grava em transação, detecta edição por outra aba e conserva ambos os registros após recarregar', async () => {
+    const { db, adjust, delivery } = prepared(),
+      store = new MemoryStorage();
+    const { dispensationAdjustments: unused, ...old } = db;
+    expect(unused).toEqual([]);
+    store.setItem(storageKey, JSON.stringify({ ...old, schemaVersion: 14 }));
+    const repo = new DemoRepository(store, () => now),
+      other = new DemoRepository(store, () => now),
+      cmd = adjust();
+    expect(repo.recoveryMessage).toBe('');
+    await repo.execute(pharmacist, cmd);
+    await expect(
+      other.execute(pharmacist, { ...cmd, requestId: crypto.randomUUID() }),
+    ).rejects.toThrow('mudaram');
+    const loaded = new DemoRepository(store, () => now);
+    expect(loaded.recoveryMessage).toBe('');
+    expect(loaded.snapshot(pharmacist).dispensations).toEqual([delivery]);
+    expect(loaded.snapshot(pharmacist).dispensationAdjustments).toHaveLength(1);
+    store.setItem = () => {
+      throw Error('Capacidade esgotada');
+    };
+    await expect(
+      loaded.execute(pharmacist, {
+        ...cmd,
+        expectedAdjustments: 1,
+        requestId: crypto.randomUUID(),
+        kind: 'reversal',
+      }),
+    ).rejects.toThrow('salvar');
+    expect(loaded.snapshot(pharmacist).dispensationAdjustments).toHaveLength(1);
+  });
+  it('rejeita base adulterada na origem, autoria, sequência, movimento, destino e totais', () => {
+    const { db, a, adjust } = prepared();
+    applyCommand(db, pharmacist, adjust({ kind: 'reversal' }), now);
+    applyCommand(db, pharmacist, adjust(), now);
+    for (const mutate of [
+      (d: Database) => {
+        d.dispensationAdjustments[0].authorId = admin.sessionId;
+      },
+      (d: Database) => {
+        d.dispensationAdjustments[0].quantity = 6;
+      },
+      (d: Database) => {
+        d.dispensationAdjustments[0].originalMovementId =
+          d.dispensations[0].allocations[1].movementId;
+      },
+      (d: Database) => {
+        d.dispensationAdjustments[0].destination = 'segregated';
+      },
+      (d: Database) => {
+        d.dispensationAdjustments[1].sequence = 1;
+      },
+      (d: Database) => {
+        d.movements.pop();
+      },
+      (d: Database) => {
+        d.dispensationAdjustments.pop();
+      },
+      (d: Database) => {
+        d.lots.find((l) => l.id === a)!.quantity += 1;
+      },
+      (d: Database) => {
+        d.lots.find((l) => l.id === a)!.segregatedQuantity = 3;
+      },
+    ]) {
+      const altered = structuredClone(db);
+      mutate(altered);
+      expect(() => validatePharmacy(altered)).toThrow();
     }
   });
 });

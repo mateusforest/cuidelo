@@ -219,6 +219,18 @@ export function EncounterDocuments({
   };
   const identities = demoIdentities(repository.directory());
   const draftCount = docs.filter((d) => d.status === 'draft').length;
+  const pharmacyCaption = (doc: ClinicalDocument) => {
+    const { history, items } = prescriptionProgress(
+      doc,
+      data.dispensations,
+      data.dispensationAdjustments,
+    );
+    if (!history.length) return 'nenhuma entrega registrada';
+    if (items.every((i) => i.delivered === 0)) return 'entrega integralmente estornada';
+    return items.every((i) => i.remaining === 0)
+      ? 'entrega concluída'
+      : 'entrega parcial registrada';
+  };
   return (
     <Panel
       title="Documentos do consultório"
@@ -330,14 +342,7 @@ export function EncounterDocuments({
             </div>
             {doc.content.kind === 'prescription' && doc.issuedAt && (
               <p className="document-caption">
-                Farmácia:{' '}
-                {data.dispensations.some((d) => d.documentId === doc.id)
-                  ? prescriptionProgress(doc, data.dispensations).items.every(
-                      (i) => i.remaining === 0,
-                    )
-                    ? 'entrega concluída'
-                    : 'entrega parcial registrada'
-                  : 'nenhuma entrega registrada'}
+                Farmácia: {pharmacyCaption(doc)}
                 {doc.status === 'cancelled' ? ' · novas entregas bloqueadas' : ''}
               </p>
             )}

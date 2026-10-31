@@ -264,6 +264,7 @@ export interface Admission extends Scoped {
   dischargeReason?: string;
 }
 export interface StockLot extends Scoped {
+  segregatedQuantity?: number;
   medication?: import('./pharmacy').MedicationStock;
   unitId: string;
   product: string;
@@ -274,6 +275,9 @@ export interface StockLot extends Scoped {
   minimum: number;
 }
 export interface StockMovement extends Scoped {
+  adjustmentKind?: import('./pharmacy').AdjustmentKind;
+  destination?: 'stock' | 'segregated';
+  originalMovementId?: string;
   dispensationId?: string;
   documentId?: string;
   itemId?: string;
@@ -467,9 +471,10 @@ export interface VaccinationSummary {
 export interface Database {
   queueServiceEvents: QueueServiceEvent[];
   queueAssessments: QueueAssessment[];
+  dispensationAdjustments: import('./pharmacy').DispensationAdjustment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
-  schemaVersion: 14;
+  schemaVersion: 15;
   workRecords: WorkRecord[];
   careSegments: CareSegment[];
   kioskArrivals: KioskArrival[];
@@ -510,6 +515,7 @@ export interface Snapshot {
   queueAssessments: QueueAssessment[];
   queueDirections: { encounterId: string; roomId: string; order: number; received: boolean }[];
   pharmacyPrescriptions: import('./pharmacy').PharmacyPrescription[];
+  dispensationAdjustments: import('./pharmacy').DispensationAdjustment[];
   dispensations: import('./pharmacy').Dispensation[];
   clinicalDocuments: import('./clinical-documents').ClinicalDocument[];
   calls: QueueCall[];

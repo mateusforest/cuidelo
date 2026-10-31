@@ -4,10 +4,12 @@ import { PharmacyDispensing } from '../components/PharmacyDispensing';
 import { StockMedicationForm } from '../components/StockMedicationForm';
 import type { MedicationLine } from '../domain/clinical-documents';
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowDownToLine, ArrowUpFromLine, Package, AlertTriangle } from 'lucide-react';
 import { useApp } from '../app/context';
 import type { StockLot } from '../domain/model';
-import { addDays, dateKey, shortDate } from '../domain/dates';
+import { dateKey, shortDate } from '../domain/dates';
+import { stockLotAttention } from '../domain/pharmacy';
 import {
   ActionForm,
   Badge,
@@ -34,7 +36,7 @@ export function Pharmacy() {
   const prescriptionSection = useRef<HTMLElement>(null),
     stockSection = useRef<HTMLElement>(null);
   const today = dateKey(),
-    alert = (l: StockLot) => l.quantity < l.minimum || l.expiresAt <= addDays(today, 30);
+    alert = (l: StockLot) => stockLotAttention(l, today).needsAttention;
   const lots = data.lots.filter(
     (l) =>
       `${l.product} ${l.lot}`
@@ -92,7 +94,7 @@ export function Pharmacy() {
             <span>02</span>
             <div>
               <h2>Estoque e movimentações</h2>
-              <p>Saldos, validade e rastreabilidade dos lotes.</p>
+              <p>Consulte o saldo para entrega e as quantidades segregadas por lote.</p>
             </div>
           </div>
           <div className="inventory-summary">
@@ -135,13 +137,14 @@ export function Pharmacy() {
                     <th>Produto</th>
                     <th>Lote</th>
                     <th>Validade</th>
-                    <th>Saldo</th>
+                    <th>Saldos do lote</th>
                     <th>Movimentar</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lots.map((l) => {
                     const expired = l.expiresAt < today;
+                    const { low, expiring } = stockLotAttention(l, today);
                     return (
                       <tr key={l.id}>
                         <td>
@@ -175,16 +178,19 @@ export function Pharmacy() {
                             <small className="cell-secondary">
                               <Badge tone="red">Vencido · uso bloqueado</Badge>
                             </small>
-                          ) : l.expiresAt <= addDays(today, 30) ? (
+                          ) : expiring ? (
                             <small className="cell-secondary">
                               <Badge tone="amber">Validade próxima</Badge>
                             </small>
                           ) : null}
                         </td>
                         <td>
-                          <strong className={l.quantity < l.minimum ? 'warning-text' : ''}>
-                            {l.quantity}
+                          <strong className={low ? 'warning-text' : ''}>
+                            {expired ? 'Bloqueado por validade' : 'Disponível'} · {l.quantity}
                           </strong>
+                          <small className="cell-secondary">
+                            Segregado · {l.segregatedQuantity ?? 0}
+                          </small>
                           <small className="cell-secondary">
                             Mínimo de referência: {l.minimum}
                           </small>
@@ -225,9 +231,8 @@ export function Pharmacy() {
             )}
           </Panel>
           <Notice>
-            Lotes vencidos permanecem visíveis para segregação e não podem ser entregues. Entregas
-            confirmadas preservam os movimentos; devoluções, perdas e estornos vinculados ainda
-            precisam de fluxo próprio.
+            Devoluções físicas entram no saldo segregado. Lotes vencidos ficam bloqueados para
+            entrega.
           </Notice>
           <Panel title="Últimas movimentações">
             {data.movements.length ? (
@@ -251,8 +256,27 @@ export function Pharmacy() {
                           {m.quantity}
                         </strong>
                         <small>
+                          Lote {data.lots.find((l) => l.id === m.lotId)?.lot}
+                          {m.adjustmentKind &&
+                            ' · ' +
+                              (m.adjustmentKind === 'return' ? 'Devolução' : 'Estorno') +
+                              ' · ' +
+                              (m.destination === 'segregated'
+                                ? 'estoque segregado'
+                                : 'saldo do lote')}
+                        </small>
+                        <small>
                           {shortDate(m.at)} · {m.reason}
                         </small>
+                        {context.role === 'pharmacy' && m.dispensationId && (
+                          <Link
+                            className="text-link"
+                            target="_blank"
+                            to={'/dispensacoes/' + m.dispensationId}
+                          >
+                            Comprovante da entrega
+                          </Link>
+                        )}
                       </div>
                     </div>
                   ))}

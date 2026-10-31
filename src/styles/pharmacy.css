@@ -90,6 +90,60 @@
   line-height: 1.7;
   color: var(--muted);
 }
+.pharmacy-history-hint {
+  margin: 0;
+  padding: 12px 22px;
+  background: var(--surface-subtle);
+  color: var(--brand-ink);
+  line-height: 1.5;
+  font-size: 13px;
+}
+.pharmacy-adjustment-balance,
+.pharmacy-adjustment-history {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-wrap: anywhere;
+}
+.pharmacy-adjustment-balance {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+}
+.pharmacy-adjustment-history {
+  margin: 14px 0;
+}
+.pharmacy-adjustment-history h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.pharmacy-adjustment-history ol {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.pharmacy-adjustment-history li {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 9px 0;
+  break-inside: avoid;
+}
+.pharmacy-adjustment-history li + li {
+  border-top: 1px solid var(--border);
+}
+.pharmacy-adjustment-history p {
+  margin: 4px 0;
+  white-space: pre-wrap;
+}
+.pharmacy-adjustment-history small {
+  color: var(--muted);
+}
+.pharmacy-adjustment-actions {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
 .pharmacy-receipt-link {
   padding: 18px 24px;
   display: flex;

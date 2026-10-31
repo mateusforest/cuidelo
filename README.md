@@ -6,7 +6,9 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.24.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.25.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+
+A versão 0.25 registra devoluções e estornos por lote, vinculados à entrega original. O [roteiro da farmácia](docs/farmacia-dispensacao.md) inclui as contas de um exemplo com dois lotes. O [estudo da rede municipal](public/panorama-municipal.html) compara a demonstração com referências públicas, identifica lacunas e propõe critérios de aceite para os postos.
 
 A [auditoria tela por tela da versão 0.24](docs/auditoria-0.24.md) identifica o alcance dos testes, as correções e as pendências por frente de trabalho.
 

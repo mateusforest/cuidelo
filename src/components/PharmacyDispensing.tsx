@@ -5,14 +5,17 @@ import { useApp } from '../app/context';
 import {
   matchesMedication,
   prescriptionProgress,
+  type Dispensation,
+  type DispensationAdjustment,
   type PharmacyPrescription,
 } from '../domain/pharmacy';
 import type { MedicationLine } from '../domain/clinical-documents';
 import { dateKey, shortDate } from '../domain/dates';
-import { cpfDigits, formatCpf } from '../domain/identification';
+import { cpfDigits, formatCpf, normalizedName } from '../domain/identification';
 import { Badge, Button, EmptyState, Field, Modal, Notice, Panel, SearchField } from './ui';
 import { DocumentBody } from './ClinicalDocuments';
 import { DispensationHistory } from './DispensationHistory';
+import { AdjustmentEditor } from './DispensationAdjustments';
 import '../styles/pharmacy.css';
 
 export const pharmacyStatus = {
@@ -31,18 +34,33 @@ export function PharmacyDispensing({
     [filter, setFilter] = useState('pending'),
     [editing, setEditing] = useState<PharmacyPrescription | null>(null),
     [detailId, setDetailId] = useState(''),
+    [adjusting, setAdjusting] = useState<{
+      delivery: Dispensation;
+      kind: DispensationAdjustment['kind'];
+    } | null>(null),
     [lastReceipt, setLastReceipt] = useState('');
   const rows = data.pharmacyPrescriptions
-    .map((doc) => ({ doc, ...prescriptionProgress(doc, data.dispensations) }))
+    .map((doc) => ({
+      doc,
+      ...prescriptionProgress(doc, data.dispensations, data.dispensationAdjustments),
+    }))
     .sort((a, b) => a.doc.issuedAt.localeCompare(b.doc.issuedAt));
+  const query = normalizedName(search);
   const list = rows.filter(
     (r) =>
       (filter === 'all' ||
+        (filter === 'history' && r.history.length > 0) ||
         (filter === 'pending' && ['waiting', 'partial'].includes(r.status)) ||
         r.status === filter) &&
-      (`${r.doc.identity.name} ${r.doc.identity.socialName} ${r.doc.number}`
-        .toLocaleLowerCase('pt-BR')
-        .includes(search.trim().toLocaleLowerCase('pt-BR')) ||
+      (!query ||
+        normalizedName(
+          [
+            r.doc.identity.name,
+            r.doc.identity.socialName,
+            r.doc.number,
+            ...r.history.flatMap((d) => [d.number, ...d.allocations.map((a) => a.lot)]),
+          ].join(' '),
+        ).includes(query) ||
         (/^[\d.\-\s]+$/.test(search) &&
           !!cpfDigits(search) &&
           r.doc.identity.cpf.includes(cpfDigits(search)))),
@@ -66,17 +84,33 @@ export function PharmacyDispensing({
       <Panel
         title="Receitas recebidas do consultório"
         subtitle="Receitas emitidas nesta unidade. A entrega é registrada pelo perfil Farmácia."
+        action={
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setFilter('history');
+              setSearch('');
+            }}
+          >
+            Localizar entrega
+          </Button>
+        }
       >
         <div className="table-toolbar">
           <SearchField
             value={search}
             onChange={setSearch}
-            placeholder="Buscar pessoa, CPF ou receita"
+            placeholder={
+              filter === 'history'
+                ? 'Buscar pessoa, comprovante ou lote'
+                : 'Buscar pessoa, CPF ou receita'
+            }
           />
           <Field label="Situação da entrega">
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="pending">Aguardando ou parcial</option>
               <option value="all">Todas</option>
+              <option value="history">Com entrega registrada</option>
               {Object.entries(pharmacyStatus).map(([v, l]) => (
                 <option value={v} key={v}>
                   {l}
@@ -85,6 +119,12 @@ export function PharmacyDispensing({
             </select>
           </Field>
         </div>
+        {filter === 'history' && (
+          <p className="pharmacy-history-hint">
+            Abra as entregas da receita e escolha o comprovante original para registrar uma
+            devolução ou um estorno por lote.
+          </p>
+        )}
         {lastReceipt && (
           <div className="pharmacy-receipt-link">
             <PackageCheck size={20} />
@@ -189,7 +229,7 @@ export function PharmacyDispensing({
         entrega da receita. A correspondência do cadastro não substitui a conferência profissional;
         não há conversão de caixas, frascos ou unidades nem substituição automática.
       </Notice>
-      {detail && (
+      {detail && !adjusting && (
         <Modal
           wide
           title={`Receita ${detail.number}`}
@@ -202,9 +242,22 @@ export function PharmacyDispensing({
             </Badge>
             <DocumentBody content={detail.content} />
             <h3>Entregas registradas</h3>
-            <DispensationHistory document={detail} />
+            <DispensationHistory
+              document={detail}
+              onAdjust={(delivery, kind) => setAdjusting({ delivery, kind })}
+            />
           </div>
         </Modal>
+      )}
+      {detail && adjusting && (
+        <AdjustmentEditor
+          key={adjusting.delivery.id + adjusting.kind}
+          {...adjusting}
+          person={detail.identity.socialName || detail.identity.name}
+          prescriptionNumber={detail.number}
+          cancelled={detail.status === 'cancelled'}
+          onClose={() => setAdjusting(null)}
+        />
       )}
       {editing && (
         <DeliveryEditor
@@ -232,7 +285,7 @@ function DeliveryEditor({
   const { data, context, repository, notify, setDirty } = useApp();
   const [initial] = useState(() => ({
     revision: repository.getRevision(),
-    progress: prescriptionProgress(prescription, data.dispensations),
+    progress: prescriptionProgress(prescription, data.dispensations, data.dispensationAdjustments),
     requestId: crypto.randomUUID(),
   }));
   const [lines, setLines] = useState(() =>
@@ -298,6 +351,7 @@ function DeliveryEditor({
                 documentId: prescription.id,
                 expectedDocumentVersion: prescription.version,
                 expectedDeliveries: initial.progress.history.length,
+                expectedAdjustments: initial.progress.adjustmentCount,
                 requestId: initial.requestId,
                 allocations: selected.map((l) => ({
                   itemId: l.itemId,

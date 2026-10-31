@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Cuidelo · O que falta para atender uma rede municipal</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+        color: #213c38;
+        background: #f5f8f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        line-height: 1.58;
+      }
+      main,
+      header > div {
+        max-width: 1050px;
+        margin: auto;
+        padding: 28px clamp(16px, 4vw, 46px);
+      }
+      header {
+        background: #153d41;
+        color: white;
+      }
+      header p {
+        max-width: 74ch;
+        color: #d8eae3;
+      }
+      header .label {
+        color: #a8dbc9;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+        text-wrap: balance;
+      }
+      h1 {
+        font-size: clamp(28px, 5vw, 49px);
+        max-width: 22ch;
+        margin: 12px 0;
+      }
+      h2 {
+        font-size: clamp(23px, 3vw, 31px);
+        margin: 4px 0 14px;
+        color: #153d41;
+      }
+      h3 {
+        font-size: 1.12rem;
+        margin: 0 0 8px;
+      }
+      .label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+      .muted {
+        color: #4e6560;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        border-bottom: 1px solid #cedcd3;
+        padding: 0 0 16px;
+      }
+      a {
+        color: #0b6157;
+        text-underline-offset: 3px;
+      }
+      section {
+        margin: 34px 0 42px;
+        scroll-margin: 18px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(265px, 100%), 1fr));
+        gap: 12px;
+      }
+      article,
+      .matrix li {
+        background: white;
+        border: 1px solid #dce6df;
+        border-radius: 12px;
+        padding: 18px;
+      }
+      article p {
+        margin: 8px 0;
+      }
+      .matrix {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+      .matrix li {
+        display: grid;
+        grid-template-columns: minmax(130px, 0.65fr) minmax(0, 1.1fr) minmax(0, 1.25fr);
+        gap: 18px;
+      }
+      .matrix p {
+        margin: 0;
+      }
+      .caption {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #34665a;
+        margin-bottom: 3px;
+      }
+      .source {
+        font-size: 0.9rem;
+      }
+      li + li {
+        margin-top: 0.45em;
+      }
+      .matrix li + li {
+        margin: 0;
+      }
+      ul,
+      ol {
+        padding-left: 1.4em;
+      }
+      footer {
+        border-top: 1px solid #c9d9ce;
+        padding-top: 12px;
+      }
+      @media (max-width: 670px) {
+        .matrix li {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        main {
+          padding-top: 18px;
+        }
+      }
+      @media print {
+        header {
+          background: white;
+          color: #153d41;
+        }
+        header p,
+        header .label {
+          color: #31534c;
+        }
+        nav {
+          display: none;
+        }
+        body {
+          font-size: 10pt;
+          background: white;
+        }
+        main,
+        header > div {
+          padding: 8px;
+        }
+        section {
+          margin: 16px 0;
+        }
+        article,
+        .matrix li {
+          break-inside: avoid;
+        }
+        a {
+          color: inherit;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <span class="label">Cuidelo · Pesquisa de produto</span>
+        <h1>O que falta para atender uma rede municipal</h1>
+        <p>
+          Comparação da demonstração 0.25 com serviços do SUS, sistemas de gestão e necessidades
+          documentadas no Rio Grande do Sul e no Maranhão. Levantamento de 31 de outubro de 2026.
+        </p>
+      </div>
+    </header>
+    <main>
+      <nav aria-label="Seções do estudo">
+        <a href="#municipios">Municípios</a><a href="#comparacao">Comparação</a
+        ><a href="#farmacia">Farmácia</a><a href="#diferenciais">Diferenciais</a
+        ><a href="#entrega">Ordem de desenvolvimento</a>
+      </nav>
+      <section aria-label="Conclusão">
+        <p class="label">Situação do produto</p>
+        <h2>O Cuidelo já demonstra a jornada. Falta sustentar a operação entre unidades.</h2>
+        <p>
+          Uma equipe consegue simular a chegada pelo totem, acompanhar a consulta, dispensar por
+          lote e ler a resposta do cidadão. Hoje, duas farmácias de postos diferentes ainda não
+          operam sobre um estoque clínico compartilhado e protegido. Essa diferença impede oferecer
+          a demonstração como substituta do sistema de uma prefeitura.
+        </p>
+        <p class="muted">
+          Método. Comparamos a documentação dos operadores públicos e o catálogo publicado por dois
+          fornecedores com os fluxos testados do Cuidelo. Os catálogos descrevem ofertas comerciais.
+          A análise não incluiu teste independente das instalações dos concorrentes, entrevistas com
+          equipes ou medição de impacto em serviço. Os 41 itens parciais medem a cobertura do
+          protótipo Pulso.
+        </p>
+      </section>
+      <section id="municipios">
+        <p class="label">01 · Situação das redes</p>
+        <h2>O trabalho começa no posto e atravessa outras equipes</h2>
+        <div class="cards">
+          <article>
+            <h3>Vacaria · organizar a procura</h3>
+            <p>
+              O município relata acolhimento em 15 unidades e distingue a demanda do dia do cuidado
+              programado. Em agosto de 2026, registrou 805 ausências em consultas de clínico geral e
+              200 em 859 ultrassonografias liberadas, cerca de 23% desses exames. A notícia não
+              informa o total de consultas de clínico geral.
+            </p>
+            <p>
+              <strong>Implicação.</strong> O totem deve indicar o motivo da procura. A equipe define
+              o acolhimento. Na agenda, avisar, receber o cancelamento e conseguir ocupar a vaga
+              liberada são três tarefas diferentes.
+            </p>
+            <p class="source">
+              <a
+                href="https://www.vacaria.rs.gov.br/noticia/5668/novo-sistema-de-acolhimento-nas-unidades-de-saude-completa-tres-semanas-com-avaliacao-positiva"
+                >Acolhimento em Vacaria</a
+              >
+              ·
+              <a
+                href="https://vacaria.rs.gov.br/noticia/5754/faltas-em-consultas-exames-e-cirurgias-preocupam-sistema-de-saude-de-vacaria/"
+                >Faltas divulgadas pela prefeitura</a
+              >
+            </p>
+          </article>
+          <article>
+            <h3>Vacaria · abastecer a unidade certa</h3>
+            <p>
+              A Secretaria lista assistência farmacêutica, central de distribuição, UPA, CAPS,
+              atenção básica e transporte eletivo. Em outubro de 2026, o município divulgou uma
+              capacitação da farmácia do Centro Médico e do setor de auditoria, controle e
+              avaliação.
+            </p>
+            <p>
+              <strong>Implicação.</strong> A central precisa saber quanto saiu, quanto chegou ao
+              posto e quanto ficou indisponível. O farmacêutico precisa localizar a entrega que
+              originou uma diferença. O levantamento não identifica o fornecedor instalado na
+              cidade.
+            </p>
+            <p class="source">
+              <a href="https://www.vacaria.rs.gov.br/prefeitura/detalhe-departamento/124/saude/"
+                >Serviços municipais de saúde</a
+              >
+              ·
+              <a
+                href="https://vacaria.rs.gov.br/noticia/5769/daca-e-farmacia-do-centro-medico-realizam-capacitacao-de-equipes/"
+                >Farmácia do Centro Médico</a
+              >
+            </p>
+          </article>
+          <article>
+            <h3>Presidente Dutra · comprar uma solução de rede</h3>
+            <p>
+              O termo de referência do pregão 009/2026 especifica operação local durante a queda da
+              internet, replicação automática depois da reconexão, histórico entre unidades,
+              integração com sistemas públicos, treinamento e suporte. A prova de conceito prevê
+              atendimento a 100% dos requisitos mínimos e pelo menos 95% dos gerais.
+            </p>
+            <p>
+              <strong>Implicação.</strong> Abrir a versão HTML offline resolve o acesso ao programa.
+              Para atender a esse exemplo de contratação, a equipe precisa demonstrar também como
+              dois postos reconciliam alterações concorrentes. O percentual pertence a esse edital.
+            </p>
+            <p class="source">
+              <a
+                href="https://presidentedutra.ma.gov.br/anexos-sinc/2026/05/207_procedimento_69fddc408bea3_0573092001778244672.pdf"
+                >Edital e termo de referência, seções 3 e 4</a
+              >
+            </p>
+          </article>
+        </div>
+        <p>
+          A pesquisa nacional TIC Saúde 2025 registra que, entre os estabelecimentos públicos
+          aferidos para esse indicador, 64% dispunham de envio ou recebimento eletrônico de
+          encaminhamentos e 55% de troca de relatórios de alta. São capacidades declaradas por
+          estabelecimentos. Para a secretaria, a pergunta prática é se o encaminhamento específico
+          voltou com resposta e se a UBS conseguiu agir.
+          <a
+            href="https://cetic.br/media/docs/publicacoes/2/pt-br/20260512115627/TIC_SAUDE_2025_PT_livro.pdf"
+            >TIC Saúde 2025, gráfico 5</a
+          >.
+        </p>
+      </section>
+      <section id="comparacao">
+        <p class="label">02 · Comparação funcional</p>
+        <h2>O que já existe no SUS e onde o Cuidelo se encontra</h2>
+        <ul class="matrix">
+          <li>
+            <h3>Atenção primária</h3>
+            <p>
+              <span class="caption">Referência</span>O PEC e-SUS APS documenta escuta inicial, SOAP,
+              classificação CIAP-2, vacinação, observação e desfecho.
+              <a
+                href="https://sisaps.saude.gov.br/sistemas/esusaps/docs/manual/PEC/PEC_06_atendimentos/"
+                >Manual do PEC</a
+              >.
+            </p>
+            <p>
+              <span class="caption">Cuidelo</span>Triagem, consulta, documentos e histórico já podem
+              ser percorridos na demonstração. Faltam catálogos e protocolos validados, autoria
+              autenticada e transmissão com retorno conciliado para a produção oficial.
+            </p>
+          </li>
+          <li>
+            <h3>Gestão municipal</h3>
+            <p>
+              <span class="caption">Referência</span>O Atende.Net Saúde da IPM anuncia gestão
+              municipal em nuvem, cadastro único, autoatendimento, integração de laboratório e
+              informações georreferenciadas.
+              <a href="https://www.ipm.com.br/saude/">Atende.Net Saúde</a>.
+            </p>
+            <p>
+              <span class="caption">Cuidelo</span>A prefeitura filtra unidades, consulta tempos e
+              exporta indicadores. Os resultados laboratoriais são informados manualmente. Faltam
+              base municipal consolidada entre aparelhos, conciliação de cadastros e interface com
+              os prestadores de diagnóstico.
+            </p>
+          </li>
+          <li>
+            <h3>Regulação e território</h3>
+            <p>
+              <span class="caption">Referência</span>O SOUL MV Saúde Pública anuncia regulação de
+              leitos, portal do cidadão e aplicativos de campo. No RS, a regulação ambulatorial tem
+              seus próprios fluxos e sistemas, entre eles o GERCON.
+              <a href="https://mv.com.br/pt/solucao/soul-mv-saude-publica">SOUL MV</a> ·
+              <a href="https://saude.rs.gov.br/regulacao-ambulatorial">SES do RS</a>.
+            </p>
+            <p>
+              <span class="caption">Cuidelo</span>Há encaminhamento, reagendamento,
+              contrarreferência manual e visitas por microárea. Faltam oferta regional pactuada,
+              autorização recebida do regulador, resposta ao solicitante e sincronização protegida
+              da visita de campo.
+            </p>
+          </li>
+          <li>
+            <h3>Assistência farmacêutica</h3>
+            <p>
+              <span class="caption">Referência</span>O eSUS AF é a solução federal em transição com
+              o Hórus. O Ministério também descreve a possibilidade de uso de sistemas próprios com
+              transmissão dos dados.
+              <a href="https://webatendimento.saude.gov.br/faq/esusaf">Orientações do Ministério</a>
+              ·
+              <a href="https://bvsms.saude.gov.br/bvs/saudelegis/gm/2026/prt11585_18_06_2026.html"
+                >Portaria de junho de 2026</a
+              >.
+            </p>
+            <p>
+              <span class="caption">Cuidelo</span>Há entrega parcial ou total por lote, comprovante
+              e ajustes vinculados ao original. Ainda faltam inventário físico, transferências,
+              destinação dos segregados, controlados, catálogo nacional conciliado e envio oficial.
+            </p>
+          </li>
+          <li>
+            <h3>Cidadão e acompanhamento</h3>
+            <p>
+              <span class="caption">Referência</span>O Meu SUS Digital já descreve Diário de Saúde,
+              agenda, exames e informações sobre medicamentos. O catálogo da MV inclui agendamento e
+              notificações.
+              <a
+                href="https://www.gov.br/saude/pt-br/composicao/seidigi/meususdigital/perguntas-e-respostas/cidadao/2-quais-os-servicos-que"
+                >Meu SUS Digital</a
+              >
+              · <a href="https://mv.com.br/pt/solucao/soul-mv-saude-publica">SOUL MV</a>.
+            </p>
+            <p>
+              <span class="caption">Cuidelo</span>O cidadão pode compartilhar o diário com o
+              consultório, receber orientação com o app fechado e confirmar leitura para o médico.
+              Permanecem identidade forte, acesso por responsável, operação assistida para quem não
+              tem smartphone e validação com pacientes.
+            </p>
+          </li>
+          <li>
+            <h3>Hospital e alta complexidade</h3>
+            <p>
+              <span class="caption">Referência</span>O AGHU, da HU Brasil, inclui internação,
+              prescrição multiprofissional, farmácia, exames, cirurgias e faturamento.
+              <a
+                href="https://www.gov.br/hubrasil/pt-br/governanca/plataformas-e-tecnologias/aghu/aghu/"
+                >Módulos do AGHU</a
+              >.
+            </p>
+            <p>
+              <span class="caption">Cuidelo</span>Admissão, leito, transferência interna e saída têm
+              percurso demonstrativo. Um hospital maior ainda precisaria de administração à
+              beira-leito, passagem de plantão, UTI, centro cirúrgico, maternidade e fechamento de
+              produção. Convênios e faturamento privado compõem uma etapa posterior.
+            </p>
+          </li>
+        </ul>
+      </section>
+      <section id="farmacia">
+        <p class="label">03 · Decisão aplicada na versão 0.25</p>
+        <h2>Duas ocorrências diferentes no balcão</h2>
+        <div class="cards">
+          <article>
+            <h3>A pessoa traz o medicamento de volta</h3>
+            <p>
+              A equipe localiza o comprovante, identifica o item e o lote e registra quanto recebeu.
+              Na política conservadora da demonstração, essa quantidade fica em saldo segregado até
+              destinação pelo responsável. A receita conserva a quantidade efetivamente entregue. A
+              orientação publicada pela SES de Santa Catarina para o CEAF é uma referência de
+              contexto específico. O protocolo operacional deve ser acordado com cada rede.
+            </p>
+            <a
+              href="https://www.saude.sc.gov.br/edocman/areas-de-atuacao/assistencia-farmaceutica-diaf/nucleo-do-sistema-de-gerenciamento-do-ceaf/capacitacoes/perguntas%20frequentes%2003_2025.pdf"
+              >SES de Santa Catarina, pergunta 9</a
+            >
+          </article>
+          <article>
+            <h3>A saída foi registrada a maior</h3>
+            <p>
+              O farmacêutico confere a quantidade que permaneceu na unidade, identifica a saída e
+              registra o motivo do estorno. O saldo pendente da receita é recalculado. O crédito
+              pertence ao lote original e fica segregado se esse lote estiver vencido. A entrega
+              original e os ajustes permanecem disponíveis para conferência. Minas Gerais também
+              documenta a correção de uma dispensação incorreta com motivo e reflexo no estoque.
+            </p>
+            <a
+              href="https://ajudasaf.saude.mg.gov.br/2020/05/04/como-realizar-o-estorno-de-uma-dispensacao-do-componente-basico-e-estrategico/"
+              >Orientação da SES de Minas Gerais</a
+            >
+          </article>
+        </div>
+        <p>
+          <strong>Integração a desenvolver.</strong> Na documentação do SI-BNAFAR, posição de
+          estoque e saídas por movimentação ou perda têm modelos próprios, REPE e RESMPE. O registro
+          de dispensação ou fornecimento, REDFM, segue pela RNDS. A implementação precisa mapear o
+          catálogo para a OBM, definir o tratamento de cada ajuste e reconciliar envios, rejeições e
+          reprocessamentos em ambiente autorizado. O Cuidelo ainda não realiza essas transmissões.
+          <a href="https://webatendimento.saude.gov.br/faq/sibnafar">SI-BNAFAR</a> ·
+          <a href="https://rnds-guia.saude.gov.br/docs/rnds/ambientes/">Ambientes da RNDS</a>.
+        </p>
+      </section>
+      <section id="diferenciais">
+        <p class="label">04 · Valor a demonstrar</p>
+        <h2>O que faria uma equipe escolher o Cuidelo</h2>
+        <p>
+          A proposta é reduzir o trabalho para descobrir o que aconteceu depois de cada decisão. A
+          pesquisa sustenta testar os percursos abaixo. Exclusividade, economia e superioridade
+          clínica precisariam de evidência comparativa em campo.
+        </p>
+        <ol>
+          <li>
+            <strong>Para a pessoa e o médico.</strong> Do episódio relatado em casa até a orientação
+            lida pela pessoa, o consultório acompanha cada etapa. Medir orientações lidas em até 48
+            horas sobre as enviadas e mediana do tempo entre envio e leitura. Registrar quem precisa
+            de outro canal. Confirmar leitura não comprova adesão ao tratamento.
+          </li>
+          <li>
+            <strong>Para a recepção e a coordenação.</strong> A senha, a sala e os horários mostram
+            em que etapa a espera se acumulou. Medir mediana e percentil 90 da espera por serviço,
+            prioridade e turno, junto da proporção de percursos com horários completos. Usar esses
+            dados com a equipe para ajustar escalas.
+          </li>
+          <li>
+            <strong>Para a farmácia.</strong> Da divergência no estoque é possível voltar à saída e
+            ao lote, ver o motivo e separar o material indisponível. Medir o tempo para localizar e
+            explicar uma amostra de divergências, a cobertura dos vínculos com as saídas originais e
+            a diferença entre o estoque físico e o registrado em cada lote.
+          </li>
+          <li>
+            <strong>Para quem aguarda um exame.</strong> Evolução proposta para Vacaria e outras
+            redes com absenteísmo: confirmação antecipada, cancelamento acessível e oferta da vaga a
+            outra pessoa elegível conforme a fila municipal. Medir vagas reaproveitadas sobre vagas
+            liberadas em tempo hábil. O Cuidelo já registra e corrige faltas. A reposição automática
+            ainda precisa ser desenvolvida.
+          </li>
+        </ol>
+      </section>
+      <section id="entrega">
+        <p class="label">05 · Ordem de desenvolvimento</p>
+        <h2>O que precisa funcionar antes de prometer 100 postos</h2>
+        <ol>
+          <li>
+            <strong>Próxima entrega funcional da farmácia.</strong> Registrar destinação do
+            segregado com responsável e evidência. Acrescentar perdas, inventário e transferência em
+            duas etapas, com expedição da central e recebimento pela unidade. Aceite: explicar cada
+            diferença de um lote contado fisicamente e impedir saldo simultâneo em origem e destino.
+          </li>
+          <li>
+            <strong>Base para os módulos municipais.</strong> Identidade autenticada, autorização no
+            servidor, armazenamento protegido por prefeitura e unidade, trilha de auditoria
+            protegida, cópias de segurança e restauração testada. Aceite: uma prefeitura não
+            consegue ler a outra, mesmo chamando o servidor diretamente. Dois postos corrigem a
+            mesma saída sem duplicar o crédito.
+          </li>
+          <li>
+            <strong>Continuidade e interoperabilidade.</strong> Implantar sincronização após
+            interrupções, conciliar duplicidades e homologar cada integração exigida pela rede.
+            Começar por um estoque, uma competência e um caminho de dispensação. Em regulação,
+            validar a ida e a volta com a central regional. Aceite: provar a recuperação sem perda
+            de registro e mostrar o retorno oficial de aceitação ou rejeição.
+          </li>
+          <li>
+            <strong>Validação com equipes nos postos disponíveis.</strong> Com dados fictícios,
+            farmacêutico, recepcionista, médico, enfermeiro, gestor e cidadão executam os roteiros
+            de ponta a ponta. Levantar a linha de base e comparar os indicadores acima por período e
+            tipo de atendimento. Documentar tempos, erros, acessibilidade, impressoras, TVs e
+            conectividade real.
+          </li>
+          <li>
+            <strong>Primeira implantação operacional completa.</strong> Validar também urgência,
+            internação, especialidades, produção e suporte. Simular 100 postos distribuídos em mais
+            de uma prefeitura com carga concorrente realista, falhas e recuperação. Publicar
+            latência, erros e janela de recuperação observados. O aceite dos módulos e dos
+            responsáveis da rede precede o uso com pacientes.
+          </li>
+        </ol>
+      </section>
+      <footer>
+        <p>
+          <strong>Cuidelo 0.25</strong> · Estudo de produto e demonstração com dados fictícios. As
+          referências abrem as páginas públicas dos municípios, operadores e fornecedores
+          consultados.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

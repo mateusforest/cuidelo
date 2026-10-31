@@ -13,23 +13,32 @@ Cuidelo 0.8.0 · 29/10/2026 · teste local com dados fictícios.
 7. Abra o comprovante para imprimir ou salvar como PDF. Volte à receita para completar o saldo em outra entrega. Depois da conclusão, encontre-a no filtro **Entregue por completo** ou **Todas**.
 8. Consulte **Ver receita e entregas**. No perfil médico ou enfermagem, abra o histórico da pessoa e **Entregas da farmácia**; os registros são compartilhados apenas dentro da mesma prefeitura.
 
-## Exemplo fictício de teste
+## Roteiro para testar devolução e estorno
 
-Crie um medicamento chamado “Medicamento fictício Alfa”, com concentração, apresentação, dose, via, frequência e duração explicitamente fictícias. Prescreva 6 “unidades de teste”. Na farmácia, cadastre dois lotes com a mesma identificação: ALFA-01 com 3 unidades e ALFA-02 com 7, ambos com validade futura. Entregue primeiro 2 unidades do ALFA-01. Depois complete usando 1 do ALFA-01 e 3 do ALFA-02. O saldo da receita será zero; o estoque ficará em 0 e 4, respectivamente. O primeiro comprovante continuará mostrando que havia 4 unidades pendentes naquele momento.
+Use a mesma UBS e o mesmo navegador para as sessões de demonstração do consultório e da farmácia. No consultório, emita uma receita de 6 unidades de um medicamento fictício. Na farmácia, cadastre dois lotes válidos com a mesma apresentação da receita e 5 unidades cada. Se já tiver uma entrega de teste, comece pela busca de entregas.
 
-## Regras implementadas
+1. Entregue 4 unidades do lote A e 2 do lote B. Anote o número do comprovante.
+2. Em **Localizar entrega**, procure pelo lote ou comprovante e abra o histórico da receita. Na entrega original, use **Registrar devolução**. Escolha a saída do lote A, informe 2 unidades, registre o motivo e confirme que recebeu o material.
+3. Confira a separação física. O lote A continua com 1 unidade disponível e passa a ter 2 segregadas. A receita continua integralmente atendida.
+4. Na mesma entrega, use **Registrar estorno** para corrigir o lançamento de 1 unidade do lote B que permaneceu na farmácia. Confira o lote, a quantidade e o motivo. O disponível do lote B passa de 3 para 4, e a receita volta a ter 1 unidade pendente.
+5. Reabra o comprovante original. Confira a quantidade registrada no momento da entrega e os ajustes posteriores com os dois lotes, motivos e responsáveis. A equipe assistencial pode ler o histórico nos perfis autorizados.
 
-- Somente Farmácia registra entregas vinculadas. Médico e enfermagem consultam o histórico; administração local acompanha estoque sem receber documentos clínicos ou identidade de quem recebeu a entrega.
-- Receita e lotes precisam pertencer à mesma unidade e prefeitura. Não há dispensação entre unidades nesta versão.
-- Cadastro de medicamento, concentração, apresentação e unidade precisam corresponder. Diferenças simples de maiúsculas, acentos e espaços são normalizadas; não há substituição terapêutica ou conversão de quantidade.
-- Lote vencido, quantidade acima do estoque ou acima do saldo prescrito, frações, quantidades zero/negativas, linhas duplicadas e itens alheios à receita são recusados.
-- Todas as baixas de uma entrega são gravadas juntas, vinculadas à receita, ao item, ao lote e ao comprovante. Falha de gravação não confirma a entrega nem altera o saldo em memória.
-- Duas conferências concorrentes não podem duplicar a baixa. Se os dados mudarem, feche e reabra a conferência para revisar os saldos. Uma repetição da mesma solicitação não gera outra entrega.
-- Entregas confirmadas são preservadas. Cancelar a receita impede novas entregas, conserva o que já foi entregue e não repõe estoque automaticamente. Saída avulsa de estoque não quita receita.
-- A migração para o formato 9 preserva receitas e registros anteriores. Lotes antigos não recebem unidades de contagem presumidas.
+| Movimento | Disponível A | Segregado A | Disponível B | Saldo da receita |
+|---|---:|---:|---:|---:|
+| Antes da entrega | 5 | 0 | 5 | 6 |
+| Entrega de 4 A e 2 B | 1 | 0 | 3 | 0 |
+| Devolução física de 2 A | 1 | 2 | 3 | 0 |
+| Estorno de lançamento de 1 B | 1 | 2 | 4 | 1 |
 
-## Pendências do módulo
+## Regras da demonstração
 
-Esta é uma demonstração de percurso, sem validade para operação clínica. Faltam validação farmacêutica completa, assinatura, receituários especiais e controlados, catálogo validado, regras de cobertura, devoluções e estornos vinculados, perdas e quarentena, transferências entre unidades, fracionamento/conversão controlada, administração de medicamentos e integração e-SUS AF. Os 44 percursos do Pulso continuam classificados como parciais.
+- O perfil Farmácia registra o ajuste na sua própria unidade e prefeitura. Médico e enfermagem consultam os registros autorizados. A administração da unidade acompanha estoque e movimentos administrativos.
+- Cada ajuste referencia o item, o lote e a saída da entrega original. Quantidades precisam ser inteiras e positivas. Devoluções e estornos disputam o mesmo saldo ajustável daquela saída.
+- A devolução física registra a entrada em segregação. A equipe responsável pela assistência farmacêutica ainda precisa validar o procedimento de destinação da rede. O registro local de devolução não autoriza nova dispensação.
+- O estorno corrige quantidade lançada como entregue que permaneceu na unidade. A quantidade corrigida volta ao disponível do lote se ele estiver válido. Se estiver vencido, entra em segregação. Receita cancelada continua bloqueada para novas entregas.
+- O ajuste é um novo registro com autoria de demonstração, data e motivo. A repetição do mesmo comando e a revisão concorrente do saldo são verificadas. Feche uma conferência desatualizada e revise o histórico antes de tentar outra quantidade.
+- Os dados da farmácia ficam no navegador atual. O arquivo HTML é portátil. Levar o arquivo para outro computador leva o programa, e os dados da estação ficam na origem.
 
-O armazenamento e a sincronização são locais ao mesmo navegador e arquivo. Não há autenticação real nem ligação entre computadores. Substitua os três HTMLs pela mesma versão e feche as abas antigas antes de testar. Copiar o HTML para outro computador não copia os registros salvos no navegador.
+## Pendências
+
+A farmácia permanece parcial no mapa de 41 percursos parciais. Para operação municipal, faltam destinação dos segregados, perdas e recolhimento, inventário físico, distribuição entre central e unidades, validação farmacêutica, controlados, catálogo e integrações nacionais. A farmácia hospitalar também precisa de fracionamento e rastreio até a administração no leito. Identidade autenticada e persistência protegida continuam pendentes.

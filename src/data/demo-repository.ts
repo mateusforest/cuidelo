@@ -33,6 +33,7 @@ export const storageKey = 'cuidelo.demo.database.v1';
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
 const collections = [
   'dispensations',
+  'dispensationAdjustments',
   'clinicalDocuments',
   'workRecords',
   'careSegments',
@@ -134,9 +135,13 @@ function parseDatabase(value: string): Database {
     db.schemaVersion = 14;
     db.reportReviews = [];
   }
+  if (isRecord(db) && db.schemaVersion === 14) {
+    db.schemaVersion = 15;
+    db.dispensationAdjustments = [];
+  }
   if (
     !isRecord(db) ||
-    db.schemaVersion !== 14 ||
+    db.schemaVersion !== 15 ||
     !Number.isSafeInteger(db.revision) ||
     Number(db.revision) < 0
   )

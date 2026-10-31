@@ -2,7 +2,7 @@ import type { ClinicalDocument, DocumentIdentity, MedicationLine } from './clini
 import type { Context, Database, Scoped, StockLot } from './model';
 import { can } from './model';
 import { demoIdentities, identityFor } from './access';
-import { dateKey, validDay } from './dates';
+import { addDays, dateKey, validDay } from './dates';
 import { DomainError } from './errors';
 
 export interface MedicationStock {
@@ -54,7 +54,38 @@ export interface Dispensation extends Scoped {
     remaining: number;
   }[];
 }
+export type AdjustmentKind = 'return' | 'reversal';
+export interface DispensationAdjustment extends Scoped {
+  unitId: string;
+  dispensationId: string;
+  documentId: string;
+  itemId: string;
+  lotId: string;
+  originalMovementId: string;
+  requestId: string;
+  sequence: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  kind: AdjustmentKind;
+  destination: 'stock' | 'segregated';
+  quantity: number;
+  reason: string;
+  at: string;
+  authorId: string;
+  author: string;
+}
 export type PharmacyCommand =
+  | {
+      type: 'pharmacy.adjust';
+      dispensationId: string;
+      originalMovementId: string;
+      kind: AdjustmentKind;
+      quantity: number;
+      reason: string;
+      confirmed: boolean;
+      expectedAdjustments: number;
+      requestId: string;
+    }
   | {
       type: 'stock.register';
       product: string;
@@ -71,6 +102,7 @@ export type PharmacyCommand =
       documentId: string;
       expectedDocumentVersion: number;
       expectedDeliveries: number;
+      expectedAdjustments?: number;
       requestId: string;
       allocations: Allocation[];
       recipient: { kind: 'patient' | 'representative'; name: string };
@@ -97,6 +129,11 @@ const normalized = (s: string) =>
     .toLocaleLowerCase('pt-BR')
     .trim()
     .replace(/\s+/g, ' ');
+export function stockLotAttention(lot: StockLot, today: string) {
+  const low = lot.quantity < lot.minimum;
+  const expiring = lot.expiresAt <= addDays(today, 30);
+  return { low, expiring, needsAttention: low || expiring || (lot.segregatedQuantity ?? 0) > 0 };
+}
 export function medicationKey(product: string, medication: MedicationStock) {
   return [product, medication.strength, medication.form, medication.quantityUnit]
     .map(normalized)
@@ -108,11 +145,26 @@ export function matchesMedication(item: MedicationLine, lot: StockLot) {
     medicationKey(item.medicine, item) === medicationKey(lot.product, lot.medication)
   );
 }
+export function allocationBalance(
+  allocation: Dispensation['allocations'][number],
+  adjustments: DispensationAdjustment[],
+) {
+  let returned = 0,
+    reversed = 0;
+  for (const a of adjustments) {
+    if (a.originalMovementId !== allocation.movementId) continue;
+    if (a.kind === 'return') returned += a.quantity;
+    else reversed += a.quantity;
+  }
+  return { returned, reversed, remaining: allocation.quantity - returned - reversed };
+}
 export function prescriptionProgress(
   doc: PharmacyPrescription | ClinicalDocument,
   deliveries: Dispensation[],
+  adjustments: DispensationAdjustment[] = [],
 ) {
   const history = deliveries.filter((d) => d.documentId === doc.id);
+  const changes = adjustments.filter((a) => a.documentId === doc.id);
   const items =
     doc.content.kind === 'prescription'
       ? doc.content.items.map((item) => {
@@ -124,7 +176,11 @@ export function prescriptionProgress(
                 .reduce((sum, a) => sum + a.quantity, 0),
             0,
           );
-          return { item, delivered, remaining: Number(item.quantity) - delivered };
+          const reversed = changes
+            .filter((a) => a.itemId === item.id && a.kind === 'reversal')
+            .reduce((n, a) => n + a.quantity, 0);
+          const net = delivered - reversed;
+          return { item, delivered: net, remaining: Number(item.quantity) - net };
         })
       : [];
   const status: 'cancelled' | 'complete' | 'partial' | 'waiting' =
@@ -132,10 +188,10 @@ export function prescriptionProgress(
       ? 'cancelled'
       : items.length && items.every((i) => i.remaining === 0)
         ? 'complete'
-        : history.length
+        : items.some((i) => i.delivered > 0)
           ? 'partial'
           : 'waiting';
-  return { items, history, status };
+  return { items, history, status, adjustmentCount: changes.length };
 }
 export function pharmacyPrescription(doc: ClinicalDocument): PharmacyPrescription {
   ensure(
@@ -247,6 +303,7 @@ export function applyPharmacyCommand(
     typeof cmd.requestId === 'string' && /^[\w-]{8,100}$/.test(cmd.requestId),
     'Identificação da entrega inválida. Reabra o formulário.',
   );
+  if (cmd.type === 'pharmacy.adjust') return adjustDispensation(db, c, cmd, now, newId);
   ensure(
     Array.isArray(cmd.allocations) && cmd.allocations.length >= 1 && cmd.allocations.length <= 60,
     'Informe de 1 a 60 entregas por lote.',
@@ -276,6 +333,7 @@ export function applyPharmacyCommand(
     documentId: cmd.documentId,
     expectedDocumentVersion: cmd.expectedDocumentVersion,
     expectedDeliveries: cmd.expectedDeliveries,
+    ...(cmd.expectedAdjustments ? { expectedAdjustments: cmd.expectedAdjustments } : {}),
     allocations,
     recipient,
     partialReason,
@@ -294,7 +352,7 @@ export function applyPharmacyCommand(
       'Esta identificação já pertence a outra entrega. Reabra o formulário.',
       'conflict',
     );
-    return { entityId: prior.id, action: 'Entrega já registrada; nenhuma nova baixa aplicada' };
+    return { entityId: prior.id, action: 'Entrega já registrada', replayed: true };
   }
   const doc = db.clinicalDocuments.find(
     (d) =>
@@ -314,10 +372,15 @@ export function applyPharmacyCommand(
     'A receita mudou. Reabra e confira a versão atual.',
     'conflict',
   );
-  const progress = prescriptionProgress(doc, db.dispensations);
+  const progress = prescriptionProgress(doc, db.dispensations, db.dispensationAdjustments);
   ensure(
     progress.history.length === cmd.expectedDeliveries,
     'Outra entrega foi registrada. Reabra e confira o saldo atual.',
+    'conflict',
+  );
+  ensure(
+    progress.adjustmentCount === (cmd.expectedAdjustments ?? 0),
+    'Um ajuste foi registrado. Reabra e confira o saldo da receita.',
     'conflict',
   );
   ensure(progress.status !== 'complete', 'Esta receita já foi entregue por completo.');
@@ -423,12 +486,266 @@ export function applyPharmacyCommand(
   };
 }
 
+function adjustDispensation(
+  db: Database,
+  c: Context,
+  cmd: Extract<PharmacyCommand, { type: 'pharmacy.adjust' }>,
+  now: Date,
+  newId: () => string,
+) {
+  ensure(cmd.kind === 'return' || cmd.kind === 'reversal', 'Tipo de ajuste inválido.');
+  ensure(integer(cmd.quantity), 'Informe uma quantidade inteira maior que zero.');
+  ensure(
+    Number.isSafeInteger(cmd.expectedAdjustments) && cmd.expectedAdjustments >= 0,
+    'Reabra a conferência da entrega.',
+  );
+  ensure(cmd.confirmed === true, 'Confirme a conferência física do lote.');
+  const reason = bounded(cmd.reason, 'Motivo do ajuste', 500, true);
+  const delivery = db.dispensations.find(
+    (d) =>
+      d.id === cmd.dispensationId && d.organizationId === c.organizationId && d.unitId === c.unitId,
+  );
+  ensure(delivery, 'Entrega original não encontrada nesta unidade.', 'scope');
+  const original = delivery.allocations.find((a) => a.movementId === cmd.originalMovementId);
+  ensure(original, 'A saída selecionada não pertence à entrega original.');
+  const prior = db.dispensationAdjustments.find(
+    (a) => a.organizationId === c.organizationId && a.requestId === cmd.requestId,
+  );
+  if (prior) {
+    ensure(
+      prior.dispensationId === delivery.id &&
+        prior.authorId === c.sessionId &&
+        prior.originalMovementId === original.movementId &&
+        prior.quantity === cmd.quantity &&
+        prior.kind === cmd.kind &&
+        prior.reason === reason &&
+        prior.sequence === cmd.expectedAdjustments + 1,
+      'Identificação já utilizada em outro ajuste. Reabra a conferência.',
+      'conflict',
+    );
+    return { entityId: prior.id, action: 'Ajuste já registrado', replayed: true };
+  }
+  const history = db.dispensationAdjustments.filter((a) => a.dispensationId === delivery.id);
+  ensure(
+    history.length === cmd.expectedAdjustments,
+    'A entrega recebeu outro ajuste. Reabra e confira as quantidades.',
+    'conflict',
+  );
+  ensure(
+    cmd.quantity <= allocationBalance(original, history).remaining,
+    'A quantidade supera o saldo ajustável da saída original.',
+  );
+  const at = now.toISOString();
+  ensure(
+    at >= (history.at(-1)?.at ?? delivery.at),
+    'A data do ajuste não pode anteceder o registro anterior.',
+  );
+  const lot = db.lots.find(
+    (l) =>
+      l.id === original.lotId && l.organizationId === c.organizationId && l.unitId === c.unitId,
+  );
+  ensure(lot, 'Lote original não encontrado nesta unidade.', 'scope');
+  const destination =
+    cmd.kind === 'return' || lot.expiresAt < dateKey(now) ? 'segregated' : 'stock';
+  const balanceBefore = destination === 'stock' ? lot.quantity : (lot.segregatedQuantity ?? 0);
+  const balance = balanceBefore + cmd.quantity;
+  ensure(Number.isSafeInteger(balance), 'Quantidade acima do limite permitido.');
+  const id = newId();
+  const record: DispensationAdjustment = {
+    id,
+    organizationId: c.organizationId,
+    unitId: c.unitId,
+    dispensationId: delivery.id,
+    documentId: delivery.documentId,
+    itemId: original.itemId,
+    lotId: lot.id,
+    originalMovementId: original.movementId,
+    requestId: cmd.requestId,
+    sequence: history.length + 1,
+    balanceBefore,
+    balanceAfter: balance,
+    kind: cmd.kind,
+    destination,
+    quantity: cmd.quantity,
+    reason,
+    at,
+    authorId: c.sessionId,
+    author: identityFor(db, c).name,
+  };
+  if (destination === 'stock') lot.quantity = balance;
+  else lot.segregatedQuantity = balance;
+  db.dispensationAdjustments.push(record);
+  db.movements.push({
+    id,
+    organizationId: c.organizationId,
+    unitId: c.unitId,
+    kind: 'entry',
+    adjustmentKind: cmd.kind,
+    destination,
+    quantity: cmd.quantity,
+    lotId: lot.id,
+    at,
+    dispensationId: delivery.id,
+    documentId: delivery.documentId,
+    itemId: original.itemId,
+    originalMovementId: original.movementId,
+    reason:
+      (cmd.kind === 'return' ? 'Devolução da entrega ' : 'Estorno da entrega ') + delivery.number,
+  });
+  return {
+    entityId: id,
+    action:
+      cmd.kind === 'return'
+        ? 'Devolução registrada em estoque segregado'
+        : 'Estorno da saída por lote registrado',
+  };
+}
+
+function validateAdjustments(
+  db: Database,
+  positions: Map<string, number>,
+  linkedMovements: Set<string>,
+) {
+  const deliveries = new Map(db.dispensations.map((d) => [d.id, d]));
+  const lots = new Map(db.lots.map((l) => [l.id, l]));
+  const actors = new Map(demoIdentities(db).map((a) => [a.sessionId, a]));
+  const adjusted = new Map<string, number>(),
+    segregated = new Map<string, number>();
+  const priorByDelivery = new Map<string, DispensationAdjustment>(),
+    requests = new Set<string>();
+  const reversals = new Map<string, { position: number; quantity: number }[]>();
+  const stockBalances = new Map<string, number>(),
+    byMovement = new Map<string, DispensationAdjustment>();
+  for (const a of db.dispensationAdjustments) {
+    const delivery = deliveries.get(a.dispensationId),
+      lot = lots.get(a.lotId);
+    ensure(
+      delivery &&
+        lot &&
+        delivery.documentId === a.documentId &&
+        delivery.unitId === a.unitId &&
+        delivery.organizationId === a.organizationId &&
+        lot.unitId === a.unitId &&
+        lot.organizationId === a.organizationId,
+      'Invalid adjustment scope',
+    );
+    const original = delivery.allocations.find((x) => x.movementId === a.originalMovementId);
+    ensure(
+      original && original.itemId === a.itemId && original.lotId === a.lotId,
+      'Invalid adjustment allocation',
+    );
+    const actor = actors.get(a.authorId),
+      prior = priorByDelivery.get(delivery.id);
+    ensure(
+      actor &&
+        actor.name === a.author &&
+        actor.role === 'pharmacy' &&
+        actor.unitId === a.unitId &&
+        actor.organizationId === a.organizationId,
+      'Invalid adjustment actor',
+    );
+    ensure(
+      a.sequence === (prior?.sequence ?? 0) + 1 &&
+        typeof a.at === 'string' &&
+        Number.isFinite(Date.parse(a.at)) &&
+        a.at >= (prior?.at ?? delivery.at),
+      'Invalid adjustment sequence',
+    );
+    const request = a.organizationId + ':' + a.requestId;
+    ensure(
+      typeof a.requestId === 'string' &&
+        /^[\w-]{8,100}$/.test(a.requestId) &&
+        !requests.has(request),
+      'Invalid adjustment request',
+    );
+    bounded(a.reason, 'Motivo do ajuste', 500, true);
+    ensure(
+      (a.kind === 'return' || a.kind === 'reversal') && integer(a.quantity),
+      'Invalid adjustment kind or quantity',
+    );
+    const destination =
+      a.kind === 'return' || lot.expiresAt < dateKey(new Date(a.at)) ? 'segregated' : 'stock';
+    ensure(a.destination === destination, 'Invalid adjustment destination');
+    ensure(
+      Number.isSafeInteger(a.balanceBefore) &&
+        a.balanceBefore >= 0 &&
+        Number.isSafeInteger(a.balanceAfter) &&
+        a.balanceAfter === a.balanceBefore + a.quantity,
+      'Invalid adjustment balance',
+    );
+    const total = (adjusted.get(original.movementId) ?? 0) + a.quantity;
+    ensure(total <= original.quantity, 'Adjustment exceeds original allocation');
+    const position = positions.get(a.id),
+      initialPosition = positions.get(original.movementId);
+    ensure(
+      position !== undefined &&
+        initialPosition !== undefined &&
+        initialPosition < position &&
+        !linkedMovements.has(a.id),
+      'Missing adjustment movement',
+    );
+    const m = db.movements[position];
+    ensure(
+      m.kind === 'entry' &&
+        m.adjustmentKind === a.kind &&
+        m.destination === destination &&
+        m.originalMovementId === original.movementId &&
+        m.dispensationId === delivery.id &&
+        m.documentId === delivery.documentId &&
+        m.itemId === a.itemId &&
+        m.lotId === lot.id &&
+        m.organizationId === a.organizationId &&
+        m.unitId === a.unitId &&
+        m.quantity === a.quantity &&
+        m.at === a.at,
+      'Invalid adjustment movement',
+    );
+    priorByDelivery.set(delivery.id, a);
+    requests.add(request);
+    linkedMovements.add(a.id);
+    adjusted.set(original.movementId, total);
+    if (destination === 'segregated') {
+      ensure(
+        a.balanceBefore === (segregated.get(lot.id) ?? 0),
+        'Invalid segregated movement balance',
+      );
+      segregated.set(lot.id, a.balanceAfter);
+    } else {
+      stockBalances.set(lot.id, lot.quantity);
+      byMovement.set(a.id, a);
+    }
+    if (a.kind === 'reversal') {
+      const key = a.documentId + ':' + a.itemId;
+      if (!reversals.has(key)) reversals.set(key, []);
+      reversals.get(key)!.push({ position, quantity: a.quantity });
+    }
+  }
+  for (const lot of db.lots)
+    ensure(
+      (lot.segregatedQuantity === undefined || Number.isSafeInteger(lot.segregatedQuantity)) &&
+        (lot.segregatedQuantity ?? 0) === (segregated.get(lot.id) ?? 0),
+      'Invalid segregated balance',
+    );
+  // Os lotes antigos podem ter saldo inicial sem uma entrada. Reconcilia a partir do saldo atual.
+  for (let i = db.movements.length - 1; i >= 0 && stockBalances.size; i--) {
+    const m = db.movements[i],
+      balance = stockBalances.get(m.lotId);
+    if (balance === undefined || m.destination === 'segregated') continue;
+    const entry = byMovement.get(m.id);
+    if (entry) ensure(entry.balanceAfter === balance, 'Reversal does not reconcile with stock');
+    stockBalances.set(m.lotId, balance + (m.kind === 'exit' ? m.quantity : -m.quantity));
+  }
+  return reversals;
+}
+
 export function validatePharmacy(db: Database) {
   const identities = demoIdentities(db),
     requests = new Set<string>(),
     numbers = new Set<string>(),
     movementIds = new Set<string>(),
     delivered = new Map<string, number>();
+  const movementPositions = new Map(db.movements.map((m, index) => [m.id, index]));
+  const reversals = validateAdjustments(db, movementPositions, movementIds);
   for (const lot of db.lots) if (lot.medication) medication(lot.medication);
   for (const d of db.dispensations) {
     const doc = db.clinicalDocuments.find(
@@ -524,6 +841,9 @@ export function validatePharmacy(db: Database) {
             m.organizationId === d.organizationId &&
             m.unitId === d.unitId &&
             m.kind === 'exit' &&
+            !m.originalMovementId &&
+            !m.adjustmentKind &&
+            !m.destination &&
             m.quantity === a.quantity &&
             m.at === d.at,
         ),
@@ -535,14 +855,22 @@ export function validatePharmacy(db: Database) {
       new Set(d.balances.map((b) => b.itemId)).size === d.balances.length,
       'Duplicate dispensation balance',
     );
+    // A ordem no extrato distingue operações registradas no mesmo instante.
+    const firstPosition = movementPositions.get(d.allocations[0].movementId)!;
     for (const item of doc.content.items) {
       const key = d.documentId + ':' + item.id,
-        previous = delivered.get(key) ?? 0,
+        gross = delivered.get(key) ?? 0,
+        reversedBefore = (reversals.get(key) ?? []).reduce(
+          (n, r) => (r.position < firstPosition ? n + r.quantity : n),
+          0,
+        ),
+        previous = gross - reversedBefore,
         amount = amounts.get(item.id) ?? 0,
         remaining = Number(item.quantity) - previous - amount,
         b = d.balances.find((b) => b.itemId === item.id);
       ensure(
-        remaining >= 0 &&
+        previous >= 0 &&
+          remaining >= 0 &&
           b &&
           b.prescribed === Number(item.quantity) &&
           b.before === previous &&
@@ -550,7 +878,7 @@ export function validatePharmacy(db: Database) {
           b.remaining === remaining,
         'Invalid prescription balance',
       );
-      delivered.set(key, previous + amount);
+      delivered.set(key, gross + amount);
     }
     ensure(
       !d.balances.some((b) => b.remaining > 0) || !!d.partialReason.trim(),
@@ -558,6 +886,13 @@ export function validatePharmacy(db: Database) {
     );
   }
   for (const m of db.movements)
-    if (m.dispensationId || m.documentId || m.itemId)
+    if (
+      m.dispensationId ||
+      m.documentId ||
+      m.itemId ||
+      m.originalMovementId ||
+      m.adjustmentKind ||
+      m.destination
+    )
       ensure(movementIds.has(m.id), 'Orphan dispensation movement');
 }

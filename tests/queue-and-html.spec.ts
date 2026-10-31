@@ -77,6 +77,13 @@ test('HTML abre diretamente, sem rede, com navegação, fontes, marca e guia inc
   await page.reload();
   await expect(page.locator('.coverage-table tbody tr')).toHaveCount(46);
   await page.getByRole('link', { name: 'Plano de entrega', exact: true }).click();
+  const studyPop = page.waitForEvent('popup');
+  await page.getByRole('link', { name: 'Ler estudo e prioridades de desenvolvimento' }).click();
+  const study = await studyPop;
+  await expect(
+    study.getByRole('heading', { name: 'O que falta para atender uma rede municipal' }),
+  ).toBeVisible();
+  await study.close();
   const guidePop = page.waitForEvent('popup');
   await page.getByRole('link', { name: 'Guia da marca' }).click();
   const guide = await guidePop;
