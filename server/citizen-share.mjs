@@ -1,3 +1,5 @@
+import { readCommand } from './http-json.mjs';
+import { networks } from '../src/domain/shipment-wire.mjs';
 import { createHash, randomBytes } from 'node:crypto';
 
 import { reportReader, reportCode, replyProof, reportBinding } from '../src/domain/report-code.mjs';
@@ -160,7 +162,9 @@ export async function citizenShare(op, token, body, cache, address, now = Date.n
       typeof sender.organizationId !== 'string' ||
       !/^[a-z0-9-]{1,80}$/.test(sender.organizationId) ||
       typeof sender.unitId !== 'string' ||
-      !sender.unitId.startsWith(sender.organizationId + '-') ||
+      !Object.hasOwn(networks, sender.organizationId) ||
+      !networks[sender.organizationId].includes(sender.unitId) ||
+      sender.unitId === 'aurora-central' ||
       !/^[a-z0-9-]{1,100}$/.test(sender.unitId) ||
       ![sender.unitId + ':clinical', sender.unitId + ':clinical:2'].includes(sender.sessionId)
     )
@@ -285,39 +289,25 @@ export async function citizenRelay(req, res, cache, mailbox) {
   if (req.method !== 'POST') return send(405, { error: 'Use POST.' });
   let b;
   try {
-    if (req.body === undefined) {
-      let n = 0;
-      const chunks = [];
-      for await (const chunk of req) {
-        n += chunk.length;
-        if (n > 161000) throw Error();
-        chunks.push(chunk);
-      }
-      b = JSON.parse(Buffer.concat(chunks).toString());
-    } else b = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    if (
-      !b ||
-      typeof b !== 'object' ||
-      !Object.hasOwn(b, 'op') ||
-      Object.keys(b).length !==
-        ({
-          'report.reply': 7,
-          'report.linkAck': 4,
-          'report.status': 3,
-          'report.legacyStatus': 2,
-          'report.ack': 2,
-          'report.device': 2,
-          'report.read': 2,
-          update: 3 + Number(Object.hasOwn(b, 'binding')),
-          create: 2 + Number(Object.hasOwn(b, 'binding')),
-          'report.create':
-            3 + Number(Object.hasOwn(b, 'network')) + Number(Object.hasOwn(b, 'device')),
-        }[b.op] ?? 1) ||
-      JSON.stringify(b).length > 161000
-    )
-      throw Error();
-  } catch {
-    return send(400, { error: 'Mensagem inválida.' });
+    b = await readCommand(req, 161000, {
+      health: [],
+      create: ['payload', 'binding'],
+      read: [],
+      stop: [],
+      update: ['revision', 'payload', 'binding'],
+      'report.create': ['payload', 'binding', 'network', 'device'],
+      'report.read': ['bindings'],
+      'report.stop': [],
+      'report.reply': ['sender', 'id', 'proof', 'binding', 'digest', 'payload'],
+      'report.device': ['device'],
+      'report.ack': ['id'],
+      'report.linkAck': ['id', 'box', 'permit'],
+      'report.status': ['id', 'box'],
+      'report.inbox': [],
+      'report.legacyStatus': ['id'],
+    });
+  } catch (e) {
+    return send(e.status ?? 400, { error: e.status ? e.message : 'Mensagem inválida.' });
   }
   try {
     if (b.op === 'health') {

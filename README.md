@@ -6,7 +6,9 @@ Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendim
 
 ## Estado desta entrega
 
-Versão **0.27.0**, de 31/10/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+Versão **0.28.0**, de 02/11/2026. Aplicação local com dados fictícios, identidade aprovada e fluxos navegáveis. **Não é um sistema clínico pronto para atendimento.** Não insira dados reais. A entrada por sessões serve para testar os perfis e não autentica ninguém.
+
+A versão 0.28 reforça as sessões demonstrativas em computadores compartilhados, as APIs públicas e a segurança dos HTMLs. Consulte os resultados e os requisitos em aberto para atendimento real no [registro de segurança](docs/seguranca.md).
 
 Na versão 0.27, a central pode conectar uma remessa a outro computador e a UBS registra parcelas no próprio estoque. O saldo restante continua em trânsito. O roteiro inclui publicação do código, entrada parcial e recuperação após perda de conexão.
 
@@ -97,7 +99,7 @@ pnpm dev
 
 Abra **http://127.0.0.1:4173/**. No Windows, `Iniciar-Cuidelo.cmd` também abre a demonstração, utilizando as ferramentas instaladas no computador. Na primeira execução, o download das dependências exige internet. Depois, fontes e dados da demonstração são locais.
 
-Para explorar, escolha um perfil na entrada, confira prefeitura e unidade e clique em **Entrar na demonstração**. Para a equipe médica, selecione também o profissional fictício. Use **Trocar sessão de demonstração** para testar outro vínculo. Essa preferência de navegação não bloqueia rotas diretas e não substitui autenticação. A recepção e a equipe operam na unidade vinculada. A prefeitura acompanha a sua rede. A operação da Cuidelo tem área comercial própria. Em **Plano de entrega**, somente a gestão da prefeitura pode redefinir o cenário da própria rede; as demais redes são preservadas.
+Para explorar, escolha um perfil na entrada, confira prefeitura e unidade e clique em **Entrar na demonstração**. Para a equipe médica, selecione também o profissional fictício. Use **Trocar sessão de demonstração** para testar outro vínculo. As rotas profissionais pedem nova entrada quando a sessão vence ou é encerrada. Essa preferência local não comprova a identidade da pessoa. A recepção e a equipe operam na unidade vinculada. A prefeitura acompanha a sua rede. A operação da Cuidelo tem área comercial própria. Em **Plano de entrega**, somente a gestão da prefeitura pode redefinir o cenário da própria rede; as demais redes são preservadas.
 
 ## Verificação
 

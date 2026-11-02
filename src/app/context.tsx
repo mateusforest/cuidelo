@@ -7,6 +7,15 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  activityKey,
+  entryKey,
+  startVisit,
+  savedVisit,
+  deadline,
+  clearReportCodes,
+} from '../data/staff-session';
 import type { Context, Snapshot, Summary } from '../domain/model';
 import type { CareRepository } from '../data/repository';
 import { browserRepository } from '../data/demo-repository';
@@ -21,6 +30,7 @@ interface AppValue {
   changeContext: (patch: Partial<Context>) => void;
   chooseSession: (sessionId: string) => void;
   demoEntered: boolean;
+  leaveSession: () => void;
   data: Snapshot;
   summary: Summary;
   repository: CareRepository;
@@ -32,7 +42,7 @@ interface AppValue {
 }
 const AppContext = createContext<AppValue | null>(null);
 const preferenceKey = 'cuidelo.demo.context.v1';
-const entryKey = 'cuidelo.demo.entry.v1';
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [repository] = useState(browserRepository);
   const [context, setContext] = useState<Context>(() => {
@@ -59,23 +69,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return initial;
   });
-  // Preferência de navegação da demonstração; não representa autenticação.
-  const [demoEntered, setDemoEntered] = useState(() => {
-    try {
-      return localStorage.getItem(entryKey) === context.sessionId;
-    } catch {
-      return false;
+  const { pathname } = useLocation();
+  const staffArea = !['/tv', '/painel', '/totem', '/acesso', '/login'].includes(pathname);
+  const [visit, setVisit] = useState(() => savedVisit(context.sessionId));
+  const demoEntered = !!visit;
+  const [dirty, setDirty] = useState(false);
+  const leaveSession = () => {
+    if (dirty && !window.confirm('Há um rascunho não salvo. Deseja encerrar a sessão?')) return;
+    if (savedVisit(context.sessionId)?.ticket === visit?.ticket) {
+      try {
+        localStorage.removeItem(entryKey);
+        localStorage.removeItem(activityKey);
+      } catch {
+        /* A aba também encerra em memória. */
+      }
     }
-  });
+    clearReportCodes();
+    setDirty(false);
+    setVisit(null);
+  };
   useEffect(() => {
-    if (!demoEntered) return;
+    if (!visit) {
+      clearReportCodes();
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    function check(event?: Event) {
+      const now = Date.now();
+      const current = savedVisit(context.sessionId, now);
+      if (!current || current.ticket !== visit?.ticket) {
+        if (event?.type === 'pointerdown' || event?.type === 'keydown' || event?.type === 'click') {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+        clearReportCodes();
+        setDirty(false);
+        setVisit(null);
+        return;
+      }
+      if (
+        staffArea &&
+        event?.isTrusted &&
+        ['pointerdown', 'keydown', 'click'].includes(event.type) &&
+        now - current.seen >= 10000
+      ) {
+        current.seen = now;
+        try {
+          localStorage.setItem(
+            activityKey,
+            JSON.stringify({ ticket: current.ticket, seen: current.seen }),
+          );
+        } catch {
+          setVisit(null);
+          return;
+        }
+      }
+      clearTimeout(timer);
+      timer = setTimeout(check, Math.max(1, deadline(current) - now));
+    }
+    function storage(e: StorageEvent) {
+      if (e.key === null || e.key === entryKey || e.key === activityKey) check();
+    }
+    const events = ['focus', 'pageshow', 'pointerdown', 'keydown', 'click'];
+    check();
+    events.forEach((type) => window.addEventListener(type, check, true));
+    window.addEventListener('storage', storage);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearTimeout(timer);
+      events.forEach((type) => window.removeEventListener(type, check, true));
+      window.removeEventListener('storage', storage);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [visit, context.sessionId, staffArea]);
+  useEffect(() => {
+    if (!demoEntered || !staffArea) return;
     const stopTV = startBroadcast(repository, context),
       stopCitizen = startCitizenUpdates(repository, context);
     return () => {
       stopTV?.();
       stopCitizen?.();
     };
-  }, [repository, context, demoEntered]);
+  }, [repository, context, demoEntered, staffArea]);
   const storageWarning = useSyncExternalStore(
     repository.subscribe,
     () => repository.recoveryMessage,
@@ -94,7 +169,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [repository]);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [dirty, setDirty] = useState(false);
   const data = useMemo(
     () => repository.snapshot(context),
     [repository, context, revision, storageWarning],
@@ -141,14 +215,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const chooseSession = (sessionId: string) => {
     const identity = demoIdentities(repository.directory()).find((i) => i.sessionId === sessionId);
     if (!identity) return;
+    const next = startVisit(identity.sessionId);
+    try {
+      localStorage.setItem(entryKey, JSON.stringify(next));
+    } catch {
+      notify(
+        'Ative o armazenamento deste navegador para entrar na estação de demonstração.',
+        'error',
+      );
+      return;
+    }
+    clearReportCodes();
     setDirty(false);
     setContext(identity);
-    setDemoEntered(true);
-    try {
-      localStorage.setItem(entryKey, identity.sessionId);
-    } catch {
-      /* A escolha continua válida nesta aba sem armazenamento. */
-    }
+    setVisit(next);
   };
   return (
     <AppContext
@@ -157,6 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         changeContext,
         chooseSession,
         demoEntered,
+        leaveSession,
         data,
         summary,
         repository,

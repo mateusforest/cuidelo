@@ -1,3 +1,4 @@
+import { csvRows } from '../data/csv';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, ArrowRight, ClipboardCheck, Download } from 'lucide-react';
@@ -590,20 +591,7 @@ function ReportBody({
         .filter((r) => r.module === module && r.status === status)
         .reduce((n, r) => n + Number(r.values.amount || 0), 0);
   const exportRows = (headers: string[], rows: unknown[][]) => {
-    const text = [headers, ...rows]
-      .map((row) =>
-        row
-          .map(
-            (v) =>
-              '"' +
-              String(v)
-                .replace(/^[=+@-]/, "'$&")
-                .replaceAll('"', '""') +
-              '"',
-          )
-          .join(';'),
-      )
-      .join('\r\n');
+    const text = csvRows([headers, ...rows]);
     const url = URL.createObjectURL(
       new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' }),
     );

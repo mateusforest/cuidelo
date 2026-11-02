@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { build } from 'vite';
 import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -37,6 +38,11 @@ function embed(text) {
   return text;
 }
 let guide = await readFile(path.join(root, 'public/brand/guia.html'), 'utf8');
+const printGuide = await readFile(path.join(root, 'public/brand/imprimir.js'), 'utf8');
+guide = guide.replace(
+  '<script src="imprimir.js"></script>',
+  () => '<script>' + printGuide + '</script>',
+);
 for (const [key, value] of assets) {
   const relative = key.startsWith('brand/') ? key.slice(6) : '../' + key;
   guide = guide.replaceAll(relative, value);
@@ -110,17 +116,34 @@ html = html.replace(/<link\b[^>]*rel="stylesheet"[^>]*>/g, () => '<style>' + css
 html = embed(html);
 if (/(?:src|href)=["'](?:\.\/)?assets\//.test(html))
   throw new Error('A exportação ainda aponta para arquivos externos.');
-await writeFile(path.join(out, 'Cuidelo.html'), html, 'utf8');
+const hashScript = (text) =>
+  "'sha256-" + createHash('sha256').update(text.replace(/\r\n?/g, '\n')).digest('base64') + "'";
+function protectPortable(page) {
+  const scripts = [...page.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+    .filter(([, attrs]) => !attrs.includes('application/json'))
+    .map(([, , body]) => hashScript(body));
+  const policy =
+    "default-src 'none'; script-src " +
+    [...scripts, hashScript(printGuide)].join(' ') +
+    "; script-src-attr 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src https://cuidelo.vercel.app/api/cidadao https://cuidelo.vercel.app/api/tv https://cuidelo.vercel.app/api/remessas; base-uri 'none'; form-action 'none'; object-src 'none'";
+  return page.replace(
+    '<head>',
+    '<head><meta charset="UTF-8"/><meta http-equiv="Content-Security-Policy" content="' +
+      policy +
+      '"/><meta name="referrer" content="no-referrer"/>',
+  );
+}
+await writeFile(path.join(out, 'Cuidelo.html'), protectPortable(html), 'utf8');
 const tv = html.replace(
   '<head>',
   '<head><script>if(!location.hash)location.hash="/painel?rede=aurora&unidade=aurora-centro&previa=1";</script>',
 );
-await writeFile(path.join(out, 'Cuidelo-TV.html'), tv, 'utf8');
+await writeFile(path.join(out, 'Cuidelo-TV.html'), protectPortable(tv), 'utf8');
 const kiosk = html.replace(
   '<head>',
   '<head><script>if(!location.hash)location.hash="/totem?rede=aurora&unidade=aurora-centro";</script>',
 );
-await writeFile(path.join(out, 'Cuidelo-Totem.html'), kiosk, 'utf8');
+await writeFile(path.join(out, 'Cuidelo-Totem.html'), protectPortable(kiosk), 'utf8');
 if (process.argv.includes('--downloads')) {
   const downloads = path.join(root, 'dist', 'downloads');
   await mkdir(downloads, { recursive: true });

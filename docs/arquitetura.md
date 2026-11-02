@@ -39,7 +39,7 @@ Identidade, permissões, auditoria durável, temporalidade e migrações vêm an
 
 ## Limites explícitos
 
-Não há criptografia de armazenamento local, autenticação, sincronização entre computadores, restauração operacional, contingência clínica, monitoramento de produção ou serviço 24 horas. O uso local não implementa o modo offline assistencial previsto no plano. O histórico local pode ser apagado e não é prova de auditoria.
+O estoque e o prontuário da demonstração ficam no navegador. Remessas, chamadas e compartilhamentos autorizados usam canais próprios entre equipamentos. Os requisitos para dados reais incluem identidade verificada, autorização e persistência no servidor, restauração ensaiada e monitoramento de incidentes. Consulte o [registro de segurança](seguranca.md). O uso local não implementa o modo offline assistencial previsto no plano. O histórico local pode ser apagado e não é prova de auditoria.
 
 As datas usam America/Sao_Paulo na demonstração. A expansão nacional exige fuso por estabelecimento e armazenamento de instantes com contexto temporal preservado, incluindo regras de competência e virada de dia.
 

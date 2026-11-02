@@ -1006,7 +1006,23 @@ export function readSnapshot(db: Database, c: Context): Snapshot {
       : [],
     intakes: has('clinical') ? org(db.intakes) : [],
     addenda: has('clinical') ? org(db.addenda) : [],
-    reportReviews: c.role === 'clinical' ? org(db.reportReviews) : [],
+    reportReviews:
+      c.role === 'clinical'
+        ? org(db.reportReviews).map((r) => {
+            const local = r.unitId === c.unitId;
+            return {
+              ...r,
+              reportRef: local ? r.reportRef : '',
+              messages: r.messages
+                .filter((m) => m.sentAt || (local && r.actorId === c.sessionId))
+                .map(({ tracking, ...message }) =>
+                  local && tracking
+                    ? { ...message, tracking: { box: tracking.box, token: tracking.token } }
+                    : message,
+                ),
+            };
+          })
+        : [],
     vaccineLots: has('vaccine.stock') ? unit(db.vaccineLots) : [],
     vaccineMovements: has('vaccine.stock') ? unit(db.vaccineMovements) : [],
     immunizations: has('vaccination') ? org(db.immunizations) : [],

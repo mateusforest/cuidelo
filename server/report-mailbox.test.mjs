@@ -51,6 +51,16 @@ it('envios concorrentes, repetição após resposta perdida e busca privada apó
       })
     ).status,
   ).toBe(403);
+  for (const unitId of ['aurora-central', 'aurora-inventada']) {
+    expect(
+      (
+        await run('reply', reader, {
+          ...body,
+          sender: { ...sender, unitId, sessionId: unitId + ':clinical' },
+        })
+      ).status,
+    ).toBe(403);
+  }
   const second = { ...body, id: crypto.randomUUID() };
   expect(
     (await Promise.all([run('reply', reader, body), run('reply', reader, second)])).map(

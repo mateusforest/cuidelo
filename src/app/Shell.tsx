@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useBlocker } from 'react-router-dom';
 import {
   ArrowRightLeft,
+  LogOut,
   HelpCircle,
   Menu,
   X,
@@ -29,8 +30,17 @@ import { Access } from '../pages/Access';
 import { identityFor } from '../domain/access';
 
 export function Shell() {
-  const { context, changeContext, data, repository, toast, dirty, setDirty, demoEntered } =
-    useApp();
+  const {
+    context,
+    changeContext,
+    data,
+    repository,
+    toast,
+    dirty,
+    setDirty,
+    demoEntered,
+    leaveSession,
+  } = useApp();
   const location = useLocation(),
     navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false),
@@ -166,6 +176,10 @@ export function Shell() {
         </details>
       </nav>
       <div className="sidebar-bottom">
+        <button className="nav-item help" onClick={leaveSession}>
+          <LogOut size={18} />
+          Encerrar sessão
+        </button>
         <button
           className="nav-item help"
           onClick={() => {
@@ -176,7 +190,7 @@ export function Shell() {
           <HelpCircle size={18} />
           Sobre este ambiente
         </button>
-        <span className="version-label">Cuidelo · desenvolvimento 0.27</span>
+        <span className="version-label">Cuidelo · desenvolvimento 0.28</span>
       </div>
     </>
   );

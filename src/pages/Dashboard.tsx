@@ -1,3 +1,4 @@
+import { csvRows } from '../data/csv';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -29,10 +30,6 @@ export function Dashboard() {
   const units = summary.units.filter((u) => kind === 'all' || u.unit.kind === kind);
   const currentUnit = data.units.find((u) => u.id === context.unitId);
   const exportSummary = () => {
-    const cell = (v: unknown) =>
-      `"${String(v)
-        .replace(/^[=+@-]/, "'$&")
-        .replaceAll('"', '""')}"`;
     const rows = [
       [
         'Unidade',
@@ -64,7 +61,7 @@ export function Dashboard() {
       ]),
     ];
     const url = URL.createObjectURL(
-      new Blob(['\uFEFF' + rows.map((r) => r.map(cell).join(';')).join('\r\n')], {
+      new Blob(['\uFEFF' + csvRows(rows)], {
         type: 'text/csv;charset=utf-8',
       }),
     );

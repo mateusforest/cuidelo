@@ -57,6 +57,7 @@ it('registra autoria, limita por paciente, médico e unidade e preserva o SOAP c
     reviewId: id,
     messageId: mid,
     sentAt: new Date().toISOString(),
+    tracking: { box: 'b'.repeat(64), token: 'c'.repeat(64), permit: 'd'.repeat(64) },
   });
   expect(citizenView(db, c, 'aurora-p1', new Date()).guidance).toMatchObject([
     { id: mid, text: msg.text },
@@ -70,6 +71,19 @@ it('registra autoria, limita por paciente, médico e unidade e preserva o SOAP c
   expect(
     readSnapshot(db, demoContext('horizonte', 'horizonte-centro', 'clinical')).reportReviews,
   ).toHaveLength(0);
+  const remote = readSnapshot(db, demoContext('aurora', 'aurora-vila', 'clinical'))
+    .reportReviews[0];
+  expect(remote.messages[0].text).toBe(msg.text);
+  expect(remote.messages[0].tracking).toBeUndefined();
+  expect(remote.reportRef).toBe('');
+  expect(readSnapshot(db, c).reportReviews[0].messages[0].tracking?.token).toBe('c'.repeat(64));
+  applyCommand(db, c, { ...msg, messageId: crypto.randomUUID(), text: 'Rascunho em conferência.' });
+  expect(
+    readSnapshot(
+      db,
+      demoContext('aurora', 'aurora-vila', 'clinical'),
+    ).reportReviews[0].messages.map((m) => m.id),
+  ).toEqual([mid]);
   expect(db.notes).toEqual(notes);
   expect(() => validateReviews(db)).not.toThrow();
 });

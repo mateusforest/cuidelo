@@ -100,7 +100,7 @@ const accessRoles: {
 
 export function Access({ resume = false }: { resume?: boolean }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const { repository, chooseSession, context, demoEntered } = useApp();
+  const { repository, chooseSession, context, demoEntered, leaveSession } = useApp();
   const navigate = useNavigate();
   const directory = repository.directory();
   const [params] = useSearchParams();
@@ -198,9 +198,14 @@ export function Access({ resume = false }: { resume?: boolean }) {
             <span /> Ambiente demonstrativo
           </span>
           {demoEntered && (
-            <Link to="/" className="access-back">
-              Voltar ao ambiente <ChevronRight size={14} />
-            </Link>
+            <>
+              <button className="button secondary" onClick={leaveSession}>
+                Encerrar sessão
+              </button>
+              <Link to="/" className="access-back">
+                Voltar ao ambiente <ChevronRight size={14} />
+              </Link>
+            </>
           )}
         </header>
         <div className="access-form-wrap">
@@ -330,7 +335,8 @@ export function Access({ resume = false }: { resume?: boolean }) {
               <span>
                 Acessos predefinidos, sem senha ou autenticação real.
                 <br />
-                Use apenas dados fictícios. As alterações ficam neste navegador.
+                Use apenas dados fictícios. A estação encerra a sessão após 15 minutos sem interação
+                ou 8 horas desde a entrada.
               </span>
             </p>
           </form>
@@ -353,7 +359,7 @@ export function Access({ resume = false }: { resume?: boolean }) {
         </div>
         <footer className="access-entry-footer">
           <span>Cuidelo © {new Date().getFullYear()}</span>
-          <span>Desenvolvimento · 0.27</span>
+          <span>Desenvolvimento · 0.28</span>
         </footer>
       </section>
     </main>

@@ -132,6 +132,7 @@ test('exame reagenda com motivo e histórico; data ultrapassada e cancelamento f
   await expect(exam.locator('.document-history')).toContainText('Novo horário fictício.');
   await page.clock.setFixedTime(new Date(addDays(dateKey(), 1) + 'T15:00:00-03:00'));
   await page.reload();
+  await selectSession(page, { role: 'clinical', unitId: 'aurora-centro' });
   await page.getByLabel('Etapa do exame').selectOption('overdue');
   await expect(exam).toBeVisible();
   await page.getByLabel('Etapa do exame').selectOption('cancelled');

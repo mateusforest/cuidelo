@@ -1,3 +1,4 @@
+import { readCommand } from './http-json.mjs';
 import { createHash, randomUUID, ECDH } from 'node:crypto';
 import { validateSchedule, nextAlarm, alarmTargets } from '../src/domain/push-schedule.mjs';
 const hash = (s) => createHash('sha256').update(s).digest('hex');
@@ -185,28 +186,14 @@ export async function pushHttp(req, res, runtime) {
   )
     return reply(403, { error: 'Origem inválida.' });
   try {
-    if (!String(req.headers['content-type']).startsWith('application/json'))
-      throw error(415, 'Use JSON.');
-    let body = req.body;
-    if (body === undefined) {
-      const chunks = [];
-      let n = 0;
-      for await (const c of req) {
-        n += c.length;
-        if (n > 20000) throw error(413, 'Agenda muito grande.');
-        chunks.push(c);
-      }
-      body = Buffer.concat(chunks).toString();
-    }
-    if (typeof body === 'string') {
-      try {
-        body = JSON.parse(body);
-      } catch {
-        throw error(400, 'Mensagem inválida.');
-      }
-    }
-    if (!body || JSON.stringify(body).length > 20000) throw error(400, 'Agenda inválida.');
-    const token = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization ?? '')?.[1] ?? '';
+    const body = await readCommand(req, 20000, {
+      status: [],
+      test: [],
+      stop: ['revision'],
+      sync: ['subscription', 'schedule', 'revision'],
+    });
+    const token = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization ?? '')?.[1];
+    if (!token) throw error(403, 'Credencial do aparelho inválida.');
     if (runtime.limit) await runtime.limit(req, body.op, token);
     return reply(200, await command(runtime, token, body));
   } catch (e) {

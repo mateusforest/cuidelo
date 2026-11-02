@@ -1,3 +1,4 @@
+import { csvRows } from '../data/csv';
 import { consultRooms, currentStay, roomName, isConsultRoom } from '../domain/unit-queue';
 import { activeEncounter } from '../domain/model';
 import { useEffect, useState } from 'react';
@@ -380,20 +381,7 @@ export function Performance() {
         p.duration.average ?? '',
       ]),
     ];
-    const csv = rows
-      .map((r) =>
-        r
-          .map(
-            (v) =>
-              '"' +
-              String(v)
-                .replace(/^[=+@-]/, "'$&")
-                .replaceAll('"', '""') +
-              '"',
-          )
-          .join(';'),
-      )
-      .join('\r\n');
+    const csv = csvRows(rows);
     const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;

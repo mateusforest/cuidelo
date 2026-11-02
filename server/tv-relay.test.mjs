@@ -30,7 +30,11 @@ function relay() {
       },
     };
     await tvRelay(
-      { method: 'POST', body, headers: { authorization: 'Bearer ' + token } },
+      {
+        method: 'POST',
+        body,
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      },
       res,
       cache,
     );

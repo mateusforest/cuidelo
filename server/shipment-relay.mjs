@@ -1,3 +1,4 @@
+import { readCommand } from './http-json.mjs';
 import { createHash } from 'node:crypto';
 import { validManifest, safeId, stockRole } from '../src/domain/shipment-wire.mjs';
 const hash = (v) => createHash('sha256').update(v).digest('hex');
@@ -112,19 +113,16 @@ export async function shipmentHttp(req, res, store) {
   if (req.method === 'OPTIONS') return send(204, null);
   if (req.method !== 'POST') return send(405, { error: 'Use POST.' });
   try {
-    let b = req.body;
-    if (b === undefined) {
-      let bytes = 0;
-      const chunks = [];
-      for await (const c of req) {
-        bytes += c.length;
-        if (bytes > 8192) throw fail(413, 'Mensagem muito grande.');
-        chunks.push(c);
-      }
-      b = Buffer.concat(chunks).toString();
-    }
-    if (typeof b === 'string') b = JSON.parse(b);
-    if (!b || JSON.stringify(b).length > 8192) throw fail(400, 'Mensagem inválida.');
+    const scope = ['org', 'unit', 'role'];
+    const b = await readCommand(req, 8192, {
+      health: [],
+      publish: [...scope, 'manifest'],
+      source: [...scope, 'code'],
+      inspect: [...scope, 'code'],
+      claim: [...scope, 'code'],
+      status: [...scope, 'code'],
+      receive: [...scope, 'code', 'requestId', 'quantity', 'expected', 'reference'],
+    });
     if (b.op === 'health' && Object.keys(b).length === 1) {
       await store.read('availability');
       return send(200, { service: 'remessas', available: true });

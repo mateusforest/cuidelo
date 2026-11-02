@@ -1,3 +1,4 @@
+import { readCommand } from './http-json.mjs';
 import { createHash } from 'node:crypto';
 
 // Only anonymous display fields cross this boundary. Rooms and scopes are fixed demo identifiers.
@@ -40,21 +41,6 @@ function validCall(c) {
     Number.isFinite(Date.parse(c.calledAt))
   );
 }
-async function body(req) {
-  if (req.body !== undefined) {
-    const s = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-    if (s.length > 3500) throw Error();
-    return JSON.parse(s);
-  }
-  const chunks = [];
-  let bytes = 0;
-  for await (const c of req) {
-    bytes += c.length;
-    if (bytes > 3500) throw Error();
-    chunks.push(c);
-  }
-  return JSON.parse(Buffer.concat(chunks).toString());
-}
 export async function tvRelay(req, res, cache) {
   const send = (status, data) => {
     res.statusCode = status;
@@ -80,11 +66,16 @@ export async function tvRelay(req, res, cache) {
   if (req.method !== 'POST') return send(405, { error: 'Use POST.' });
   let b;
   try {
-    b = await body(req);
-  } catch {
-    return send(400, { error: 'Mensagem inválida.' });
+    b = await readCommand(req, 3500, {
+      health: [],
+      read: [],
+      stop: ['org', 'unit'],
+      publish: ['org', 'unit', 'revision', 'current', 'recent'],
+    });
+  } catch (e) {
+    return send(e.status ?? 400, { error: e.status ? e.message : 'Mensagem inválida.' });
   }
-  const token = String(req.headers.authorization ?? '').replace(/^Bearer /, '');
+  const token = /^Bearer ([a-fA-F0-9]+)$/.exec(req.headers.authorization ?? '')?.[1] ?? '';
   try {
     if (obj(b, ['op']) && b.op === 'health') {
       await cache.get('diagnostic:tv');

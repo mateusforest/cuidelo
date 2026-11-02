@@ -144,6 +144,7 @@ test('recepção revisa uma chegada de ontem, preserva o percurso e permite uma 
   await selectSession(page, { role: 'reception', unitId: 'aurora-centro' });
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00Z'));
   await page.reload();
+  await selectSession(page, { role: 'reception', unitId: 'aurora-centro' });
   await page.getByRole('button', { name: 'Revisar chegadas anteriores' }).click();
   const row = page.locator('.desk-row').filter({ hasText: 'Ana Clara Martins' });
   await row.getByRole('button', { name: 'Encerrar chegada anterior' }).click();
