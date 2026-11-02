@@ -12,3 +12,6 @@ test-results/
 .sites-runtime/
 .openai/
 .vercel/
+supabase/.temp/
+supabase/.branches/
+supabase/signing_keys.json

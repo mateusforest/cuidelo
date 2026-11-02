@@ -1,6 +1,7 @@
 node_modules
 dist-standalone
 entregas
+supabase
 test-results
 playwright-report
 coverage

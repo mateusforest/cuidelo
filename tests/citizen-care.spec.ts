@@ -109,3 +109,35 @@ test('ativação pede inscrição de push e sincroniza somente horários e datas
   await expect(page.getByRole('button', { name: 'Ativar avisos do aparelho' })).toBeVisible();
   expect(commands.at(-1)?.op).toBe('stop');
 });
+
+test('inscrição de push sem resposta libera nova tentativa e não sincroniza uma agenda sem confirmação', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['notifications'], { origin });
+  await page.clock.install();
+  await page.addInitScript(() => {
+    Object.defineProperty(PushManager.prototype, 'getSubscription', { value: async () => null });
+    Object.defineProperty(PushManager.prototype, 'subscribe', {
+      value: () => {
+        document.body.dataset.pushStarted = 'sim';
+        return new Promise(() => {});
+      },
+    });
+  });
+  let posts = 0;
+  await page.route('**/api/care-push', (route) => {
+    if (route.request().method() === 'POST') posts++;
+    return route.fulfill({ json: { key: 'B' + 'a'.repeat(86) } });
+  });
+  await page.goto(origin + '/cidadao');
+  await page.getByRole('button', { name: /João Pedro/ }).click();
+  await page.goto(origin + '/cidadao/dia-a-dia/orientacoes');
+  const activate = page.getByRole('button', { name: 'Ativar avisos do aparelho' });
+  await activate.click();
+  await expect(page.locator('body')).toHaveAttribute('data-push-started', 'sim');
+  await page.clock.fastForward(21000);
+  await expect(page.getByText(/não confirmou a inscrição/)).toBeVisible();
+  await expect(activate).toBeEnabled();
+  expect(posts).toBe(0);
+});

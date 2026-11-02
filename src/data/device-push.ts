@@ -255,19 +255,23 @@ export async function subscribePhone() {
       changed();
     });
   }
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const existing = await reg.pushManager.getSubscription();
-    return (
-      existing ??
-      (await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: packed(publicKey),
-      }))
-    );
+    const subscribe = async () =>
+      (await reg.pushManager.getSubscription()) ??
+      reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: packed(publicKey) });
+    return await Promise.race([
+      subscribe(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Tempo excedido')), 20000);
+      }),
+    ]);
   } catch {
     throw Error(
-      'O serviço de notificações do aparelho não confirmou a inscrição. Confira as permissões e tente novamente.',
+      'O serviço de notificações do aparelho não confirmou a inscrição. Confira as permissões e a conexão antes de tentar novamente.',
     );
+  } finally {
+    clearTimeout(timer);
   }
 }
 let checkedWorkerAt = 0;

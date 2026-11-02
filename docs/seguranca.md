@@ -17,6 +17,12 @@ O encerramento vale para a estação profissional. Links já concedidos ao cidad
 
 Os alertas corrigidos tratam de esgotamento de recursos. A auditoria do gerenciador verifica avisos publicados para as versões resolvidas. Consulte os avisos de [Zod](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) e [minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249).
 
+## Verificação em 2 de novembro de 2026
+
+Na demonstração publicada, dois navegadores exercitaram a TV e os recebimentos de remessas. A política do site bloqueou a inserção de script e a abertura dentro de uma página externa. O HTML baixado também bloqueou o script. No Edge, uma orientação chegou sem o app aberto e a confirmação voltou ao consultório. No Chrome do equipamento de teste, o provedor não confirmou a inscrição a tempo. A tela informa a falha e permite repetir sem dar o aparelho como inscrito.
+
+As políticas de vínculos foram testadas em PostgreSQL 17.11 descartável, com usuários e declarações de sessão fictícios. O verificador de segurança do Supabase não apontou avisos nem erros nessa base. As verificações de políticas e da aplicação cobrem o ambiente ensaiado. Autenticação hospedada, entrega em aparelhos físicos e avaliação independente ainda exigem seus próprios testes.
+
 ## Condições para usar dados reais
 
 | Ordem | Entrega necessária | Evidência para o aceite |
@@ -28,3 +34,15 @@ Os alertas corrigidos tratam de esgotamento de recursos. A auditoria do gerencia
 | 5 | Fazer teste independente no ambiente autorizado e obter o aceite operacional e de privacidade da instituição. | Retestar os achados e registrar versão, responsáveis e decisão de liberação. |
 
 A equipe de desenvolvimento responde pelas correções e pelas evidências técnicas. A prefeitura precisa indicar os responsáveis pelos acessos, privacidade, contingência e liberação do atendimento. A aprovação para uso clínico permanece pendente.
+
+## Primeira base de homologação
+
+A pasta `supabase` prepara um projeto separado. A demonstração da Vercel continua usando seu adaptador local. A migração cria organizações, unidades e vínculos profissionais. Não há contas predefinidas nem tabelas de pacientes nessa base.
+
+A função `public.cuidelo_meus_acessos()` recebe a identidade validada pelo Supabase Auth e lista as unidades e funções autorizadas. O banco exige segundo fator, sessão da mesma pessoa ainda existente e válida, conta ativa e vínculo vigente. A gestão vê unidades da própria organização. O profissional de uma UBS precisa de vínculo explícito para cada unidade. A pessoa não pode atribuir ou modificar o próprio vínculo.
+
+Para repetir o teste de políticas, use um PostgreSQL descartável, versão 17, sem dados reais. Aplique, nessa ordem, `tests/homologacao/auth-fixture.sql`, a migração `supabase/migrations/20261102225349_vinculos_profissionais.sql` e `tests/homologacao/vinculos.sql`. Use `psql -X -v ON_ERROR_STOP=1 -f` para cada arquivo. O primeiro arquivo representa a parte do Auth necessária ao teste e falha se o esquema Auth já existir. **Nunca o aplique em um projeto Supabase.** As políticas rodam no próprio PostgreSQL. O teste configura as declarações de uma identidade fictícia no banco e exercita os papéis anônimo e autenticado.
+
+Para ativar a homologação online, crie um projeto Supabase exclusivo e restrinja a aplicação de homologação aos participantes. Aplique apenas a migração nesse projeto. Configure cadastro por convite, confirmação de e-mail, segundo fator TOTP, validade curta do token e apenas o domínio privado nos redirecionamentos. O arquivo `supabase/config.toml` prepara o ambiente local; confira os controles equivalentes no ambiente hospedado. Mantenha o esquema `cuidelo_privado` fora dos esquemas expostos na API. Um administrador deve cadastrar as organizações e unidades fictícias e associar os usuários convidados aos vínculos. A conta do paciente e a do dispositivo terão políticas distintas.
+
+O próximo aceite precisa percorrer o login real, o desafio de segundo fator, a consulta dos vínculos e o desligamento com uma sessão já aberta. Também é necessário implementar e testar as políticas de cada operação assistencial antes de mover dados do prontuário para o banco. A base de vínculos sozinha não autoriza atendimento. Consulte a documentação de [segurança da API](https://supabase.com/docs/guides/api/securing-your-api), [segundo fator](https://supabase.com/docs/guides/auth/auth-mfa) e [revogação de sessões](https://supabase.com/docs/guides/auth/sessions).

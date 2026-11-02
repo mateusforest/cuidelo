@@ -20,6 +20,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --audit-level moderate
       - run: pnpm test
+      - name: Verificar isolamento da homologação em PostgreSQL descartável
+        shell: bash
+        run: |
+          set -euo pipefail
+          pg_bin="$(pg_config --bindir)"
+          cluster="$(mktemp -d)"
+          socket="$(mktemp -d)"
+          "$pg_bin/initdb" -D "$cluster" --auth-local=trust --auth-host=reject >/dev/null
+          "$pg_bin/pg_ctl" -D "$cluster" -o "-k $socket -c listen_addresses='' -p 55432" -l "$cluster/teste.log" -w start
+          trap '"$pg_bin/pg_ctl" -D "$cluster" -m fast -w stop' EXIT
+          export PGHOST="$socket" PGPORT=55432 PGDATABASE=postgres
+          psql -X -v ON_ERROR_STOP=1 -f tests/homologacao/auth-fixture.sql
+          for migration in supabase/migrations/*.sql; do psql -X -v ON_ERROR_STOP=1 -f "$migration"; done
+          psql -X -v ON_ERROR_STOP=1 -f tests/homologacao/vinculos.sql
       - run: pnpm build
       - run: pnpm build:html
       - run: node scripts/verify-secrets.mjs
