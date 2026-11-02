@@ -107,11 +107,10 @@ Para explorar, escolha um perfil na entrada, confira prefeitura e unidade e cliq
 pnpm test
 pnpm build
 pnpm build:html
-pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-No Windows os testes de navegador usam Microsoft Edge instalado. Nos demais sistemas usam Chromium. A integração contínua instala o navegador e executa regras de domínio, compilação e percursos completos.
+No Windows, os testes usam o Microsoft Edge instalado. No Linux e no macOS, usam o Google Chrome completo, inclusive para testar notificações. Se ele estiver ausente, instale-o com `pnpm exec playwright install chrome` antes dos testes. A integração contínua verifica o banco de homologação e executa as regras de domínio e os percursos da interface.
 
 ## Organização
 

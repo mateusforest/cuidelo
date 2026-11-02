@@ -13,7 +13,8 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
-    ...(process.platform === 'win32' ? { channel: 'msedge' } : {}),
+    // A versão reduzida do Chromium não implementa as notificações do sistema.
+    channel: process.platform === 'win32' ? 'msedge' : 'chrome',
   },
   webServer: {
     command: 'node node_modules/vite/bin/vite.js --port 43173 --strictPort',

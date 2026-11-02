@@ -37,8 +37,12 @@ jobs:
       - run: pnpm build
       - run: pnpm build:html
       - run: node scripts/verify-secrets.mjs
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - name: Preparar o navegador com suporte a notificações
+        run: |
+          pnpm exec playwright install-deps chromium
+          if ! command -v google-chrome >/dev/null; then pnpm exec playwright install chrome; fi
+          google-chrome --version
+      - run: pnpm test:e2e --workers=2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
