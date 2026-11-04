@@ -12,6 +12,7 @@ import {
   Outlet,
 } from 'react-router-dom';
 import { Citizen } from './pages/Citizen';
+import { Presentation } from './pages/Presentation';
 import { AppProvider, useApp } from './app/context';
 import { Shell } from './app/Shell';
 import { can, type Permission } from './domain/model';
@@ -80,6 +81,7 @@ const protect = (permission: Permission, node: ReactNode) => (
   <Gate permission={permission}>{node}</Gate>
 );
 const router = (isPortable() ? createHashRouter : createBrowserRouter)([
+  { path: '/apresentacao', element: <Presentation /> },
   { path: '/cidadao/*', element: <Citizen /> },
   {
     element: (

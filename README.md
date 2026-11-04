@@ -2,6 +2,10 @@
 
 **Toda a rede. Mais perto das pessoas.**
 
+## Apresentação para Vacaria
+
+Revisão de 04/11/2026 para a reunião de 05/11. O [roteiro executivo](https://cuidelo.vercel.app/apresentacao) abre seis etapas de demonstração, preservando a escolha explícita dos perfis. O [PDF de seis páginas](public/downloads/Cuidelo-Apresentacao-Vacaria.pdf) reúne a proposta de valor, telas reais com dados fictícios, indicadores a medir, dependências e próximos passos. A [revisão técnica](docs/revisao-vacaria.html) registra a cobertura e as pendências, sem alterar o aceite exigido para a primeira implantação operacional.
+
 Plataforma em desenvolvimento para prefeituras, UBS, postos, UPA, pronto atendimento e hospitais públicos. A expansão para redes privadas é posterior. Esta base organiza o desenvolvimento do escopo público completo; a primeira implantação operacional continua condicionada à entrega e validação desse escopo.
 
 ## Estado desta entrega
@@ -70,7 +74,7 @@ Já é possível testar:
 
 Publicação de teste em 30/10/2026: [Cuidelo](https://cuidelo.vercel.app/acesso), [totem da UBS Centro](https://cuidelo.vercel.app/totem?rede=aurora&unidade=aurora-centro) e [painel da TV da UBS Centro](https://cuidelo.vercel.app/painel?rede=aurora&unidade=aurora-centro).
 
-O endereço hospeda a mesma demonstração com dados fictícios. As alterações continuam salvas somente no navegador de cada visitante; abrir o endereço em outro computador não compartilha filas, estoque ou prontuários. O pareamento opcional publica o painel de senhas pela internet. A ocupação e o atendimento dos diferentes perfis continuam na mesma estação. Os dados dos arquivos HTML locais não são transferidos automaticamente para o endereço online.
+O endereço hospeda a mesma demonstração com dados fictícios. Os registros assistenciais e o estoque continuam no navegador de cada visitante. Canais específicos permitem parear a TV, enviar remessas por código com recebimento parcial, compartilhar documentos e relatórios com o cidadão e receber notificações. Esses canais não constituem um prontuário ou estoque municipal sincronizado. A ocupação e o atendimento dos diferentes perfis continuam na mesma estação. Os dados dos arquivos HTML locais não são transferidos automaticamente para o endereço online.
 
 `vercel.json` configura a compilação Vite, a pasta `dist`, a abertura direta das rotas e o cabeçalho `noindex, nofollow`. Esse cabeçalho orienta buscadores; não é controle de acesso. `.vercelignore` exclui arquivos locais, credenciais e entregas da publicação pela CLI. Os avisos de demonstração permanecem visíveis. A publicação não habilita atendimento real, autenticação ou persistência protegida.
 

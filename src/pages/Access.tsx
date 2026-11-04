@@ -342,6 +342,9 @@ export function Access({ resume = false }: { resume?: boolean }) {
           </form>
           <div className="access-preview-links">
             <span>Explore também</span>
+            <Link to="/apresentacao">
+              <Building2 size={15} /> Apresentação executiva
+            </Link>
             <Link to="/cidadao">
               <UserRound size={15} /> App do cidadão
             </Link>

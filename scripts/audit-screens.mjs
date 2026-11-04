@@ -23,7 +23,7 @@ const roles = [
   'business',
 ];
 const capture = {
-  public: ['/acesso', '/cidadao'],
+  public: ['/acesso', '/cidadao', '/apresentacao'],
   manager: ['/', '/integracoes'],
   reception: ['/', '/recepcao', '/agenda', '/acesso'],
   clinical: ['/consultorio', '/atendimento/aurora-centro-e0', '/escuta', '/pessoas/aurora-p1'],
@@ -148,6 +148,7 @@ try {
   for (const width of [1440, 360]) {
     await page.setViewportSize({ width, height: width === 360 ? 800 : 900 });
     for (const p of [
+      '/apresentacao',
       '/acesso',
       '/totem?rede=aurora&unidade=aurora-centro',
       '/painel?rede=aurora&unidade=aurora-centro',

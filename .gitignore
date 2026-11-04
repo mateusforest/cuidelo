@@ -15,3 +15,5 @@ test-results/
 supabase/.temp/
 supabase/.branches/
 supabase/signing_keys.json
+/tmp/
+/output/

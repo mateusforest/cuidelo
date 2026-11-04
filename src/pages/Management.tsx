@@ -207,7 +207,7 @@ const integrations = [
   {
     name: 'Identidade e persistência',
     scope: 'Acesso autenticado, permissões no servidor e dados protegidos.',
-    next: 'Conectar o backend em uma etapa própria, conforme combinado.',
+    next: 'Criar a homologação protegida e conectar login individual, segundo fator e autorização por vínculo. A base de isolamento foi testada localmente; a aplicação ainda usa dados demonstrativos no navegador.',
     url: null,
   },
 ];

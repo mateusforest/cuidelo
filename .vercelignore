@@ -10,3 +10,5 @@ coverage
 *.log
 .sites-runtime
 .openai
+tmp
+output
